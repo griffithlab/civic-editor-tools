@@ -61,6 +61,9 @@ def extract_genomic_coords(ca_json):
 # given a protein level civic variant (e.g. BRAF V600E) get possible coords from clingen
 if __name__ == "__main__":
 
+    gene_symbol = "BRAF"
+    p_dot_var = "p.Val600Glu"
+
     hgvs_protein = "NP_004324.2:p.Val600Glu"
     print("\nHGVS protein query:", hgvs_protein)
 
