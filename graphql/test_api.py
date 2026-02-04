@@ -6,9 +6,6 @@ import pdb
 
 api_url = "https://civicdb.org/api/graphql"
 
-#def populate_query_id(query_template: str, graphql_id: int) -> str:
-#    return query_template.replace("graphql_query_id1", str(graphql_id))
-
 def populate_variables_id(variables_template: str, graphql_id: int) -> str:
     placeholder = "graphql_query_id1"
 
@@ -17,8 +14,6 @@ def populate_variables_id(variables_template: str, graphql_id: int) -> str:
         raise ValueError(
             f"Expected exactly one '{placeholder}', found {count}"
     )
-    #print("=== Variables object BEFORE substitution ===")
-    #print(variables_template)
 
     if placeholder not in variables_template:
         raise ValueError(
@@ -26,8 +21,6 @@ def populate_variables_id(variables_template: str, graphql_id: int) -> str:
         )
 
     populated = variables_template.replace(placeholder, str(graphql_id), 1)
-    #print("=== Variables object AFTER substitution ===")
-    #print(populated)
 
     return populated
 
@@ -93,14 +86,19 @@ revisions = json["data"]["revisions"]["edges"]
 for revision in revisions:
 	revision_id = revision['node']['id']
 	user_display_name = revision['node']['creationActivity']['user']['displayName']
-	variant_type = revision['node']['linkoutData']['diffValue']['addedObjects'][0]['displayName']
+	revision_values = revision['node']['linkoutData']['diffValue']['addedObjects']
+	revision_values_list = []
+	for revision_value in revision_values:
+		revision_display_name = revision_value['displayName']
+		revision_values_list.append(revision_display_name)
 	field_name = revision['node']['fieldName']
+	revision_values_string = ",".join(sorted(revision_values_list))
 
 	print(
 		f"\nInformation for revision: {revision_id}\n"
 		f"  Revision user display name: {user_display_name}\n"
-		f"  Revision variant type: {variant_type}\n"
-		f"  Revision field name: {field_name}"
+		f"  Revision field name: {field_name}\n"
+		f"  Revision value(s): {revision_values_string}"
 	)
 
 #variant_Revisions-VariantCoordinates (takes a variant _coordinates_ id)
