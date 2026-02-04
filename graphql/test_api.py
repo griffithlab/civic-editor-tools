@@ -24,7 +24,6 @@ def populate_variables_id(variables_template: str, graphql_id: int) -> str:
 
     return populated
 
-
 def run_graphql_operation(api_url, operation_name, query_id, timeout=(10, 200)):
     # Base directory = directory containing this script
     base_dir = Path(__file__).resolve().parent
@@ -58,63 +57,65 @@ def run_graphql_operation(api_url, operation_name, query_id, timeout=(10, 200)):
 
     return resp
 
-#Example variant POLE S459F (civic.vid: 1832)
-test_variant_id = 1832
+def main(variant_id):
+	#Get coordinate ids for variant (takes a variant id)
+	resp = run_graphql_operation(api_url, "variant_CoordinateIdsForVariant", variant_id)
+	json = resp.json()
 
-#Get coordinate ids for variant (takes a variant id)
-resp = run_graphql_operation(api_url, "variant_CoordinateIdsForVariant", test_variant_id)
-json = resp.json()
-
-open_revision_count_variant = json['data']['variant']['openRevisionCount']
-open_revision_count_coordinates = json['data']['variant']['coordinates']['openRevisionCount']
-variant_coordinates_id = json['data']['variant']['coordinates']['id']
-
-print(
-	f"Variant ID used for graphql query: {test_variant_id}\n"
-	f"  Open gene-variant revisions: {open_revision_count_variant}\n"
-	f"  Open variant coordinate revisions: {open_revision_count_coordinates}\n"
-	f"  Variant coordinates id: {variant_coordinates_id}"
-)
-
-#variant_Revisions-Variant (takes a variant id)
-resp = run_graphql_operation(api_url, "variant_Revisions-Variant", test_variant_id)
-json = resp.json()
-
-#pdb.set_trace()
-
-revisions = json["data"]["revisions"]["edges"]
-for revision in revisions:
-	revision_id = revision['node']['id']
-	user_display_name = revision['node']['creationActivity']['user']['displayName']
-	revision_values = revision['node']['linkoutData']['diffValue']['addedObjects']
-	revision_values_list = []
-	for revision_value in revision_values:
-		revision_display_name = revision_value['displayName']
-		revision_values_list.append(revision_display_name)
-	field_name = revision['node']['fieldName']
-	revision_values_string = ",".join(sorted(revision_values_list))
+	open_revision_count_variant = json['data']['variant']['openRevisionCount']
+	open_revision_count_coordinates = json['data']['variant']['coordinates']['openRevisionCount']
+	variant_coordinates_id = json['data']['variant']['coordinates']['id']
 
 	print(
-		f"\nInformation for revision: {revision_id}\n"
-		f"  Revision user display name: {user_display_name}\n"
-		f"  Revision field name: {field_name}\n"
-		f"  Revision value(s): {revision_values_string}"
+		f"Variant ID used for graphql query: {variant_id}\n"
+		f"  Open gene-variant revisions: {open_revision_count_variant}\n"
+		f"  Open variant coordinate revisions: {open_revision_count_coordinates}\n"
+		f"  Variant coordinates id: {variant_coordinates_id}"
 	)
 
-#variant_Revisions-VariantCoordinates (takes a variant _coordinates_ id)
-resp = run_graphql_operation(api_url, "variant_Revisions-VariantCoordinates", variant_coordinates_id)
-json = resp.json()
+	#variant_Revisions-Variant (takes a variant id)
+	resp = run_graphql_operation(api_url, "variant_Revisions-Variant", variant_id)
+	json = resp.json()
 
-#variant_VariantDetail
-resp = run_graphql_operation(api_url, "variant_VariantDetail", test_variant_id)
-json = resp.json()
+	#pdb.set_trace()
 
+	revisions = json["data"]["revisions"]["edges"]
+	for revision in revisions:
+		revision_id = revision['node']['id']
+		user_display_name = revision['node']['creationActivity']['user']['displayName']
+		revision_values = revision['node']['linkoutData']['diffValue']['addedObjects']
+		revision_values_list = []
+		for revision_value in revision_values:
+			revision_display_name = revision_value['displayName']
+			revision_values_list.append(revision_display_name)
+		field_name = revision['node']['fieldName']
+		revision_values_string = ",".join(sorted(revision_values_list))
 
-#To interactively explore json responses that come back from these queryies, place this inline above:
-#pdb.set_trace()
-#json = resp.json()
+		print(
+			f"\nInformation for revision: {revision_id}\n"
+			f"  Revision user display name: {user_display_name}\n"
+			f"  Revision field name: {field_name}\n"
+			f"  Revision value(s): {revision_values_string}"
+		)
 
-#json['data']['revisions']['edges'][0]['node']['creationActivity']['user']['displayName']
-#json['data']['revisions']['edges'][0]['node']['linkoutData']['diffValue']['addedObjects'][0]['displayName']
-#json['data']['revisions']['edges'][0]['node']['fieldName']
+	#variant_Revisions-VariantCoordinates (takes a variant _coordinates_ id)
+	resp = run_graphql_operation(api_url, "variant_Revisions-VariantCoordinates", variant_coordinates_id)
+	json = resp.json()
+
+	#variant_VariantDetail
+	resp = run_graphql_operation(api_url, "variant_VariantDetail", variant_id)
+	json = resp.json()
+
+	#To interactively explore json responses that come back from these queryies, place this inline above:
+	#pdb.set_trace()
+	#json = resp.json()
+
+	#json['data']['revisions']['edges'][0]['node']['creationActivity']['user']['displayName']
+	#json['data']['revisions']['edges'][0]['node']['linkoutData']['diffValue']['addedObjects'][0]['displayName']
+	#json['data']['revisions']['edges'][0]['node']['fieldName']
+
+if __name__ == "__main__":
+	test_variant = 1832 #Example variant POLE S459F (civic.vid: 1832)
+	main(test_variant)
+
 
