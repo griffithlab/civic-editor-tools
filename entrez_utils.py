@@ -75,9 +75,9 @@ def main(gene_symbol):
     print(f"Gene symbol: {gene_symbol}")
     print(f"NCBI Gene ID: {gene_id}")
     print(f"MANE Select transcript: {mane_nm}")
-    #print(f"Corresponding protein: {mane_np}")
+    print(f"Corresponding protein: {mane_np}")
 
 
 if __name__ == "__main__":
-    main("BRAF")
+    main("POLE")
 

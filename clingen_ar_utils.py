@@ -61,10 +61,11 @@ def extract_genomic_coords(ca_json):
 # given a protein level civic variant (e.g. BRAF V600E) get possible coords from clingen
 if __name__ == "__main__":
 
-    gene_symbol = "BRAF"
-    p_dot_var = "p.Val600Glu"
+    gene_symbol = "POLE"
+    protein_id = "NP_006222.2"
+    p_dot_var = "p.Ser459Phe" #S459F
+    hgvs_protein = f"{protein_id}:{p_dot_var}"
 
-    hgvs_protein = "NP_004324.2:p.Val600Glu"
     print("\nHGVS protein query:", hgvs_protein)
 
     # query clingen api with a protein allele hgvs
