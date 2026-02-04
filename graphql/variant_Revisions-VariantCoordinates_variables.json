@@ -1,7 +1,7 @@
 {
-    "first": 10,
+    "first": 50,
     "subject": {
-        "id": 1389,
+        "id": graphql_query_id1,
         "entityType": "VARIANT_COORDINATES"
     },
     "status": "NEW"

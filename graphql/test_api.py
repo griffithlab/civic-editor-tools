@@ -6,23 +6,44 @@ import pdb
 
 api_url = "https://civicdb.org/api/graphql"
 
-# Read the JSON file into a string variable
-#with open('variant_CoordinateIdsForVariant_query.json', 'r') as file:
-#    query = file.read()
+#def populate_query_id(query_template: str, graphql_id: int) -> str:
+#    return query_template.replace("graphql_query_id1", str(graphql_id))
 
-#with open('variant_CoordinateIdsForVariant_variables.json', 'r') as file:
-#    variables = file.read()
+def populate_variables_id(variables_template: str, graphql_id: int) -> str:
+    placeholder = "graphql_query_id1"
 
-#resp = requests.post(
-#   api_url, json={"query": query, "variables": variables}, timeout=(10, 200)
-#)
+    count = variables_template.count(placeholder)
+    if count != 1:
+        raise ValueError(
+            f"Expected exactly one '{placeholder}', found {count}"
+    )
+    #print("=== Variables object BEFORE substitution ===")
+    #print(variables_template)
 
-def run_graphql_operation(api_url, operation_name, timeout=(10, 200)):
+    if placeholder not in variables_template:
+        raise ValueError(
+            f"Placeholder '{placeholder}' not found in variables template"
+        )
+
+    populated = variables_template.replace(placeholder, str(graphql_id), 1)
+    #print("=== Variables object AFTER substitution ===")
+    #print(populated)
+
+    return populated
+
+
+def run_graphql_operation(api_url, operation_name, query_id, timeout=(10, 200)):
     # Base directory = directory containing this script
     base_dir = Path(__file__).resolve().parent
 
     query_path = base_dir / f"{operation_name}_query.json"
     variables_path = base_dir / f"{operation_name}_variables.json"
+
+    if not query_path.exists():
+        raise FileNotFoundError(f"Missing query file: {query_path}")
+
+    if not variables_path.exists():
+        raise FileNotFoundError(f"Missing variables file: {variables_path}")
 
     with query_path.open("r") as f:
         query = f.read()
@@ -30,30 +51,72 @@ def run_graphql_operation(api_url, operation_name, timeout=(10, 200)):
     with variables_path.open("r") as f:
         variables = f.read()
 
+    #inject the actual query ID into the variables object
+    variables_updated = populate_variables_id(variables, query_id)
+
     resp = requests.post(
         api_url,
         json={
             "query": query,
-            "variables": variables
+            "variables": variables_updated
         },
         timeout=timeout
     )
 
     return resp
 
-#Get coordinate ids for variant
-operation_name = "variant_CoordinateIdsForVariant"
-resp = run_graphql_operation(api_url, operation_name)
+#Example variant POLE S459F (civic.vid: 1832)
+test_variant_id = 1832
+
+#Get coordinate ids for variant (takes a variant id)
+resp = run_graphql_operation(api_url, "variant_CoordinateIdsForVariant", test_variant_id)
 json = resp.json()
-json['data']
+
 open_revision_count_variant = json['data']['variant']['openRevisionCount']
 open_revision_count_coordinates = json['data']['variant']['coordinates']['openRevisionCount']
+variant_coordinates_id = json['data']['variant']['coordinates']['id']
 
-print(open_revision_count_variant)
-print(open_revision_count_coordinates)
+print(
+	f"Variant ID used for graphql query: {test_variant_id}\n"
+	f"  Open gene-variant revisions: {open_revision_count_variant}\n"
+	f"  Open variant coordinate revisions: {open_revision_count_coordinates}\n"
+	f"  Variant coordinates id: {variant_coordinates_id}"
+)
 
+#variant_Revisions-Variant (takes a variant id)
+resp = run_graphql_operation(api_url, "variant_Revisions-Variant", test_variant_id)
+json = resp.json()
+
+#pdb.set_trace()
+
+revisions = json["data"]["revisions"]["edges"]
+for revision in revisions:
+	revision_id = revision['node']['id']
+	user_display_name = revision['node']['creationActivity']['user']['displayName']
+	variant_type = revision['node']['linkoutData']['diffValue']['addedObjects'][0]['displayName']
+	field_name = revision['node']['fieldName']
+
+	print(
+		f"\nInformation for revision: {revision_id}\n"
+		f"  Revision user display name: {user_display_name}\n"
+		f"  Revision variant type: {variant_type}\n"
+		f"  Revision field name: {field_name}"
+	)
+
+#variant_Revisions-VariantCoordinates (takes a variant _coordinates_ id)
+resp = run_graphql_operation(api_url, "variant_Revisions-VariantCoordinates", variant_coordinates_id)
+json = resp.json()
+
+#variant_VariantDetail
+resp = run_graphql_operation(api_url, "variant_VariantDetail", test_variant_id)
+json = resp.json()
+
+
+#To interactively explore json responses that come back from these queryies, place this inline above:
 #pdb.set_trace()
 #json = resp.json()
 
-
+#json['data']['revisions']['edges'][0]['node']['creationActivity']['user']['displayName']
+#json['data']['revisions']['edges'][0]['node']['linkoutData']['diffValue']['addedObjects'][0]['displayName']
+#json['data']['revisions']['edges'][0]['node']['fieldName']
 

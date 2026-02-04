@@ -1,7 +1,7 @@
 {
-    "first": 10,
+    "first": 50,
     "subject": {
-        "id": 1481,
+        "id": graphql_query_id1,
         "entityType": "VARIANT"
     },
     "status": "NEW"
