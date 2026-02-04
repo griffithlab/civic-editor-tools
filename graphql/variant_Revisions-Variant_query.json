@@ -1,0 +1,305 @@
+query Revisions($subject: ModeratedInput, $first: Int, $last: Int, $before: String, $after: String, $fieldName: String, $originatingUserId: Int, $resolvingUserId: Int, $revisionSetId: Int, $status: RevisionStatus) {
+  revisions(
+    first: $first
+    last: $last
+    before: $before
+    after: $after
+    fieldName: $fieldName
+    originatingUserId: $originatingUserId
+    resolvingUserId: $resolvingUserId
+    subject: $subject
+    status: $status
+    revisionSetId: $revisionSetId
+  ) {
+    totalCount
+    unfilteredCountForSubject
+    uniqueRevisors {
+      username
+      id
+      profileImagePath(size: 32)
+      __typename
+    }
+    uniqueResolvers {
+      username
+      id
+      profileImagePath(size: 32)
+      __typename
+    }
+    revisedFieldNames {
+      name
+      displayName
+      __typename
+    }
+    pageInfo {
+      hasNextPage
+      hasPreviousPage
+      endCursor
+      startCursor
+      __typename
+    }
+    edges {
+      node {
+        ...revision
+        __typename
+      }
+      __typename
+    }
+    __typename
+  }
+}
+
+fragment revision on Revision {
+  id
+  revisionSetId
+  createdAt
+  fieldName
+  currentValue
+  suggestedValue
+  linkoutData {
+    ...revisionLinkoutData
+    __typename
+  }
+  creationActivity {
+    createdAt
+    user {
+      id
+      displayName
+      role
+      __typename
+    }
+    parsedNote {
+      ...parsedCommentFragment
+      __typename
+    }
+    organization {
+      id
+      name
+      __typename
+    }
+    __typename
+  }
+  resolutionActivity {
+    createdAt
+    user {
+      id
+      displayName
+      role
+      __typename
+    }
+    parsedNote {
+      ...parsedCommentFragment
+      __typename
+    }
+    __typename
+  }
+  status
+  __typename
+}
+
+fragment revisionLinkoutData on LinkoutData {
+  name
+  diffValue {
+    ... on ObjectFieldDiff {
+      currentObjects {
+        id
+        displayName
+        displayType
+        entityType
+        link
+        deleted
+        deprecated
+        flagged
+        feature {
+          link
+          id
+          name
+          deprecated
+          flagged
+          __typename
+        }
+        __typename
+      }
+      addedObjects {
+        id
+        displayName
+        displayType
+        entityType
+        link
+        deleted
+        deprecated
+        flagged
+        feature {
+          link
+          id
+          name
+          deprecated
+          flagged
+          __typename
+        }
+        __typename
+      }
+      removedObjects {
+        id
+        displayName
+        displayType
+        entityType
+        link
+        deleted
+        deprecated
+        flagged
+        feature {
+          link
+          id
+          name
+          deprecated
+          flagged
+          __typename
+        }
+        __typename
+      }
+      keptObjects {
+        id
+        displayName
+        displayType
+        entityType
+        link
+        deleted
+        deprecated
+        flagged
+        feature {
+          link
+          id
+          name
+          deprecated
+          flagged
+          __typename
+        }
+        __typename
+      }
+      suggestedObjects {
+        id
+        displayName
+        displayType
+        entityType
+        link
+        deleted
+        deprecated
+        flagged
+        feature {
+          link
+          id
+          name
+          deprecated
+          flagged
+          __typename
+        }
+        __typename
+      }
+      __typename
+    }
+    ... on ScalarFieldDiff {
+      left
+      right
+      __typename
+    }
+    __typename
+  }
+  __typename
+}
+
+fragment parsedCommentFragment on CommentBodySegment {
+  __typename
+  ... on CommentTagSegment {
+    entityId
+    displayName
+    tagType
+    link
+    revisionSetId
+    feature {
+      id
+      name
+      link
+      deprecated
+      flagged
+      __typename
+    }
+    __typename
+  }
+  ... on CommentTagSegmentFlagged {
+    entityId
+    displayName
+    tagType
+    flagged
+    link
+    revisionSetId
+    feature {
+      id
+      name
+      link
+      deprecated
+      flagged
+      __typename
+    }
+    __typename
+  }
+  ... on CommentTagSegmentFlaggedAndWithStatus {
+    entityId
+    displayName
+    tagType
+    status
+    flagged
+    link
+    revisionSetId
+    feature {
+      id
+      name
+      link
+      deprecated
+      flagged
+      __typename
+    }
+    __typename
+  }
+  ... on CommentTagSegmentFlaggedAndDeprecated {
+    entityId
+    displayName
+    tagType
+    flagged
+    deprecated
+    link
+    revisionSetId
+    feature {
+      id
+      name
+      link
+      deprecated
+      flagged
+      __typename
+    }
+    __typename
+  }
+  ... on CommentTextSegment {
+    text
+    __typename
+  }
+  ... on User {
+    ...commenterFields
+    __typename
+  }
+}
+
+fragment commenterFields on User {
+  id
+  username
+  displayName
+  name
+  role
+  profileImagePath(size: 32)
+  organizations {
+    id
+    name
+    profileImagePath(size: 32)
+    __typename
+  }
+  __typename
+}
