@@ -59,8 +59,8 @@ def run_graphql_operation(api_url, operation_name, query_id, timeout=(10, 200)):
 
     return resp
 
-#demonstrate functionality
-def main(variant_id):
+#execute graphql queries, parse json returns, build a simplied data structure with just the info needed
+def gather_variant_revisions(variant_id):
 	#Get coordinate ids for variant (takes a variant id)
 	resp = run_graphql_operation(api_url, "variant_CoordinateIdsForVariant", variant_id)
 	json = resp.json()
@@ -69,29 +69,30 @@ def main(variant_id):
 	open_revision_count_coordinates = json['data']['variant']['coordinates']['openRevisionCount']
 	variant_coordinates_id = json['data']['variant']['coordinates']['id']
 
-	print(
-		f"Variant ID used for graphql query: {variant_id}\n"
-		f"  Open gene-variant revisions: {open_revision_count_variant}\n"
-		f"  Open variant coordinate revisions: {open_revision_count_coordinates}\n"
-		f"  Variant coordinates id: {variant_coordinates_id}"
-	)
-	
+	variant_data = {
+		"variant_id": variant_id,
+		"open_revision_count_variant": open_revision_count_variant,
+		"open_revision_count_coordinates": open_revision_count_coordinates,
+		"variant_coordinates_id": variant_coordinates_id,
+		"variant_revisions": [],
+		"coordinate_revisions": []
+	}	
+
 	#variant_VariantDetail
 	resp = run_graphql_operation(api_url, "variant_VariantDetail", variant_id)
 	json = resp.json()
 	variant_name = json['data']['variant']['name']
 	feature_name = json['data']['variant']['feature']['name']
-	print(
-		f"\nVariant details:\n"
-		f"  Variant name:{variant_name}\n"
-		f"  Feature name:{feature_name}"
-	)
+	
+	variant_data["variant_name"] = variant_name
+	variant_data["feature_name"] = feature_name	
 
 	#variant_Revisions-Variant (takes a variant id)
 	resp = run_graphql_operation(api_url, "variant_Revisions-Variant", variant_id)
 	json = resp.json()
 
 	revisions = json["data"]["revisions"]["edges"]
+	i = 0
 	for revision in revisions:
 		revision_id = revision['node']['id']
 		user_id = revision['node']['creationActivity']['user']['id']
@@ -104,18 +105,22 @@ def main(variant_id):
 		field_name = revision['node']['fieldName']
 		revision_values_string = ",".join(sorted(revision_values_list))
 
-		print(
-			f"\nInformation for variant revision: {revision_id}\n"
-			f"  Revision user display name: {user_display_name} (id: {user_id})\n"
-			f"  Revision field name: {field_name}\n"
-			f"  Revision value(s): {revision_values_string}"
-		)
+		variant_data["variant_revisions"].append({
+			"index": i,
+			"revision_id": revision_id,
+			"user_id": user_id,
+			"user_display_name": user_display_name,
+			"field_name": field_name,
+			"revision_values_string": revision_values_string
+		})
+		i += 1
 
 	#variant_Revisions-VariantCoordinates (takes a variant _coordinates_ id)
 	resp = run_graphql_operation(api_url, "variant_Revisions-VariantCoordinates", variant_coordinates_id)
 	json = resp.json()
-	coord_revisions = json["data"]["revisions"]["edges"]
-	for revision in coord_revisions:
+	coordinate_revisions = json["data"]["revisions"]["edges"]
+	i = 0
+	for revision in coordinate_revisions:
 		revision_id = revision['node']['id']
 		user_id = revision['node']['creationActivity']['user']['id']
 		user_display_name = revision['node']['creationActivity']['user']['displayName']
@@ -128,6 +133,17 @@ def main(variant_id):
 			f"  Revision field name: {field_name}\n"
 			f"  Revision value(s): {suggested_value}"
 		)
+		variant_data["coordinate_revisions"].append({
+			"index": i,
+			"revision_id": revision_id,
+			"user_id": user_id,
+			"user_display_name": user_display_name,
+			"field_name": field_name,
+			"suggested_value": suggested_value
+		})
+		i += 1
+
+	#print(variant_data)
 
 	#To interactively explore json responses that come back from these queryies, place this inline above:
 	#pdb.set_trace()
@@ -135,6 +151,29 @@ def main(variant_id):
 	#json['data']['revisions']['edges'][0]['node']['creationActivity']['user']['displayName']
 	#json['data']['revisions']['edges'][0]['node']['linkoutData']['diffValue']['addedObjects'][0]['displayName']
 	#json['data']['revisions']['edges'][0]['node']['fieldName']
+	return variant_data
+
+#demonstrate functionality
+def main (variant_id):
+	variant_data = gather_variant_revisions(variant_id)
+	print(
+		f"\n\nVariant revision info from gather_variant_revisions()\n"
+		f"Variant ID used for graphql query: {variant_data['variant_id']}\n"
+		f"  Variant name: {variant_data['variant_name']}\n"
+		f"  Feature name: {variant_data['feature_name']}\n"
+		f"  Open gene-variant revisions: {variant_data['open_revision_count_variant']}\n"
+		f"  Open variant coordinate revisions: {variant_data['open_revision_count_coordinates']}\n"
+		f"  Variant coordinates id: {variant_data['variant_coordinates_id']}"
+	)
+	variant_revisions = variant_data['variant_revisions']
+	for variant_revision in variant_revisions:
+		print(
+			f"\nInformation for variant revision: {variant_revision['revision_id']}\n"
+			f"  Revision user display name: {variant_revision['user_display_name']} (id: {variant_revision['user_id']})\n"
+			f"  Revision field name: {variant_revision['field_name']}\n"
+			f"  Revision value(s): {variant_revision['revision_values_string']}"
+		)
+
 
 #only run the main function if this script is being run directly
 if __name__ == "__main__":
