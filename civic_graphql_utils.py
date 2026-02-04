@@ -75,6 +75,17 @@ def main(variant_id):
 		f"  Open variant coordinate revisions: {open_revision_count_coordinates}\n"
 		f"  Variant coordinates id: {variant_coordinates_id}"
 	)
+	
+	#variant_VariantDetail
+	resp = run_graphql_operation(api_url, "variant_VariantDetail", variant_id)
+	json = resp.json()
+	variant_name = json['data']['variant']['name']
+	feature_name = json['data']['variant']['feature']['name']
+	print(
+		f"\nVariant details:\n"
+		f"  Variant name:{variant_name}\n"
+		f"  Feature name:{feature_name}"
+	)
 
 	#variant_Revisions-Variant (takes a variant id)
 	resp = run_graphql_operation(api_url, "variant_Revisions-Variant", variant_id)
@@ -94,7 +105,7 @@ def main(variant_id):
 		revision_values_string = ",".join(sorted(revision_values_list))
 
 		print(
-			f"\nInformation for revision: {revision_id}\n"
+			f"\nInformation for variant revision: {revision_id}\n"
 			f"  Revision user display name: {user_display_name} (id: {user_id})\n"
 			f"  Revision field name: {field_name}\n"
 			f"  Revision value(s): {revision_values_string}"
@@ -103,24 +114,24 @@ def main(variant_id):
 	#variant_Revisions-VariantCoordinates (takes a variant _coordinates_ id)
 	resp = run_graphql_operation(api_url, "variant_Revisions-VariantCoordinates", variant_coordinates_id)
 	json = resp.json()
+	coord_revisions = json["data"]["revisions"]["edges"]
+	for revision in coord_revisions:
+		revision_id = revision['node']['id']
+		user_id = revision['node']['creationActivity']['user']['id']
+		user_display_name = revision['node']['creationActivity']['user']['displayName']
+		field_name = revision['node']['fieldName']
+		suggested_value = revision['node']['suggestedValue']
 
-
-
-
-	#variant_VariantDetail
-	resp = run_graphql_operation(api_url, "variant_VariantDetail", variant_id)
-	json = resp.json()
-	variant_name = json['data']['variant']['name']
-	feature_name = json['data']['variant']['feature']['name']
-	print(
-		f"\nVariant details:\n"
-		f"Variant name:{variant_name}\n"
-		f"Feature name:{feature_name}\n"
-	)
+		print(
+			f"\nInformation for coordinate revision: {revision_id}\n"
+			f"  Revision user display name: {user_display_name} (id: {user_id})\n"
+			f"  Revision field name: {field_name}\n"
+			f"  Revision value(s): {suggested_value}"
+		)
 
 	#To interactively explore json responses that come back from these queryies, place this inline above:
+	#pdb.set_trace()
 	#json = resp.json()
-
 	#json['data']['revisions']['edges'][0]['node']['creationActivity']['user']['displayName']
 	#json['data']['revisions']['edges'][0]['node']['linkoutData']['diffValue']['addedObjects'][0]['displayName']
 	#json['data']['revisions']['edges'][0]['node']['fieldName']
