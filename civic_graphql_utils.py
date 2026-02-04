@@ -28,8 +28,8 @@ def run_graphql_operation(api_url, operation_name, query_id, timeout=(10, 200)):
     # Base directory = directory containing this script
     base_dir = Path(__file__).resolve().parent
 
-    query_path = base_dir / f"{operation_name}_query.json"
-    variables_path = base_dir / f"{operation_name}_variables.json"
+    query_path = base_dir / f"graphql/{operation_name}_query.json"
+    variables_path = base_dir / f"graphql/{operation_name}_variables.json"
 
     if not query_path.exists():
         raise FileNotFoundError(f"Missing query file: {query_path}")
