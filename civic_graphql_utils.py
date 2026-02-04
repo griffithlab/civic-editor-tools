@@ -6,6 +6,7 @@ import pdb
 
 api_url = "https://civicdb.org/api/graphql"
 
+#update a template graphql object string to inject the query ID to be used
 def populate_variables_id(variables_template: str, graphql_id: int) -> str:
     placeholder = "graphql_query_id1"
 
@@ -24,6 +25,7 @@ def populate_variables_id(variables_template: str, graphql_id: int) -> str:
 
     return populated
 
+#load graphql query and variable json objects from file, update with a query id, and submit the query to the API
 def run_graphql_operation(api_url, operation_name, query_id, timeout=(10, 200)):
     # Base directory = directory containing this script
     base_dir = Path(__file__).resolve().parent
@@ -57,6 +59,7 @@ def run_graphql_operation(api_url, operation_name, query_id, timeout=(10, 200)):
 
     return resp
 
+#demonstrate functionality
 def main(variant_id):
 	#Get coordinate ids for variant (takes a variant id)
 	resp = run_graphql_operation(api_url, "variant_CoordinateIdsForVariant", variant_id)
@@ -77,11 +80,10 @@ def main(variant_id):
 	resp = run_graphql_operation(api_url, "variant_Revisions-Variant", variant_id)
 	json = resp.json()
 
-	#pdb.set_trace()
-
 	revisions = json["data"]["revisions"]["edges"]
 	for revision in revisions:
 		revision_id = revision['node']['id']
+		user_id = revision['node']['creationActivity']['user']['id']
 		user_display_name = revision['node']['creationActivity']['user']['displayName']
 		revision_values = revision['node']['linkoutData']['diffValue']['addedObjects']
 		revision_values_list = []
@@ -93,7 +95,7 @@ def main(variant_id):
 
 		print(
 			f"\nInformation for revision: {revision_id}\n"
-			f"  Revision user display name: {user_display_name}\n"
+			f"  Revision user display name: {user_display_name} (id: {user_id})\n"
 			f"  Revision field name: {field_name}\n"
 			f"  Revision value(s): {revision_values_string}"
 		)
@@ -102,18 +104,28 @@ def main(variant_id):
 	resp = run_graphql_operation(api_url, "variant_Revisions-VariantCoordinates", variant_coordinates_id)
 	json = resp.json()
 
+
+
+
 	#variant_VariantDetail
 	resp = run_graphql_operation(api_url, "variant_VariantDetail", variant_id)
 	json = resp.json()
+	variant_name = json['data']['variant']['name']
+	feature_name = json['data']['variant']['feature']['name']
+	print(
+		f"\nVariant details:\n"
+		f"Variant name:{variant_name}\n"
+		f"Feature name:{feature_name}\n"
+	)
 
 	#To interactively explore json responses that come back from these queryies, place this inline above:
-	#pdb.set_trace()
 	#json = resp.json()
 
 	#json['data']['revisions']['edges'][0]['node']['creationActivity']['user']['displayName']
 	#json['data']['revisions']['edges'][0]['node']['linkoutData']['diffValue']['addedObjects'][0]['displayName']
 	#json['data']['revisions']['edges'][0]['node']['fieldName']
 
+#only run the main function if this script is being run directly
 if __name__ == "__main__":
 	test_variant = 1832 #Example variant POLE S459F (civic.vid: 1832)
 	main(test_variant)
