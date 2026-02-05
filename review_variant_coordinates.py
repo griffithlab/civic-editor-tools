@@ -63,6 +63,18 @@ def main(variant_id: int, contributor_id: int):
         f"  Variant coordinates id: {variant_data['variant_coordinates_id']}"
     )
 
+    #Concepts to explore/implement
+    #- Add a mode the reviews all variants one at a time
+    #- Skip a variant if it has 0 pending revision from other users
+    
+    #- Variant ambiguity check (consider an example variant "BRAF V600E"
+    #  - For a given gene get all transcripts (RefSeq and Ensembl) in ClinGen Allele Registry (CAR)
+    #  - Starting from the name of a variant, contruct possible p. hgvs expressions for all RefSeq and Ensembl transcript is CAR
+    #  - Check each of these p. hgvs expressions and get PAIDs. Get all CAIDs associated with these
+    #  - Skip CAIDs that are not a simple SNV?
+    #  - Get the g. HGVS expression associated with all remaining CAIDs (make not of the MANE select)
+    #  - Are there multiple distinct g. HGVS values that the variant name could refer to? If so, warn the user
+
 
 
 if __name__ == "__main__":
