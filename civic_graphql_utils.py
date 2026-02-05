@@ -60,7 +60,7 @@ def run_graphql_operation(api_url, operation_name, query_id, timeout=(10, 200)):
     return resp
 
 #execute graphql queries, parse json returns, build a simplied data structure with just the info needed
-def gather_variant_revisions(variant_id):
+def gather_variant_revisions(variant_id, contributor_id):
 	#Get coordinate ids for variant (takes a variant id)
 	resp = run_graphql_operation(api_url, "variant_CoordinateIdsForVariant", variant_id)
 	json = resp.json()
@@ -74,6 +74,7 @@ def gather_variant_revisions(variant_id):
 		"open_revision_count_variant": open_revision_count_variant,
 		"open_revision_count_coordinates": open_revision_count_coordinates,
 		"variant_coordinates_id": variant_coordinates_id,
+        "contributor_revisions": 0,
 		"variant_revisions": [],
 		"coordinate_revisions": []
 	}	
@@ -84,11 +85,11 @@ def gather_variant_revisions(variant_id):
 	variant_name = json['data']['variant']['name']
 	feature_name = json['data']['variant']['feature']['name']
 	
-	variant_data["variant_name"] = variant_name
-	variant_data["feature_name"] = feature_name	
+	variant_data['variant_name'] = variant_name
+	variant_data['feature_name'] = feature_name	
 
 	#variant_Revisions-Variant (takes a variant id)
-	resp = run_graphql_operation(api_url, "variant_Revisions-Variant", variant_id)
+	resp = run_graphql_operation(api_url, 'variant_Revisions-Variant', variant_id)
 	json = resp.json()
 
 	revisions = json["data"]["revisions"]["edges"]
@@ -96,6 +97,8 @@ def gather_variant_revisions(variant_id):
 	for revision in revisions:
 		revision_id = revision['node']['id']
 		user_id = revision['node']['creationActivity']['user']['id']
+		if user_id == contributor_id:
+			ariant_data['contributor_revisions'] += 1
 		user_display_name = revision['node']['creationActivity']['user']['displayName']
 		revision_values = revision['node']['linkoutData']['diffValue']['addedObjects']
 		revision_values_list = []
@@ -123,16 +126,12 @@ def gather_variant_revisions(variant_id):
 	for revision in coordinate_revisions:
 		revision_id = revision['node']['id']
 		user_id = revision['node']['creationActivity']['user']['id']
+		if user_id == contributor_id:
+			variant_data['contributor_revisions'] += 1
 		user_display_name = revision['node']['creationActivity']['user']['displayName']
 		field_name = revision['node']['fieldName']
 		suggested_value = revision['node']['suggestedValue']
 
-		print(
-			f"\nInformation for coordinate revision: {revision_id}\n"
-			f"  Revision user display name: {user_display_name} (id: {user_id})\n"
-			f"  Revision field name: {field_name}\n"
-			f"  Revision value(s): {suggested_value}"
-		)
 		variant_data["coordinate_revisions"].append({
 			"index": i,
 			"revision_id": revision_id,
@@ -142,6 +141,8 @@ def gather_variant_revisions(variant_id):
 			"suggested_value": suggested_value
 		})
 		i += 1
+    
+	variant_data['open_revisions_non_contributor'] = variant_data['open_revision_count_variant'] - variant_data['contributor_revisions']
 
 	#print(variant_data)
 
@@ -153,16 +154,18 @@ def gather_variant_revisions(variant_id):
 	#json['data']['revisions']['edges'][0]['node']['fieldName']
 	return variant_data
 
-#demonstrate functionality
-def main (variant_id):
-	variant_data = gather_variant_revisions(variant_id)
+#demonstrate functionality of the methods above and variant data retrieved
+def main (variant_id, contributor_id):
+	variant_data = gather_variant_revisions(variant_id, contributor_id)
 	print(
 		f"\n\nVariant revision info from gather_variant_revisions()\n"
 		f"Variant ID used for graphql query: {variant_data['variant_id']}\n"
 		f"  Variant name: {variant_data['variant_name']}\n"
 		f"  Feature name: {variant_data['feature_name']}\n"
-		f"  Open gene-variant revisions: {variant_data['open_revision_count_variant']}\n"
+		f"  Open gene-variant revisions (total): {variant_data['open_revision_count_variant']}\n"
 		f"  Open variant coordinate revisions: {variant_data['open_revision_count_coordinates']}\n"
+        f"  Open gene-variant revisions from specified contributor: {variant_data['contributor_revisions']}\n"
+		f"  Open gene-variant revisions from all others users: {variant_data['open_revisions_non_contributor']}\n"
 		f"  Variant coordinates id: {variant_data['variant_coordinates_id']}"
 	)
 	variant_revisions = variant_data['variant_revisions']
@@ -174,10 +177,19 @@ def main (variant_id):
 			f"  Revision value(s): {variant_revision['revision_values_string']}"
 		)
 
+	coordinate_revisions = variant_data['coordinate_revisions']
+	for coordinate_revision in coordinate_revisions:
+		print(
+			f"\nInformation for coordinate revision: {coordinate_revision['revision_id']}\n"
+			f"  Revision user display name: {coordinate_revision['user_display_name']} (id: {coordinate_revision['user_id']})\n"
+			f"  Revision field name: {coordinate_revision['field_name']}\n"
+			f"  Revision value(s): {coordinate_revision['suggested_value']}"
+		)
 
 #only run the main function if this script is being run directly
 if __name__ == "__main__":
 	test_variant = 1832 #Example variant POLE S459F (civic.vid: 1832)
-	main(test_variant)
+	contributor_id = 15 #Example user (Malachi Griffith, user id 15)
+	main(test_variant, contributor_id)
 
 
