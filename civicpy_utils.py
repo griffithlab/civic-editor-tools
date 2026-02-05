@@ -23,14 +23,26 @@ def extract_variant_info(v):
 
     }
 
-def main():
-    variants = civic.get_all_gene_variants(include_status=['accepted', 'submitted'], allow_cached=True)
-    print(f"Total variants in CIViC: {len(variants)}\n")
+def extract_variant_id_list(variants):
+	variant_ids = []
+	for v in variants:
+		id = v.id
+		variant_ids.append(id)
+	return variant_ids
 
-    for v in variants[:100]:
-        info = extract_variant_info(v)
-        print(info)
-        print("-" * 80)
+def main():
+    #include_list=None #to use every single variant regardless of status
+	include_list = ['accepted', 'submitted']
+
+	variants = civic.get_all_gene_variants(include_status=include_list, allow_cached=True)
+	print(f"Total variants in CIViC: {len(variants)}\n")
+
+	variant_ids = extract_variant_id_list(variants)
+
+	for v in variants[:5]:
+		info = extract_variant_info(v)
+		print(info)
+		print("-" * 80)
 
 if __name__ == "__main__":
     main()

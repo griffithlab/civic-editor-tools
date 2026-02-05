@@ -32,7 +32,7 @@ def parse_args():
         dest="variant_id",
         type=int,
         required=True,
-        help="CIViC variant ID to review (integer)"
+        help="CIViC variant ID to review (integer, e.g. 1832)"
     )
 
     parser.add_argument(
@@ -40,7 +40,7 @@ def parse_args():
         dest="contributor_id",
         type=int,
         required=True,
-        help="CIViC contributor ID performing the review (integer)"
+        help="CIViC contributor ID performing the review (integer, e.g. 15)"
     )
 
     return parser.parse_args()
@@ -64,7 +64,7 @@ def main(variant_id: int, contributor_id: int):
     )
 
     #Concepts to explore/implement
-    #- Add a mode the reviews all variants one at a time
+    #- Add a mode that reviews all variants, one at a time
     #- Skip a variant if it has 0 pending revision from other users
     
     #- Variant ambiguity check (consider an example variant "BRAF V600E"
@@ -75,6 +75,7 @@ def main(variant_id: int, contributor_id: int):
     #  - Get the g. HGVS expression associated with all remaining CAIDs (make not of the MANE select)
     #  - Are there multiple distinct g. HGVS values that the variant name could refer to? If so, warn the user
 
+    
 
 
 if __name__ == "__main__":
