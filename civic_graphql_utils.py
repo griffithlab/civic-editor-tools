@@ -163,7 +163,6 @@ def main (variant_id, contributor_id):
 		f"  Variant name: {variant_data['variant_name']}\n"
 		f"  Feature name: {variant_data['feature_name']}\n"
 		f"  Open gene-variant revisions (total): {variant_data['open_revision_count_variant']}\n"
-		f"  Open variant coordinate revisions: {variant_data['open_revision_count_coordinates']}\n"
         f"  Open gene-variant revisions from specified contributor: {variant_data['contributor_revisions']}\n"
 		f"  Open gene-variant revisions from all others users: {variant_data['open_revisions_non_contributor']}\n"
 		f"  Variant coordinates id: {variant_data['variant_coordinates_id']}"
