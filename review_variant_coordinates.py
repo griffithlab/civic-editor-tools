@@ -14,6 +14,7 @@ import argparse
 import sys
 
 # Local utility imports
+import generic_utils
 import civic_graphql_utils
 import civicpy_utils
 import clingen_ar_utils
@@ -62,9 +63,23 @@ def main(variant_id: int, contributor_id: int):
         f"  Open gene-variant revisions from all others users: {variant_data['open_revisions_non_contributor']}\n"
         f"  Variant coordinates id: {variant_data['variant_coordinates_id']}"
     )
+    civic_variant_name = variant_data['variant_name']
+
+    #- Try to guess the variant type based on the CIViC variant name
+    guessed_gene_variant_type = generic_utils.guess_variant_type(civic_variant_name)
+    
+    if (guessed_gene_variant_type == "snv_coding"):
+        print(f"Guessed variant type for: {civic_variant_name!r} -> {guessed_gene_variant_type}")
+    else:
+        print(f"Variant type for: {civic_variant_name!r} is not supported here")
 
     #Concepts to explore/implement
+    #- Create the p. notation for the variant name (e.g. 'S459F' -> 'p.Ser459Phe')
+    civic_variant_name_p_3letter = generic_utils.snv_coding_to_p_3letter(civic_variant_name)
+    print(f"Variant name in p. notation: {civic_variant_name_p_3letter}")
+
     #- Add a mode that reviews all variants, one at a time
+
     #- Skip a variant if it has 0 pending revision from other users
     
     #- Variant ambiguity check (consider an example variant "BRAF V600E"
