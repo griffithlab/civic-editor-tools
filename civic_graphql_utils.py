@@ -61,98 +61,100 @@ def run_graphql_operation(api_url, operation_name, query_id, timeout=(10, 200)):
 
 #execute graphql queries, parse json returns, build a simplied data structure with just the info needed
 def gather_variant_revisions(variant_id, contributor_id):
-	#Get coordinate ids for variant (takes a variant id)
-	resp = run_graphql_operation(api_url, "variant_CoordinateIdsForVariant", variant_id)
-	json = resp.json()
+    #Get coordinate ids for variant (takes a variant id)
+    resp = run_graphql_operation(api_url, "variant_CoordinateIdsForVariant", variant_id)
+    json = resp.json()
 
-	open_revision_count_variant = json['data']['variant']['openRevisionCount']
-	open_revision_count_coordinates = json['data']['variant']['coordinates']['openRevisionCount']
-	variant_coordinates_id = json['data']['variant']['coordinates']['id']
+    open_revision_count_variant = json['data']['variant']['openRevisionCount']
+    open_revision_count_coordinates = json['data']['variant']['coordinates']['openRevisionCount']
+    variant_coordinates_id = json['data']['variant']['coordinates']['id']
 
-	variant_data = {
-		"variant_id": variant_id,
-		"open_revision_count_variant": open_revision_count_variant,
-		"open_revision_count_coordinates": open_revision_count_coordinates,
-		"variant_coordinates_id": variant_coordinates_id,
+    variant_data = {
+        "variant_id": variant_id,
+        "open_revision_count_variant": open_revision_count_variant,
+        "open_revision_count_coordinates": open_revision_count_coordinates,
+        "variant_coordinates_id": variant_coordinates_id,
         "contributor_revisions": 0,
-		"variant_revisions": [],
-		"coordinate_revisions": []
-	}	
+        "variant_revisions": [],
+        "coordinate_revisions": []
+    }	
 
-	#variant_VariantDetail
-	resp = run_graphql_operation(api_url, "variant_VariantDetail", variant_id)
-	json = resp.json()
-	variant_name = json['data']['variant']['name']
-	feature_name = json['data']['variant']['feature']['name']
+    #variant_VariantDetail
+    resp = run_graphql_operation(api_url, "variant_VariantDetail", variant_id)
+    json = resp.json()
+    variant_name = json['data']['variant']['name']
+    feature_name = json['data']['variant']['feature']['name']
 	
-	variant_data['variant_name'] = variant_name
-	variant_data['feature_name'] = feature_name	
+    variant_data['variant_name'] = variant_name
+    variant_data['feature_name'] = feature_name	
 
-	#variant_Revisions-Variant (takes a variant id)
-	resp = run_graphql_operation(api_url, 'variant_Revisions-Variant', variant_id)
-	json = resp.json()
+    #variant_Revisions-Variant (takes a variant id)
+    resp = run_graphql_operation(api_url, 'variant_Revisions-Variant', variant_id)
+    json = resp.json()
 
-	revisions = json["data"]["revisions"]["edges"]
-	i = 0
-	for revision in revisions:
-		revision_id = revision['node']['id']
-		user_id = revision['node']['creationActivity']['user']['id']
-		if user_id == contributor_id:
-			ariant_data['contributor_revisions'] += 1
-		user_display_name = revision['node']['creationActivity']['user']['displayName']
-		revision_values = revision['node']['linkoutData']['diffValue']['addedObjects']
-		revision_values_list = []
-		for revision_value in revision_values:
-			revision_display_name = revision_value['displayName']
-			revision_values_list.append(revision_display_name)
-		field_name = revision['node']['fieldName']
-		revision_values_string = ",".join(sorted(revision_values_list))
+    #pdb.set_trace()
 
-		variant_data["variant_revisions"].append({
-			"index": i,
-			"revision_id": revision_id,
-			"user_id": user_id,
-			"user_display_name": user_display_name,
-			"field_name": field_name,
-			"revision_values_string": revision_values_string
-		})
-		i += 1
+    revisions = json["data"]["revisions"]["edges"]
+    i = 0
+    for revision in revisions:
+        revision_id = revision['node']['id']
+        user_id = revision['node']['creationActivity']['user']['id']
+        user_display_name = revision['node']['creationActivity']['user']['displayName']
+        if user_id == contributor_id:
+            variant_data['contributor_revisions'] += 1
+        revision_values = revision['node']['linkoutData']['diffValue']['addedObjects']
+        revision_values_list = []
+        for revision_value in revision_values:
+            revision_display_name = revision_value['displayName']
+            revision_values_list.append(revision_display_name)
+        field_name = revision['node']['fieldName']
+        revision_values_string = ",".join(sorted(revision_values_list))
 
-	#variant_Revisions-VariantCoordinates (takes a variant _coordinates_ id)
-	resp = run_graphql_operation(api_url, "variant_Revisions-VariantCoordinates", variant_coordinates_id)
-	json = resp.json()
-	coordinate_revisions = json["data"]["revisions"]["edges"]
-	i = 0
-	for revision in coordinate_revisions:
-		revision_id = revision['node']['id']
-		user_id = revision['node']['creationActivity']['user']['id']
-		if user_id == contributor_id:
-			variant_data['contributor_revisions'] += 1
-		user_display_name = revision['node']['creationActivity']['user']['displayName']
-		field_name = revision['node']['fieldName']
-		suggested_value = revision['node']['suggestedValue']
+        variant_data["variant_revisions"].append({
+            "index": i,
+            "revision_id": revision_id,
+            "user_id": user_id,
+            "user_display_name": user_display_name,
+            "field_name": field_name,
+            "revision_values_string": revision_values_string
+        })
+        i += 1
 
-		variant_data["coordinate_revisions"].append({
-			"index": i,
-			"revision_id": revision_id,
-			"user_id": user_id,
-			"user_display_name": user_display_name,
-			"field_name": field_name,
-			"suggested_value": suggested_value
-		})
-		i += 1
+    #variant_Revisions-VariantCoordinates (takes a variant _coordinates_ id)
+    resp = run_graphql_operation(api_url, "variant_Revisions-VariantCoordinates", variant_coordinates_id)
+    json = resp.json()
+    coordinate_revisions = json["data"]["revisions"]["edges"]
+    i = 0
+    for revision in coordinate_revisions:
+        revision_id = revision['node']['id']
+        user_id = revision['node']['creationActivity']['user']['id']
+        if user_id == contributor_id:
+            variant_data['contributor_revisions'] += 1
+        user_display_name = revision['node']['creationActivity']['user']['displayName']
+        field_name = revision['node']['fieldName']
+        suggested_value = revision['node']['suggestedValue']
+
+        variant_data["coordinate_revisions"].append({
+            "index": i,
+            "revision_id": revision_id,
+            "user_id": user_id,
+            "user_display_name": user_display_name,
+            "field_name": field_name,
+            "suggested_value": suggested_value
+        })
+        i += 1
     
-	variant_data['open_revisions_non_contributor'] = variant_data['open_revision_count_variant'] - variant_data['contributor_revisions']
+    variant_data['open_revisions_non_contributor'] = variant_data['open_revision_count_variant'] - variant_data['contributor_revisions']
 
-	#print(variant_data)
+    #print(variant_data)
 
-	#To interactively explore json responses that come back from these queryies, place this inline above:
-	#pdb.set_trace()
-	#json = resp.json()
-	#json['data']['revisions']['edges'][0]['node']['creationActivity']['user']['displayName']
-	#json['data']['revisions']['edges'][0]['node']['linkoutData']['diffValue']['addedObjects'][0]['displayName']
-	#json['data']['revisions']['edges'][0]['node']['fieldName']
-	return variant_data
+    #To interactively explore json responses that come back from these queryies, place this inline above:
+    #pdb.set_trace()
+    #json = resp.json()
+    #json['data']['revisions']['edges'][0]['node']['creationActivity']['user']['displayName']
+    #json['data']['revisions']['edges'][0]['node']['linkoutData']['diffValue']['addedObjects'][0]['displayName']
+    #json['data']['revisions']['edges'][0]['node']['fieldName']
+    return variant_data
 
 #demonstrate functionality of the methods above and variant data retrieved
 def main (variant_id, contributor_id):
@@ -187,8 +189,8 @@ def main (variant_id, contributor_id):
 
 #only run the main function if this script is being run directly
 if __name__ == "__main__":
-	test_variant = 1832 #Example variant POLE S459F (civic.vid: 1832)
-	contributor_id = 15 #Example user (Malachi Griffith, user id 15)
-	main(test_variant, contributor_id)
-
+    #test_variant = 1832 #Example variant POLE S459F (civic.vid: 1832)
+    test_variant = 785 #Example variant giving error
+    contributor_id = 15 #Example user (Malachi Griffith, user id 15)
+    main(test_variant, contributor_id)
 

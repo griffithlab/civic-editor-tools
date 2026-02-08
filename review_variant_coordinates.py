@@ -12,6 +12,7 @@ review workflows tied to a specific CIViC contributor.
 
 import argparse
 import sys
+from civicpy import civic
 
 # Local utility imports
 import generic_utils
@@ -29,14 +30,6 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--variant-id",
-        dest="variant_id",
-        type=int,
-        required=True,
-        help="CIViC variant ID to review (integer, e.g. 1832)"
-    )
-
-    parser.add_argument(
         "--contributor-id",
         dest="contributor_id",
         type=int,
@@ -44,51 +37,79 @@ def parse_args():
         help="CIViC contributor ID performing the review (integer, e.g. 15)"
     )
 
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+        "--variant-id",
+        dest="variant_id",
+        type=int,
+        help="CIViC variant ID to review (integer, e.g. 1832)"
+    )
+    group.add_argument(
+        "--all-variants",
+        dest="all_variants",
+        action="store_true",
+        help="Review all CIViC variants"
+    )
+
     return parser.parse_args()
 
 
-def main(variant_id: int, contributor_id: int):
+def main(variant_id: int, contributor_id: int, all_variants: bool):
 
-    print(f"Reviewing CIViC variant {variant_id} for revisions that could be reviewed by contributor: {contributor_id}")
-
-    variant_data = civic_graphql_utils.gather_variant_revisions(variant_id, contributor_id)
-
-    print(
-        f"\nVariant revision info from gather_variant_revisions()\n"
-        f"Variant ID used for graphql query: {variant_data['variant_id']}\n"
-        f"  Variant name: {variant_data['variant_name']}\n"
-        f"  Feature name: {variant_data['feature_name']}\n"
-        f"  Open gene-variant revisions (total): {variant_data['open_revision_count_variant']}\n"
-        f"  Open gene-variant revisions from specified contributor: {variant_data['contributor_revisions']}\n"
-        f"  Open gene-variant revisions from all others users: {variant_data['open_revisions_non_contributor']}\n"
-        f"  Variant coordinates id: {variant_data['variant_coordinates_id']}"
-    )
-    civic_variant_name = variant_data['variant_name']
-
-    #- Try to guess the variant type based on the CIViC variant name
-    guessed_gene_variant_type = generic_utils.guess_variant_type(civic_variant_name)
+    variant_ids_to_process = []
+    if variant_id:
+        variant_ids_to_process.append(variant_id)
     
-    if (guessed_gene_variant_type == "snv_coding"):
-        print(f"Guessed variant type for: {civic_variant_name!r} -> {guessed_gene_variant_type}")
-    else:
-        print(f"Variant type for: {civic_variant_name!r} is not supported here")
+    if all_variants:
+        include_list = ['accepted', 'submitted']
+        variants = civic.get_all_gene_variants(include_status=include_list, allow_cached=True)
+        variant_ids_to_process = civicpy_utils.extract_variant_id_list(variants)
+        print(f"Total variant ids obtained from CIViCpy: {len(variant_ids_to_process)}\n")
 
-    #Concepts to explore/implement
-    #- Create the p. notation for the variant name (e.g. 'S459F' -> 'p.Ser459Phe')
-    civic_variant_name_p_3letter = generic_utils.snv_coding_to_p_3letter(civic_variant_name)
-    print(f"Variant name in p. notation: {civic_variant_name_p_3letter}")
+    for vid in variant_ids_to_process:
+        print(f"\nReviewing CIViC variant {vid} for revisions that could be reviewed by contributor: {contributor_id}")
 
-    #- Add a mode that reviews all variants, one at a time
+        #query the graphql api for variant info
+        variant_data = civic_graphql_utils.gather_variant_revisions(vid, contributor_id)
 
-    #- Skip a variant if it has 0 pending revision from other users
+        print(
+            f"Variant revision info from gather_variant_revisions()\n"
+            f"Variant ID used for graphql query: {variant_data['variant_id']}\n"
+            f"  Variant name: {variant_data['variant_name']}\n"
+            f"  Feature name: {variant_data['feature_name']}\n"
+            f"  Open gene-variant revisions (total): {variant_data['open_revision_count_variant']}\n"
+            f"  Open gene-variant revisions from specified contributor: {variant_data['contributor_revisions']}\n"
+            f"  Open gene-variant revisions from all others users: {variant_data['open_revisions_non_contributor']}\n"
+            f"  Variant coordinates id: {variant_data['variant_coordinates_id']}"
+        )
+        civic_variant_name = variant_data['variant_name']
+
+        #- Try to guess the variant type based on the CIViC variant name
+        guessed_gene_variant_type = generic_utils.guess_variant_type(civic_variant_name)
     
-    #- Variant ambiguity check (consider an example variant "BRAF V600E"
-    #  - For a given gene get all transcripts (RefSeq and Ensembl) in ClinGen Allele Registry (CAR)
-    #  - Starting from the name of a variant, contruct possible p. hgvs expressions for all RefSeq and Ensembl transcript is CAR
-    #  - Check each of these p. hgvs expressions and get PAIDs. Get all CAIDs associated with these
-    #  - Skip CAIDs that are not a simple SNV?
-    #  - Get the g. HGVS expression associated with all remaining CAIDs (make not of the MANE select)
-    #  - Are there multiple distinct g. HGVS values that the variant name could refer to? If so, warn the user
+        if (guessed_gene_variant_type == "snv_coding"):
+            print(f"Guessed variant type for: {civic_variant_name!r} -> {guessed_gene_variant_type}")
+        else:
+            print(f"Variant type for: {civic_variant_name!r} is not supported here - skipping")
+            continue
+
+        #Concepts to explore/implement
+        #- Create the p. notation for the variant name (e.g. 'S459F' -> 'p.Ser459Phe')
+        civic_variant_name_p_3letter = generic_utils.snv_coding_to_p_3letter(civic_variant_name)
+        print(f"Variant name in p. notation: {civic_variant_name_p_3letter}")
+
+        #- Skip a variant if it has 0 pending revision from other users
+        if variant_data['open_revisions_non_contributor'] == 0:
+            print(f"No open revision for this variant - skipping")
+            continue
+    
+        #- Variant ambiguity check (consider an example variant "BRAF V600E"
+        #  - For a given gene get all transcripts (RefSeq and Ensembl) in ClinGen Allele Registry (CAR)
+        #  - Starting from the name of a variant, contruct possible p. hgvs expressions for all RefSeq and Ensembl transcript is CAR
+        #  - Check each of these p. hgvs expressions and get PAIDs. Get all CAIDs associated with these
+        #  - Skip CAIDs that are not a simple SNV?
+        #  - Get the g. HGVS expression associated with all remaining CAIDs (make not of the MANE select)
+        #  - Are there multiple distinct g. HGVS values that the variant name could refer to? If so, warn the user
 
     
 
@@ -97,7 +118,8 @@ if __name__ == "__main__":
     args = parse_args()
 
     main(
+        contributor_id=args.contributor_id,
         variant_id=args.variant_id,
-        contributor_id=args.contributor_id
+        all_variants=args.all_variants
     )
 
