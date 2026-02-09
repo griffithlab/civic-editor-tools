@@ -103,7 +103,8 @@ def gather_variant_revisions(variant_id, contributor_id):
     feature_name = json['data']['variant']['feature']['name']
 	
     variant_data['variant_name'] = variant_name
-    variant_data['feature_name'] = feature_name	
+    variant_data['feature_name'] = feature_name
+    variant_data['name_change'] = False
 
     #variant_Revisions-Variant (takes a variant id)
     resp = run_graphql_operation(api_url, 'variant_Revisions-Variant', variant_id)
@@ -119,13 +120,24 @@ def gather_variant_revisions(variant_id, contributor_id):
         user_display_name = revision['node']['creationActivity']['user']['displayName']
         if user_id == contributor_id:
             variant_data['contributor_revisions'] += 1
-        revision_values = revision['node']['linkoutData']['diffValue']['addedObjects']
-        revision_values_list = []
-        for revision_value in revision_values:
-            revision_display_name = revision_value['displayName']
-            revision_values_list.append(revision_display_name)
+        
         field_name = revision['node']['fieldName']
-        revision_values_string = ",".join(sorted(revision_values_list))
+        revision_values_string = ""
+
+        #special handling when the revision is the variant "name" itself
+        if field_name == 'name':
+            current_value = revision['node']['currentValue']
+            suggested_value = revision['node']['suggestedValue']
+            revision_values_string = f"'{current_value}' -> '{suggested_value}'"
+            variant_data['name_change'] = True
+        else:
+            #revisions that are lists of things
+            revision_values = revision['node']['linkoutData']['diffValue']['addedObjects']
+            revision_values_list = []
+            for revision_value in revision_values:
+                revision_display_name = revision_value['displayName']
+                revision_values_list.append(revision_display_name)
+            revision_values_string = ",".join(sorted(revision_values_list))
 
         variant_data["variant_revisions"].append({
             "index": i,

@@ -107,6 +107,14 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
             f"  Open gene-variant revisions from all others users: {variant_data['open_revisions_non_contributor']}\n"
             f"  Variant coordinates id: {variant_data['variant_coordinates_id']}"
         )
+
+        variant_revisions = variant_data['variant_revisions']
+
+        #If there is an outstanding revision to the variant name itself, warn the user
+        if variant_data['name_change']:
+            print(f"WARNING. The variant name itself has an outstanding revision!")
+            print(f"  Since this entire exercise derives from that name, this must be resolved first\n")
+
         #Concepts to explore/implement
         #- Create the p. notation for the variant name (e.g. 'S459F' -> 'p.Ser459Phe')
         civic_variant_name_p_3letter = generic_utils.snv_coding_to_p_3letter(civic_variant_name)
