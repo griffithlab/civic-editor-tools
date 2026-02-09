@@ -51,7 +51,14 @@ def guess_variant_type(variant):
 
     variant = variant.strip()
 
-    # 1) coding SNV: e.g. S459F
+    # 1) frameshift: e.g. A321fs
+    match = re.match(r'^([A-Za-z])(\d+)(fs)', variant, re.IGNORECASE)
+    if match:
+        aa = match.group(1)
+        if is_valid_aa(aa):
+            return "frameshift"
+
+    # 2) coding SNV: e.g. S459F
     snv_pattern = re.compile(r"^([A-Za-z])(\d+)([A-Za-z])")
 
     match = snv_pattern.match(variant)
@@ -61,10 +68,11 @@ def guess_variant_type(variant):
         if is_valid_aa(ref_aa) and is_valid_aa(alt_aa):
             return "snv_coding"
     
-    # 2) splice site
+    # 3) splice site
     if variant.startswith("Splice Site"):
         return "splice_site"
 
+    # None of the categories above were guessed from the variant name
     return None
 
 

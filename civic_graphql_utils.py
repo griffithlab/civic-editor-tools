@@ -59,7 +59,24 @@ def run_graphql_operation(api_url, operation_name, query_id, timeout=(10, 200)):
 
     return resp
 
-#execute graphql queries, parse json returns, build a simplied data structure with just the info needed
+#execute graphql queries, parse json returns, return basic variant info
+def gather_variant_details(variant_id):
+    #variant_VariantDetail
+    resp = run_graphql_operation(api_url, "variant_VariantDetail", variant_id)
+    json = resp.json()
+    variant_name = json['data']['variant']['name']
+    feature_name = json['data']['variant']['feature']['name']
+    deprecated = json['data']['variant']['deprecated']
+    variant_data = {
+        "variant_name": variant_name,
+        "feature_name": feature_name,
+        "deprecated": deprecated
+    }
+    #pdb.set_trace()
+
+    return variant_data    
+
+#execute graphql queries, parse json returns, build a simplied data structure with the variant revision info needed
 def gather_variant_revisions(variant_id, contributor_id):
     #Get coordinate ids for variant (takes a variant id)
     resp = run_graphql_operation(api_url, "variant_CoordinateIdsForVariant", variant_id)
@@ -155,6 +172,29 @@ def gather_variant_revisions(variant_id, contributor_id):
     #json['data']['revisions']['edges'][0]['node']['linkoutData']['diffValue']['addedObjects'][0]['displayName']
     #json['data']['revisions']['edges'][0]['node']['fieldName']
     return variant_data
+
+def load_blacklisted_variant_ids(filepath):
+	"""Load blacklisted variant IDs from a file. One per line. Each line must start with the ID, anything else on the line will be ignored"""
+	variant_ids = set()
+
+	with open(filepath, "r") as fh:
+		next(fh) #skip header
+
+		for line in fh:
+			line = line.strip()
+			if not line:
+				continue
+
+			# Take the first whitespace-delimited field only
+			variant_id_str = line.split()[0]
+
+			try:
+				variant_ids.add(int(variant_id_str))
+			except ValueError:
+				continue
+
+	return variant_ids
+
 
 #demonstrate functionality of the methods above and variant data retrieved
 def main (variant_id, contributor_id):
