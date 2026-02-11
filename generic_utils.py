@@ -59,7 +59,7 @@ def guess_variant_type(variant):
             return "frameshift"
 
     # 2) coding SNV: e.g. S459F
-    snv_pattern = re.compile(r"^([A-Za-z])(\d+)([A-Za-z])")
+    snv_pattern = re.compile(r"^([A-Za-z])(\d+)([A-Za-z])(?=\s|$)")
 
     match = snv_pattern.match(variant)
     if match:

@@ -2,25 +2,33 @@
 
 import requests
 import urllib.parse
+import sys
 
 BASE_URL = "https://reg.genome.network"
 
-# query clingen API using a protein HGVS (e.g. NP_004324.2:p.Val600Glu)
 def get_allele_by_hgvs(hgvs):
+    """query clingen API using a protein HGVS (e.g. NP_004324.2:p.Val600Glu)"""
     url = f"{BASE_URL}/allele?hgvs={urllib.parse.quote(hgvs, safe='')}"
     r = requests.get(url, headers={"Accept": "application/json"})
     r.raise_for_status()
     return r.json()
 
-# query clingen API using a transcript level CAID
 def get_allele_by_id(allele_id):
+    """query clingen API using a transcript level CAID"""
     url = f"{BASE_URL}/allele/{allele_id}"
     r = requests.get(url, headers={"Accept": "application/json"})
     r.raise_for_status()
     return r.json()
 
-# extract CAIDs from a protein PAID json object
+def get_reference_sequences_by_gene(gene_name):
+    """query clinen API using a gene name"""
+    url = f"{BASE_URL}/refseqs?gene={gene_name}"
+    r = requests.get(url, headers={"Accept": "application/json"})
+    r.raise_for_status()
+    return r.json()
+
 def extract_transcript_cas(pa_json):
+    """extract CAIDs from a protein PAID json object"""
     cas = []
     for aa in pa_json.get("aminoAcidAlleles", []):
         for tx in aa.get("matchingRegisteredTranscripts", []):
@@ -31,8 +39,8 @@ def extract_transcript_cas(pa_json):
             })
     return cas
 
-# extract genomic coordinate info from a transcript CAID json object
 def extract_genomic_coords(ca_json):
+    """extract genomic coordinate info from a transcript CAID json object"""
     coords = []
     allowed_assemblies = {"GRCh37", "GRCh38"}
 
@@ -57,9 +65,30 @@ def extract_genomic_coords(ca_json):
 
     return coords
 
+def extract_reference_sequences(ref_seqs_json):
+    tid_list = []
+    for reference_sequence in ref_seqs_json:
+        type = reference_sequence['type']
+        if type != "transcript":
+            continue
+        external_records = reference_sequence['externalRecords']
 
-# given a protein level civic variant (e.g. BRAF V600E) get possible coords from clingen
+        tid = (
+            external_records.get('NCBI', {}).get('id')
+            or
+            external_records.get('Ensembl', {}).get('id')
+        )
+        # reject predicted/refseq model transcripts
+        if tid.startswith(("XM_", "XR_")):
+            continue
+
+        if tid is None:
+            sys.exit("Error: No transcript ID found in NCBI or Ensembl external records.")
+        tid_list.append(tid)
+    return tid_list
+
 if __name__ == "__main__":
+    """given a protein level civic variant (e.g. BRAF V600E) get possible coords from clingen"""
 
     gene_symbol = "POLE"
     protein_id = "NP_006222.2"
@@ -77,6 +106,7 @@ if __name__ == "__main__":
     # example: http://reg.genome.network/allele/CA123643
     transcript_cas = extract_transcript_cas(pa)
 
+    # for each transcript-level CA allele, get additional information 
     for tx in transcript_cas:
         print(f"\nTranscript {tx['hgvs']} ({tx['caid']})")
 
@@ -87,4 +117,11 @@ if __name__ == "__main__":
                 f"  {c['assembly']} chr{c['chr']}:{c['start']}-{c['end']} "
                 f"{c['ref']}>{c['alt']}"
             )
+
+    # for a single gene, get the supported transcript identifiers
+    rs = get_reference_sequences_by_gene(gene_symbol)
+    reference_sequence_ids = extract_reference_sequences(rs)
+    print(f"\nClinGen supported transcript ids (excluding XR_ and NR_): {reference_sequence_ids}")
+
+
 
