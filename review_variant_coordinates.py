@@ -56,8 +56,11 @@ def parse_args():
 
 def main(variant_id: int, contributor_id: int, all_variants: bool):
 
+    #load black listed variants file
     black_list_path = "data/civic_variant_blacklist.tsv"
     black_listed_variant_ids = civic_graphql_utils.load_blacklisted_variant_ids(black_list_path)
+
+    clingen_transcript_ids = {}
 
     variant_ids_to_process = []
     if variant_id:
@@ -70,6 +73,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
         print(f"Total variant ids obtained from CIViCpy: {len(variant_ids_to_process)}\n")
 
     for vid in variant_ids_to_process:
+        #skip if this variant is black listed
         if vid in black_listed_variant_ids:
             print(f"\nSkipping CIViC variant {vid} because it was found in the blacklist: {black_list_path}")
             continue
@@ -81,11 +85,12 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
 
         civic_variant_name = variant_data_basic['variant_name']
 
+        #skip variants with deprecated status
         if (variant_data_basic['deprecated'] == "True"):
             print(f"Skipping CIViC variant {vid} because it has a deprecated status")
             continue
 
-        #- Try to guess the variant type based on the CIViC variant name
+        #guess the variant type based on the CIViC variant name - skip unless it is a coding snv
         guessed_gene_variant_type = generic_utils.guess_variant_type(civic_variant_name)
     
         if (guessed_gene_variant_type == "snv_coding"):
@@ -94,7 +99,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
             print(f"Guessed variant type for: {civic_variant_name!r} -> {guessed_gene_variant_type} is not supported here - skipping")
             continue
 
-        #now query the graphql api for more detailed variant revision info
+        #query the graphql api for more detailed variant revision info
         variant_data = civic_graphql_utils.gather_variant_revisions(vid, contributor_id)
 
         print(
@@ -110,23 +115,32 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
 
         variant_revisions = variant_data['variant_revisions']
 
-        #If there is an outstanding revision to the variant name itself, warn the user
+        #if there is an outstanding revision to the variant name itself, warn the user
         if variant_data['name_change']:
             print(f"WARNING. The variant name itself has an outstanding revision!")
             print(f"  Since this entire exercise derives from that name, this must be resolved first\n")
 
-        #Concepts to explore/implement
-        #- Create the p. notation for the variant name (e.g. 'S459F' -> 'p.Ser459Phe')
+        #create the p. notation for the variant name (e.g. 'S459F' -> 'p.Ser459Phe')
         civic_variant_name_p_3letter = generic_utils.snv_coding_to_p_3letter(civic_variant_name)
         print(f"Variant name in p. notation: {civic_variant_name_p_3letter}")
 
-        #- Skip a variant if it has 0 pending revision from other users
+        #skip a variant if it has 0 pending revision from other users
         if variant_data['open_revisions_non_contributor'] == 0:
             print(f"No open revision for this variant - skipping")
             continue
+
+        #get all clingen allele registry transcripts supported for the gene of this variant
+        gene_name = variant_data['feature_name']
+        clingen_gene_transcript_ids = clingen_transcript_ids.get(gene_name)
+
+        if clingen_gene_transcript_ids is None:
+            clingen_gene_transcript_ids = clingen_ar_utils.get_reference_sequences_by_gene(gene_name)
+            clingen_transcript_ids[gene_name] = clingen_gene_transcript_ids
+
     
         #- Variant ambiguity check (consider an example variant "BRAF V600E"
         #  - For a given gene get all transcripts (RefSeq and Ensembl) in ClinGen Allele Registry (CAR)
+        #  - Check which of these transcripts have the expected ref AA at the expected position
         #  - Starting from the name of a variant, contruct possible p. hgvs expressions for all RefSeq and Ensembl transcript is CAR
         #  - Check each of these p. hgvs expressions and get PAIDs. Get all CAIDs associated with these
         #  - Skip CAIDs that are not a simple SNV?

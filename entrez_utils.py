@@ -5,6 +5,7 @@ import ssl
 import certifi
 from Bio import Entrez
 import xml.etree.ElementTree as ET
+import gzip
 
 def _patched_https_context():
     return ssl.create_default_context(cafile=certifi.where())
@@ -29,8 +30,8 @@ def get_gene_id(gene_symbol, organism="human"):
 
     return record["IdList"][0]
 
-# create a dictionary of gene symbol to gene/protein ids (read from flat file)
 def load_mane_summary(path):
+    """create a dictionary of gene symbol to gene/protein ids for mane select transcripts only"""
     mane = {}
     with open(path) as fh:
         header = fh.readline().strip().split("\t")
@@ -43,26 +44,36 @@ def load_mane_summary(path):
                 }
     return mane
 
-def get_protein_from_transcript(transcript_id):
-    """Map NM_ transcript to NP_ protein by parsing RefSeq record"""
 
-    # NCBI efetch is unreliable with versioned NM_ accessions
-    base_id = transcript_id.split(".")[0]
+def load_refseq_transcript_to_protein_map(filepath):
+    """load refseq transcript to protein id mappings from a file"""
+    tx_to_protein = {}
 
-    handle = Entrez.efetch(
-        db="nucleotide",
-        id=base_id,
-        rettype="gbwithparts",
-        retmode="text"
-    )
-    record = handle.read()
-    handle.close()
+    open_func = gzip.open if filepath.endswith(".gz") else open
 
-    for line in record.splitlines():
-        if line.strip().startswith("/protein_id="):
-            return line.split('"')[1]
+    with open_func(filepath, "rt") as f:
+        for line in f:
+            line = line.strip()
 
-    raise ValueError(f"No protein_id found for {transcript_id}")
+            # Skip header or empty lines
+            if not line or line.startswith("#"):
+                continue
+
+            fields = line.split()
+
+            # Defensive check (make sure enough columns exist)
+            if len(fields) < 6:
+                continue
+
+            transcript_id = fields[3]
+            protein_id = fields[5]
+
+            if not transcript_id.startswith("NM_"):
+                continue
+
+            tx_to_protein[transcript_id] = protein_id
+
+    return tx_to_protein
 
 
 def main(gene_symbol):
@@ -77,6 +88,9 @@ def main(gene_symbol):
     print(f"MANE Select transcript: {mane_nm}")
     print(f"Corresponding protein: {mane_np}")
 
+    refseq_transcript_to_protein_map = load_refseq_transcript_to_protein_map("data/gene2refseq_human.tsv.gz")
+    mapped_np = refseq_transcript_to_protein_map.get(mane_nm)
+    print(f"Mapped protein id: {mapped_np}")
 
 if __name__ == "__main__":
     main("POLE")

@@ -66,6 +66,7 @@ def extract_genomic_coords(ca_json):
     return coords
 
 def extract_reference_sequences(ref_seqs_json):
+    """get all supported ensembl and refseq transcript ids for a gene from clingen allele registry"""
     tid_list = []
     for reference_sequence in ref_seqs_json:
         type = reference_sequence['type']
@@ -121,7 +122,7 @@ if __name__ == "__main__":
     # for a single gene, get the supported transcript identifiers
     rs = get_reference_sequences_by_gene(gene_symbol)
     reference_sequence_ids = extract_reference_sequences(rs)
-    print(f"\nClinGen supported transcript ids (excluding XR_ and NR_): {reference_sequence_ids}")
+    print(f"\nClinGen supported transcript ids (excluding XR_ and NR_ transcripts):\n {reference_sequence_ids}")
 
 
 
