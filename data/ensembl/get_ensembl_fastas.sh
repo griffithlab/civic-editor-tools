@@ -7,6 +7,7 @@ while IFS= read -r v; do
 done < ensembl_versions.txt
 
 mkdir -p version_data
+cd version_data
 
 for v in "${versions[@]}"; do
     echo "Processing $v"
