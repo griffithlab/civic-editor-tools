@@ -20,6 +20,7 @@ import civic_graphql_utils
 import civicpy_utils
 import clingen_ar_utils
 import entrez_utils
+import ensembl_utils
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -59,6 +60,15 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
     #load black listed variants file
     black_list_path = "data/civic_variant_blacklist.tsv"
     black_listed_variant_ids = civic_graphql_utils.load_blacklisted_variant_ids(black_list_path)
+    
+    #get mappings of transcripts to protein identifiers
+    refseq_transcript_to_protein_map = entrez_utils.load_refseq_transcript_to_protein_map("data/gene2refseq_human.tsv.gz")
+    ensembl_transcript_to_protein_map = ensembl_utils.parse_ensembl_pep_fasta("data/ensembl/Homo_sapiens.GRCh38.pep.all.v115.fa.gz", strip_version=False)
+
+    #get ensembl transcript biotype to transcript identifiers
+    fasta_files = ["data/ensembl/Homo_sapiens.GRCh38.cdna.all.v115.fa.gz", 
+                   "data/ensembl/Homo_sapiens.GRCh38.ncrna.v115.fa.gz"]
+    ensembl_transcript_to_biotype = ensembl_utils.build_transcript_biotype_map(fasta_files)
 
     clingen_transcript_ids = {}
 
@@ -130,14 +140,44 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
             continue
 
         #get all clingen allele registry transcripts supported for the gene of this variant
+        #only get query the clingen API if we don't already have transcripts for this gene
         gene_name = variant_data['feature_name']
         clingen_gene_transcript_ids = clingen_transcript_ids.get(gene_name)
 
         if clingen_gene_transcript_ids is None:
             clingen_gene_transcript_ids = clingen_ar_utils.get_reference_sequences_by_gene(gene_name)
             clingen_transcript_ids[gene_name] = clingen_gene_transcript_ids
+        clingen_reference_sequence_ids = clingen_ar_utils.extract_reference_sequences(clingen_gene_transcript_ids)
+        clingen_reference_sequence_ids_latest = clingen_ar_utils.keep_latest_transcript_versions(clingen_reference_sequence_ids)
 
-    
+        for clingen_reference_sequence_id in clingen_reference_sequence_ids_latest:
+            #if the transcript ID is an ensembl ID and its biotype is NOT protein_coding, skip it
+            if clingen_reference_sequence_id.startswith("ENST"):
+                if clingen_reference_sequence_id not in ensembl_transcript_to_biotype:
+                    #raise ValueError(
+                    #    f"{clingen_reference_sequence_id} not found in Ensembl biotype map"
+                    #)
+                    print(f"{clingen_reference_sequence_id} not found in Ensembl biotype map")
+                    continue
+                if ensembl_transcript_to_biotype[clingen_reference_sequence_id] != "protein_coding":
+                    print(f"{clingen_reference_sequence_id} not protein coding")
+                    continue
+
+            print(clingen_reference_sequence_id)
+
+            protein_id = None
+
+            if clingen_reference_sequence_id in refseq_transcript_to_protein_map:
+                protein_id = refseq_transcript_to_protein_map[clingen_reference_sequence_id]
+            elif clingen_reference_sequence_id in ensembl_transcript_to_protein_map:
+                protein_id = ensembl_transcript_to_protein_map[clingen_reference_sequence_id]
+            #else:
+                #raise ValueError(
+                #    f"Transcript ID {clingen_reference_sequence_id} not found in "
+                #    "RefSeq or Ensembl transcript-to-protein maps"
+                #)
+            print(f"transcript id: {clingen_reference_sequence_id} -> protein_id: {protein_id}")
+
         #- Variant ambiguity check (consider an example variant "BRAF V600E"
         #  - For a given gene get all transcripts (RefSeq and Ensembl) in ClinGen Allele Registry (CAR)
         #  - Check which of these transcripts have the expected ref AA at the expected position

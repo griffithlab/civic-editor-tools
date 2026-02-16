@@ -88,6 +88,26 @@ def extract_reference_sequences(ref_seqs_json):
         tid_list.append(tid)
     return tid_list
 
+def keep_latest_transcript_versions(reference_sequence_ids):
+    latest = {}
+
+    for tid in reference_sequence_ids:
+        if "." not in tid:
+            raise ValueError(f"Transcript ID missing version: {tid}")
+
+        base_id, version_str = tid.rsplit(".", 1)
+
+        if not version_str.isdigit():
+            raise ValueError(f"Invalid version in transcript ID: {tid}")
+
+        version = int(version_str)
+
+        if base_id not in latest or version > latest[base_id][1]:
+            latest[base_id] = (tid, version)
+
+    return [v[0] for v in latest.values()]
+
+
 if __name__ == "__main__":
     """given a protein level civic variant (e.g. BRAF V600E) get possible coords from clingen"""
 
@@ -119,10 +139,13 @@ if __name__ == "__main__":
                 f"{c['ref']}>{c['alt']}"
             )
 
-    # for a single gene, get the supported transcript identifiers
+    # for a single gene, get all the CAR supported transcript identifiers
     rs = get_reference_sequences_by_gene(gene_symbol)
     reference_sequence_ids = extract_reference_sequences(rs)
     print(f"\nClinGen supported transcript ids (excluding XR_ and NR_ transcripts):\n {reference_sequence_ids}")
 
+    # produce a filtered list that keeps only the most recent version of each transcript support by CAR
+    reference_sequence_ids_latest = keep_latest_transcript_versions(reference_sequence_ids)
+    print(f"\nClinGen supported transcript ids (only most recent versions):\n {reference_sequence_ids_latest}")
 
 
