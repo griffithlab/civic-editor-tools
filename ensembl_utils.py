@@ -213,8 +213,6 @@ def main():
     print(f"{enst1} -> {ensembl_transcript_to_biotype_map[enst1]}")
 
 
-
-
 if __name__ == "__main__":
     main()
 
