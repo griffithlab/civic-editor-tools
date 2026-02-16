@@ -209,5 +209,7 @@ __marimo__/
 # Vim
 *.swp
 
+# Project specific 
 data/ensembl/version_data/
+*.pkl
 
