@@ -91,6 +91,24 @@ def snv_coding_to_p_3letter(variant):
     return f"p.{aa_1_to_3(ref_aa)}{pos}{aa_1_to_3(alt_aa)}"
 
 
+def parse_snv_coding_name_components(snv_coding_name):
+    """
+    Parse a CIViC-style protein variant like 'S459F'
+    into (ref_aa_1, pos, var_aa_1).
+
+    Raises ValueError if the format is invalid.
+    """
+    pattern = re.compile(r"^([A-Z])(\d+)([A-Z])$")
+
+    match = pattern.match(snv_coding_name)
+    if not match:
+        raise ValueError(f"Invalid variant format: {snv_coding_name}")
+
+    ref_aa_1, pos, var_aa_1 = match.groups()
+
+    return ref_aa_1, int(pos), var_aa_1
+
+
 def main():
     
     test_aa_1 = "W"
@@ -120,6 +138,10 @@ def main():
         vtype = guess_variant_type(v)
         vname_long = snv_coding_to_p_3letter(v)
         print(f"{v!r} -> {vtype}. Long form name: {vname_long}")
+
+    test_snv_coding_variant_name = "S459F"
+    ref_aa_1, pos, var_aa_1 = parse_snv_coding_name_components(test_snv_coding_variant_name)
+    print(f"{test_snv_coding_variant_name} -> ref_aa_1: {ref_aa_1} / pos: {pos} / var_aa_1: {var_aa_1}")
 
 
 if __name__ == "__main__":
