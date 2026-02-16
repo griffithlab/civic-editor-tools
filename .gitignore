@@ -209,3 +209,5 @@ __marimo__/
 # Vim
 *.swp
 
+data/ensembl/version_data/
+
