@@ -63,7 +63,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
     black_listed_variant_ids = civic_graphql_utils.load_blacklisted_variant_ids(black_list_path)
     
     #get mappings of transcript to protein identifiers for refseq transcripts
-    refseq_transcript_to_protein_map = entrez_utils.load_refseq_transcript_to_protein_map("data/gene2refseq_human.tsv.gz")
+    refseq_transcript_to_protein_map = entrez_utils.load_refseq_transcript_to_protein_map("data/entrez/gene2refseq_human.tsv.gz")
 
     #get mappings ot transcript to protein identifier for ensembl transcripts
     ensembl_transcript_to_protein_map = {}
