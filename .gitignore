@@ -211,5 +211,7 @@ __marimo__/
 
 # Project specific 
 data/ensembl/version_data/
+data/refseq/indexed/
+data/refseq/*.faa.gz
 *.pkl
 

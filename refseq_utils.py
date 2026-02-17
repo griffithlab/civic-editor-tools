@@ -3,47 +3,35 @@
 import os
 import gzip
 import pickle
+from Bio import SeqIO
 
-def get_refseq_protein(refseq_id, refseq_fasta_path):
-    """
-    Parse a gzipped RefSeq FASTA file and return the protein sequence
-    for an exact RefSeq ID match (e.g. 'NM_006231.4').
-    """
+def build_refseq_fasta_index(refseq_fasta_path, index_path):
+    """Creates a persistent index file (.idx)"""
 
-    if not refseq_id:
-        raise ValueError("refseq_id must be provided")
+    SeqIO.index_db(index_path, refseq_fasta_path, "fasta")
 
-    found = False
-    sequence_lines = []
 
-    with gzip.open(refseq_fasta_path, "rt") as handle:
-        for line in handle:
-            if line.startswith(">"):
-                header_id = line[1:].split()[0]
+def get_refseq_protein_indexed(refseq_protein_id, index_path):
+    """Given a refseq protein id and a prebuilt SeqIO index, retrieve the protein sequence"""
+    index = SeqIO.index_db(index_path)
+    
+    if refseq_protein_id not in index:
+        raise ValueError(f"{refseq_protein_id} not found in index")
 
-                # If we were already collecting and hit a new header, stop
-                if found:
-                    break
-
-                if header_id == refseq_id:
-                    found = True
-                    continue
-            else:
-                if found:
-                    sequence_lines.append(line.strip())
-
-    if not found:
-        raise ValueError(f"RefSeq ID '{refseq_id}' not found in {refseq_fasta_path}")
-
-    return "".join(sequence_lines)
+    return str(index[refseq_protein_id].seq)
 
 
 def main():
 
-    refseq_fasta_path = "data/refseq/GCF_000001405.40_GRCh38.p14_protein.faa.gz"
     test_refseq_protein_id = "NP_006222.2"
 
-    seq = get_refseq_protein(test_refseq_protein_id, refseq_fasta_path)
+    # build the index
+    refseq_fasta_path = "data/refseq/indexed/GCF_000001405.40_GRCh38.p14_protein.faa"
+    refseq_fasta_index_path = "data/refseq/indexed/GCF_000001405.40_GRCh38.p14_protein.faa.idx"
+    build_refseq_fasta_index(refseq_fasta_path, refseq_fasta_index_path)
+
+    # Later
+    seq = get_refseq_protein_indexed(test_refseq_protein_id, refseq_fasta_index_path)
     
     print(f"Found sequence of {test_refseq_protein_id} with length: {len(seq)}:")
     print(seq)

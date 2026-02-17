@@ -6,7 +6,7 @@ while IFS= read -r v; do
     versions+=("$v")
 done < ensembl_versions.txt
 
-mkdir -p version_data
+mkdir -p version_data/indexed
 
 for v in "${versions[@]}"; do
     echo "Processing $v"
@@ -25,9 +25,11 @@ for v in "${versions[@]}"; do
         echo "  $outfile_ncrna already exists"
     fi
 
-    outfile_pep="version_data/Homo_sapiens.GRCh38.pep.all.v${v}.fa.gz"
+    outfile_pep="Homo_sapiens.GRCh38.pep.all.v${v}.fa.gz"
     if [[ ! -f "$outfile_pep" ]]; then
-        wget https://ftp.ensembl.org/pub/release-${v}/fasta/homo_sapiens/pep/Homo_sapiens.GRCh38.pep.all.fa.gz -O $outfile_pep
+        wget https://ftp.ensembl.org/pub/release-${v}/fasta/homo_sapiens/pep/Homo_sapiens.GRCh38.pep.all.fa.gz -O version_data/$outfile_pep
+	cp version_data/$outfile_pep version_data/indexed/
+	gunzip version_data/indexed/$outfile_pep
     else
         echo "  $outfile_pep already exists"
     fi

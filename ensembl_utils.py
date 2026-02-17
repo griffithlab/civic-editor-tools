@@ -3,6 +3,7 @@
 import os
 import gzip
 import pickle
+from Bio import SeqIO
 
 def build_transcript_to_protein_id_map(fasta_path, transcript_to_protein=None, strip_version=False):
     """
@@ -109,7 +110,11 @@ def load_ensembl_versions(filepath):
 
 
 def compile_transcript_to_protein_map(ensembl_versions_file):
-    """Use the ensembl peptide parsing method to compile a transcript to protein id map from multiple version of ensembl defined in a file"""
+    """
+    Use the ensembl peptide parsing method to compile a transcript to protein id map 
+    from multiple version of ensembl defined in a file
+    """
+
     print(f"\nLoading ensembl transcript to protein map from multiple versions of ensembl")
     ensembl_transcript_to_protein_map = {}
     versions = load_ensembl_versions(ensembl_versions_file)
@@ -125,7 +130,11 @@ def compile_transcript_to_protein_map(ensembl_versions_file):
 
 
 def compile_transcript_to_biotype_map(ensembl_versions_file):
-    """Use the ensembl biotype parsing method to compile a transcript to biotype map from multiple version of ensembl defined in a file"""
+    """
+    Use the ensembl biotype parsing method to compile a transcript to biotype map from 
+    multiple version of ensembl defined in a file
+    """
+
     print(f"\nLoading ensembl transcript to biotype map from multiple versions of ensembl")
     ensembl_transcript_to_biotype_map = {}
     versions = load_ensembl_versions(ensembl_versions_file)
@@ -138,6 +147,43 @@ def compile_transcript_to_biotype_map(ensembl_versions_file):
         )
         print(f"  Loaded ensembl version: {version}. Total mappings so far: {len(transcript_to_biotype)}")
     return ensembl_transcript_to_biotype_map
+
+
+def build_ensembl_fasta_index(ensembl_versions_file):
+    """Creates a persistent index file (.idx) for each ensembl fasta file"""
+
+    versions = load_ensembl_versions(ensembl_versions_file)
+
+    for version in versions:
+        ensembl_fasta_path = f"data/ensembl/version_data/indexed/Homo_sapiens.GRCh38.pep.all.v{version}.fa"
+        ensembl_fasta_index_path = f"{ensembl_fasta_path}.idx"
+
+        SeqIO.index_db(ensembl_fasta_index_path, ensembl_fasta_path, "fasta")
+
+
+def get_ensembl_protein_indexed(ensembl_protein_id, ensembl_versions_file):
+    """
+    Given and ensembl protein id and a prebuilt SeqIO index, retrieve the protein sequence
+    Search across multiple version of Ensembl but stop searching once the id is found
+    """
+    protein_seq = None
+
+    versions = load_ensembl_versions(ensembl_versions_file)
+
+    for version in versions:
+        index_path = f"data/ensembl/version_data/indexed/Homo_sapiens.GRCh38.pep.all.v{version}.fa.idx"
+        index = SeqIO.index_db(index_path)
+
+        if ensembl_protein_id not in index:
+            continue
+        else:
+            protein_seq = str(index[ensembl_protein_id].seq)
+            return protein_seq
+
+    if biotype is None:
+        raise ValueError(
+            f"No protein sequence found for {ensembl_protein_id} in ensembl versions: {ensembl_versions_file}"
+        )
 
 
 def save_transcript_map_pickle(transcript_map, output_path):
@@ -160,8 +206,8 @@ def main():
     print(f"\nWith versions")
     print(f"Imported {len(ensembl_transcript_to_protein_map)} Ensembl transcript to protein mappings")
     enst1 = "ENST00000641515.2"
-    ensp = ensembl_transcript_to_protein_map.get(enst1)
-    print(f"Test ensembl transcript to protein map for: {enst1}: {ensp}\n")
+    ensp1 = ensembl_transcript_to_protein_map.get(enst1)
+    print(f"Test ensembl transcript to protein map for: {enst1}: {ensp1}\n")
 
     #load ensembl transcript to protein map from a single file (remove version numbers)
     ensembl_transcript_to_protein_map = build_transcript_to_protein_id_map(
@@ -171,8 +217,8 @@ def main():
     print(f"\nWithout versions")
     print(f"Imported {len(ensembl_transcript_to_protein_map)} Ensembl transcript to protein mappings")
     enst2 = "ENST00000641515"
-    ensp = ensembl_transcript_to_protein_map.get(enst2)
-    print(f"Test ensembl transcript to protein map for: {enst2}: {ensp}\n")
+    ensp2 = ensembl_transcript_to_protein_map.get(enst2)
+    print(f"Test ensembl transcript to protein map for: {enst2}: {ensp2}\n")
 
     ensembl_versions_file = "data/ensembl/ensembl_versions.txt"
 
@@ -187,8 +233,8 @@ def main():
         ensembl_transcript_to_protein_map = compile_transcript_to_protein_map(ensembl_versions_file)
         save_transcript_map_pickle(ensembl_transcript_to_protein_map, transcript_to_protein_map_path)
 
-    ensp = ensembl_transcript_to_protein_map.get(enst1)
-    print(f"Test ensembl transcript to protein map using multi-version object for: {enst1}: {ensp}\n")
+    ensp1 = ensembl_transcript_to_protein_map.get(enst1)
+    print(f"Test ensembl transcript to protein map using multi-version object for: {enst1}: {ensp1}\n")
 
     #load ensembl transcript to biotype map from a single file
     fasta_files = ["data/ensembl/version_data/Homo_sapiens.GRCh38.cdna.all.v115.fa.gz", 
@@ -211,6 +257,15 @@ def main():
 
     print(f"\nImported {len(ensembl_transcript_to_biotype_map)} Ensembl transcript to biotype mappings")
     print(f"{enst1} -> {ensembl_transcript_to_biotype_map[enst1]}")
+
+    #Build fasta indexes for each ensembl peptide fasta
+    build_ensembl_fasta_index(ensembl_versions_file)
+
+    #Extract a protein sequence from an ensembl protein id
+    ensp_seq = get_ensembl_protein_indexed(ensp1, ensembl_versions_file)
+
+    print(f"\nProtein sequence for ensembl protein: {ensp1}")
+    print(f"{ensp_seq}")
 
 
 if __name__ == "__main__":
