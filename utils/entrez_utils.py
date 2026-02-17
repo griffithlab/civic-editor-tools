@@ -6,6 +6,9 @@ import certifi
 from Bio import Entrez
 import xml.etree.ElementTree as ET
 import gzip
+from pathlib import Path
+
+base_dir = Path(__file__).resolve().parent
 
 def _patched_https_context():
     return ssl.create_default_context(cafile=certifi.where())
@@ -49,7 +52,7 @@ def load_refseq_transcript_to_protein_map(filepath):
     """load refseq transcript to protein id mappings from a file"""
     tx_to_protein = {}
 
-    open_func = gzip.open if filepath.endswith(".gz") else open
+    open_func = gzip.open if filepath.suffix == ".gz" else open
 
     with open_func(filepath, "rt") as f:
         for line in f:
@@ -78,7 +81,7 @@ def load_refseq_transcript_to_protein_map(filepath):
 
 def main(gene_symbol):
     gene_id = get_gene_id(gene_symbol)
-    mane = load_mane_summary("data/refseq/MANE.GRCh38.v1.5.summary.txt")
+    mane = load_mane_summary(base_dir / f"../data/refseq/MANE.GRCh38.v1.5.summary.txt")
     mane_nm = mane[gene_symbol]["transcript"]
     mane_np = mane[gene_symbol]["protein"]
     #mane_np = get_protein_from_transcript(mane_nm)
@@ -88,7 +91,7 @@ def main(gene_symbol):
     print(f"MANE Select transcript: {mane_nm}")
     print(f"Corresponding protein: {mane_np}")
 
-    refseq_transcript_to_protein_map = load_refseq_transcript_to_protein_map("data/entrez/gene2refseq_human.tsv.gz")
+    refseq_transcript_to_protein_map = load_refseq_transcript_to_protein_map(base_dir / f"../data/entrez/gene2refseq_human.tsv.gz")
     mapped_np = refseq_transcript_to_protein_map.get(mane_nm)
     print(f"Mapped protein id: {mapped_np}")
 

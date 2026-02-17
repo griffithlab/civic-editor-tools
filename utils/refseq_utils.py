@@ -4,6 +4,9 @@ import os
 import gzip
 import pickle
 from Bio import SeqIO
+from pathlib import Path
+
+base_dir = Path(__file__).resolve().parent
 
 def build_refseq_fasta_index(refseq_fasta_path, index_path):
     """Creates a persistent index file (.idx)"""
@@ -26,8 +29,8 @@ def main():
     test_refseq_protein_id = "NP_006222.2"
 
     # build the index
-    refseq_fasta_path = "data/refseq/indexed/GCF_000001405.40_GRCh38.p14_protein.faa"
-    refseq_fasta_index_path = "data/refseq/indexed/GCF_000001405.40_GRCh38.p14_protein.faa.idx"
+    refseq_fasta_path = base_dir / f"../data/refseq/indexed/GCF_000001405.40_GRCh38.p14_protein.faa"
+    refseq_fasta_index_path = base_dir / f"../data/refseq/indexed/GCF_000001405.40_GRCh38.p14_protein.faa.idx"
     build_refseq_fasta_index(refseq_fasta_path, refseq_fasta_index_path)
 
     # Later
@@ -39,7 +42,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
 

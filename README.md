@@ -25,6 +25,7 @@ Before running for the first time the following python dependencies will need to
 
 Install dependencies with:
 ```bash
+cd ~/git/civic-editor-tools
 pip3 install -r requirements.txt
 ```
 
@@ -47,13 +48,13 @@ cd ~/git/civic-editor-tools
 Execute the following one at a time and examine the output for any errors
 ```bash
 
-./civic_graphql_utils.py
-./civicpy_utils.py
-./clingen_ar_utils.py
-./ensembl_utils.py
-./entrez_utils.py
-./generic_utils.py
-./refseq_utils.py
+./utils/civic_graphql_utils.py
+./utils/civicpy_utils.py
+./utils/clingen_ar_utils.py
+./utils/ensembl_utils.py
+./utils/entrez_utils.py
+./utils/generic_utils.py
+./utils/refseq_utils.py
 
 ```
 

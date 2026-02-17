@@ -5,6 +5,7 @@ import requests
 import pdb
 
 api_url = "https://civicdb.org/api/graphql"
+base_dir = Path(__file__).resolve().parent
 
 #update a template graphql object string to inject the query ID to be used
 def populate_variables_id(variables_template: str, graphql_id: int) -> str:
@@ -27,11 +28,9 @@ def populate_variables_id(variables_template: str, graphql_id: int) -> str:
 
 #load graphql query and variable json objects from file, update with a query id, and submit the query to the API
 def run_graphql_operation(api_url, operation_name, query_id, timeout=(10, 200)):
-    # Base directory = directory containing this script
-    base_dir = Path(__file__).resolve().parent
 
-    query_path = base_dir / f"graphql/{operation_name}_query.json"
-    variables_path = base_dir / f"graphql/{operation_name}_variables.json"
+    query_path = base_dir / f"../graphql/{operation_name}_query.json"
+    variables_path = base_dir / f"../graphql/{operation_name}_variables.json"
 
     if not query_path.exists():
         raise FileNotFoundError(f"Missing query file: {query_path}")

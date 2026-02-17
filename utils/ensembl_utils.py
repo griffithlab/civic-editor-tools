@@ -4,6 +4,9 @@ import os
 import gzip
 import pickle
 from Bio import SeqIO
+from pathlib import Path
+
+base_dir = Path(__file__).resolve().parent
 
 def build_transcript_to_protein_id_map(fasta_path, transcript_to_protein=None, strip_version=False):
     """
@@ -119,7 +122,7 @@ def compile_transcript_to_protein_map(ensembl_versions_file):
     ensembl_transcript_to_protein_map = {}
     versions = load_ensembl_versions(ensembl_versions_file)
     for version in versions:
-        pep_fasta_file = f"data/ensembl/version_data/Homo_sapiens.GRCh38.pep.all.v{version}.fa.gz"
+        pep_fasta_file = base_dir / f"../data/ensembl/version_data/Homo_sapiens.GRCh38.pep.all.v{version}.fa.gz"
         ensembl_transcript_to_protein_map = build_transcript_to_protein_id_map(
             fasta_path=pep_fasta_file,
             transcript_to_protein=ensembl_transcript_to_protein_map,
@@ -139,8 +142,8 @@ def compile_transcript_to_biotype_map(ensembl_versions_file):
     ensembl_transcript_to_biotype_map = {}
     versions = load_ensembl_versions(ensembl_versions_file)
     for version in versions:
-        fasta_files = [f"data/ensembl/version_data/Homo_sapiens.GRCh38.cdna.all.v{version}.fa.gz",
-                       f"data/ensembl/version_data/Homo_sapiens.GRCh38.ncrna.v{version}.fa.gz"]
+        fasta_files = [base_dir / f"../data/ensembl/version_data/Homo_sapiens.GRCh38.cdna.all.v{version}.fa.gz",
+                       base_dir / f"../data/ensembl/version_data/Homo_sapiens.GRCh38.ncrna.v{version}.fa.gz"]
         transcript_to_biotype = build_transcript_biotype_map(
             fasta_files,
             transcript_to_biotype=ensembl_transcript_to_biotype_map
@@ -155,7 +158,7 @@ def build_ensembl_fasta_index(ensembl_versions_file):
     versions = load_ensembl_versions(ensembl_versions_file)
 
     for version in versions:
-        ensembl_fasta_path = f"data/ensembl/version_data/indexed/Homo_sapiens.GRCh38.pep.all.v{version}.fa"
+        ensembl_fasta_path = base_dir / f"../data/ensembl/version_data/indexed/Homo_sapiens.GRCh38.pep.all.v{version}.fa"
         ensembl_fasta_index_path = f"{ensembl_fasta_path}.idx"
 
         SeqIO.index_db(ensembl_fasta_index_path, ensembl_fasta_path, "fasta")
@@ -171,7 +174,7 @@ def get_ensembl_protein_indexed(ensembl_protein_id, ensembl_versions_file):
     versions = load_ensembl_versions(ensembl_versions_file)
 
     for version in versions:
-        index_path = f"data/ensembl/version_data/indexed/Homo_sapiens.GRCh38.pep.all.v{version}.fa.idx"
+        index_path = base_dir / f"../data/ensembl/version_data/indexed/Homo_sapiens.GRCh38.pep.all.v{version}.fa.idx"
         index = SeqIO.index_db(index_path)
 
         if ensembl_protein_id not in index:
@@ -199,8 +202,9 @@ def load_transcript_map_pickle(input_path):
 def main():
 
     #load ensembl transcript to protein map from a single file (keep version numbers)
+    fasta_path = base_dir / f"../data/ensembl/version_data/Homo_sapiens.GRCh38.pep.all.v115.fa.gz"
     ensembl_transcript_to_protein_map = build_transcript_to_protein_id_map(
-        "data/ensembl/version_data/Homo_sapiens.GRCh38.pep.all.v115.fa.gz",
+         fasta_path,
          strip_version=False
     )
     print(f"\nWith versions")
@@ -211,7 +215,7 @@ def main():
 
     #load ensembl transcript to protein map from a single file (remove version numbers)
     ensembl_transcript_to_protein_map = build_transcript_to_protein_id_map(
-        "data/ensembl/version_data/Homo_sapiens.GRCh38.pep.all.v115.fa.gz",
+         fasta_path,
          strip_version=True
     )
     print(f"\nWithout versions")
@@ -220,11 +224,11 @@ def main():
     ensp2 = ensembl_transcript_to_protein_map.get(enst2)
     print(f"Test ensembl transcript to protein map for: {enst2}: {ensp2}\n")
 
-    ensembl_versions_file = "data/ensembl/ensembl_versions.txt"
+    ensembl_versions_file = base_dir / f"../data/ensembl/ensembl_versions.txt"
 
     #Now create a more comprehensive transcript to protein map that incorporates multiple Ensembl versions
     ensembl_transcript_to_protein_map = {}
-    transcript_to_protein_map_path = "data/ensembl/ensembl_transcript_to_protein.pkl"
+    transcript_to_protein_map_path = base_dir / f"../data/ensembl/ensembl_transcript_to_protein.pkl"
     if os.path.exists(transcript_to_protein_map_path):
         print(f"Transcript to protein map pickle exists, loading directly from: {transcript_to_protein_map_path}")
         ensembl_transcript_to_protein_map = load_transcript_map_pickle(transcript_to_protein_map_path)
@@ -237,8 +241,8 @@ def main():
     print(f"Test ensembl transcript to protein map using multi-version object for: {enst1}: {ensp1}\n")
 
     #load ensembl transcript to biotype map from a single file
-    fasta_files = ["data/ensembl/version_data/Homo_sapiens.GRCh38.cdna.all.v115.fa.gz", 
-                   "data/ensembl/version_data/Homo_sapiens.GRCh38.ncrna.v115.fa.gz"]
+    fasta_files = [base_dir / f"../data/ensembl/version_data/Homo_sapiens.GRCh38.cdna.all.v115.fa.gz", 
+                   base_dir / f"../data/ensembl/version_data/Homo_sapiens.GRCh38.ncrna.v115.fa.gz"]
     ensembl_transcript_to_biotype_map= build_transcript_biotype_map(fasta_files)
 
     print(f"\nImported {len(ensembl_transcript_to_biotype_map)} Ensembl transcript to biotype mappings")
@@ -246,7 +250,7 @@ def main():
 
     #Now create a more comprehensive transcript to biotype map that incorporated multiple Ensembl versions
     ensembl_transcript_to_biotype_map = {}
-    transcript_to_biotype_map_path = "data/ensembl/ensembl_transcript_to_biotype.pkl"
+    transcript_to_biotype_map_path = base_dir / f"../data/ensembl/ensembl_transcript_to_biotype.pkl"
     if os.path.exists(transcript_to_biotype_map_path):
         print(f"Transcript to biotype map pickle exists, loading directly from: {transcript_to_biotype_map_path}")
         ensembl_transcript_to_biotype_map = load_transcript_map_pickle(transcript_to_biotype_map_path)
