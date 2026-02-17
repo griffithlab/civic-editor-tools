@@ -15,7 +15,7 @@ for v in "${versions[@]}"; do
     if [[ ! -f "$outfile_cdna" ]]; then
         wget https://ftp.ensembl.org/pub/release-${v}/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz -O $outfile_cdna
     else
-	echo "  $outfile_cdna already exists"
+	    echo "  $outfile_cdna already exists"
     fi 
 
     outfile_ncrna="version_data/Homo_sapiens.GRCh38.ncrna.v${v}.fa.gz"
@@ -26,12 +26,17 @@ for v in "${versions[@]}"; do
     fi
 
     outfile_pep="Homo_sapiens.GRCh38.pep.all.v${v}.fa.gz"
-    if [[ ! -f "$outfile_pep" ]]; then
+    if [[ ! -f "version_data/${outfile_pep}" ]]; then
         wget https://ftp.ensembl.org/pub/release-${v}/fasta/homo_sapiens/pep/Homo_sapiens.GRCh38.pep.all.fa.gz -O version_data/$outfile_pep
-	cp version_data/$outfile_pep version_data/indexed/
-	gunzip version_data/indexed/$outfile_pep
     else
-        echo "  $outfile_pep already exists"
+        echo "  version_data/$outfile_pep already exists"
+        outfile_pep2="Homo_sapiens.GRCh38.pep.all.v${v}.fa"
+        if [[ ! -f "version_data/indexed/${outfile_pep2}" ]]; then
+            cp version_data/$outfile_pep version_data/indexed/
+	        gunzip version_data/indexed/$outfile_pep
+        else
+            echo "  version_data/indexed/$outfile_pep2 already exists"
+        fi
     fi
 
 done
