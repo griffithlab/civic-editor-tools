@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
 entrez_file_url="ftp://ftp.ncbi.nih.gov/gene/DATA"
 entrez_file_name_compressed="gene2refseq.gz"
 entrez_file_name_final="gene2refseq_human.tsv.gz"

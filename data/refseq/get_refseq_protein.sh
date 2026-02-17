@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
 fasta_file_url="https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/reference/GCF_000001405.40_GRCh38.p14"
 fasta_file_name_compressed="GCF_000001405.40_GRCh38.p14_protein.faa.gz"
 fasta_file_name_uncompressed="GCF_000001405.40_GRCh38.p14_protein.faa"
