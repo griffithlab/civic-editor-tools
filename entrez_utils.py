@@ -78,7 +78,7 @@ def load_refseq_transcript_to_protein_map(filepath):
 
 def main(gene_symbol):
     gene_id = get_gene_id(gene_symbol)
-    mane = load_mane_summary("data/entrez/MANE.GRCh38.v1.5.summary.txt")
+    mane = load_mane_summary("data/refseq/MANE.GRCh38.v1.5.summary.txt")
     mane_nm = mane[gene_symbol]["transcript"]
     mane_np = mane[gene_symbol]["protein"]
     #mane_np = get_protein_from_transcript(mane_nm)
