@@ -161,7 +161,7 @@ def build_ensembl_fasta_index(ensembl_versions_file):
         ensembl_fasta_path = base_dir / f"../data/ensembl/version_data/indexed/Homo_sapiens.GRCh38.pep.all.v{version}.fa"
         ensembl_fasta_index_path = f"{ensembl_fasta_path}.idx"
 
-        SeqIO.index_db(ensembl_fasta_index_path, ensembl_fasta_path, "fasta")
+        SeqIO.index_db(str(ensembl_fasta_index_path), str(ensembl_fasta_path), "fasta")
 
 
 def get_ensembl_protein_indexed(ensembl_protein_id, ensembl_versions_file):
@@ -175,7 +175,7 @@ def get_ensembl_protein_indexed(ensembl_protein_id, ensembl_versions_file):
 
     for version in versions:
         index_path = base_dir / f"../data/ensembl/version_data/indexed/Homo_sapiens.GRCh38.pep.all.v{version}.fa.idx"
-        index = SeqIO.index_db(index_path)
+        index = SeqIO.index_db(str(index_path))
 
         if ensembl_protein_id not in index:
             continue
@@ -183,7 +183,7 @@ def get_ensembl_protein_indexed(ensembl_protein_id, ensembl_versions_file):
             protein_seq = str(index[ensembl_protein_id].seq)
             return protein_seq
 
-    if biotype is None:
+    if protein_seq is None:
         raise ValueError(
             f"No protein sequence found for {ensembl_protein_id} in ensembl versions: {ensembl_versions_file}"
         )

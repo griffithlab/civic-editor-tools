@@ -23,6 +23,7 @@ from utils import civicpy_utils
 from utils import clingen_ar_utils
 from utils import entrez_utils
 from utils import ensembl_utils
+from utils import refseq_utils
 
 base_dir = Path(__file__).resolve().parent
 
@@ -67,6 +68,9 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
     
     #get mappings of transcript to protein identifiers for refseq transcripts
     refseq_transcript_to_protein_map = entrez_utils.load_refseq_transcript_to_protein_map(base_dir / f"data/entrez/gene2refseq_human.tsv.gz")
+
+    refseq_fasta_index_path = base_dir / f"data/refseq/indexed/GCF_000001405.40_GRCh38.p14_protein.faa.idx"
+    ensembl_versions_file = base_dir / f"data/ensembl/ensembl_versions.txt"
 
     #get mappings ot transcript to protein identifier for ensembl transcripts
     ensembl_transcript_to_protein_map = {}
@@ -188,17 +192,24 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
 
             #get the protein ID for the current transcript id
             protein_id = None
+            protein_seq = None
             if clingen_reference_sequence_id in refseq_transcript_to_protein_map:
                 protein_id = refseq_transcript_to_protein_map[clingen_reference_sequence_id]
+                protein_seq = refseq_utils.get_refseq_protein_indexed(protein_id, refseq_fasta_index_path)
+
             elif clingen_reference_sequence_id in ensembl_transcript_to_protein_map:
                 protein_id = ensembl_transcript_to_protein_map[clingen_reference_sequence_id]
+                protein_seq = ensembl_utils.get_ensembl_protein_indexed(protein_id, ensembl_versions_file)
+
             else:
                 raise ValueError(
                     f"Transcript ID {clingen_reference_sequence_id} not found in "
                     "RefSeq or Ensembl transcript-to-protein maps"
                 )
 
-            #determine if the protein sequence found has the expected reference amino acid at the expected position 
+            #unless the protein sequence has the expected reference amino acid at the expected position, skip it
+            if not generic_utils.reference_aa_positions_matches(ref_aa_1, pos, protein_seq):
+                continue
 
             print(f"  transcript id: {clingen_reference_sequence_id} -> protein_id: {protein_id} -> {protein_id}:{civic_variant_name_p_3letter}")
 

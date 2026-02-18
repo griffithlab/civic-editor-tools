@@ -109,6 +109,23 @@ def parse_snv_coding_name_components(snv_coding_name):
     return ref_aa_1, int(pos), var_aa_1
 
 
+def reference_aa_positions_matches(ref_aa_1, pos, protein_seq):
+    """
+    Check whether the amino acid at position `pos` in `protein_seq`
+    matches `ref_aa_1`.
+    """
+    # Basic validation
+    if not isinstance(ref_aa_1, str) or len(ref_aa_1) != 1:
+        raise ValueError("ref_aa_1 must be a single-character string")
+    if not isinstance(pos, int) or pos < 1:
+        raise ValueError("pos must be a positive integer (1-based)")
+    if not is_valid_aa(ref_aa_1):
+        raise ValueError("ref_aa_1 must be a valid amino acid")
+    if pos > len(protein_seq):
+        return False  # position out of range
+
+    return protein_seq[pos - 1] == ref_aa_1
+
 def main():
     
     test_aa_1 = "W"
@@ -142,6 +159,12 @@ def main():
     test_snv_coding_variant_name = "S459F"
     ref_aa_1, pos, var_aa_1 = parse_snv_coding_name_components(test_snv_coding_variant_name)
     print(f"{test_snv_coding_variant_name} -> ref_aa_1: {ref_aa_1} / pos: {pos} / var_aa_1: {var_aa_1}")
+
+    protein = "MSTNPKPQRKTKRNTNRRPQDVKFPGGG"
+    print(f"\nTesting amino acid position matches for sequence: {protein}")
+    print(f"  Does P at position 5 match? {reference_aa_positions_matches('P', 5, protein)}") #True
+    print(f"  Does A at position 5 match? {reference_aa_positions_matches('A', 5, protein)}") #False
+    print(f"  Does P at position 100 match? {reference_aa_positions_matches('P', 100, protein)}") #False
 
 
 if __name__ == "__main__":
