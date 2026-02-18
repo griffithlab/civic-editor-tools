@@ -62,19 +62,22 @@ def parse_args():
 
 def main(variant_id: int, contributor_id: int, all_variants: bool):
 
-    #load black listed variants file
+    #data files
     black_list_path = base_dir / f"data/civic_variant_blacklist.tsv"
+    refseq_fasta_index_path = base_dir / f"data/refseq/indexed/GCF_000001405.40_GRCh38.p14_protein.faa.idx"
+    ensembl_versions_file = base_dir / f"data/ensembl/ensembl_versions.txt"
+    refseq_to_protein_file = base_dir / f"data/entrez/gene2refseq_human.tsv.gz"
+    transcript_to_protein_map_path = base_dir / f"data/ensembl/ensembl_transcript_to_protein.pkl"
+    transcript_to_biotype_map_path = base_dir / f"data/ensembl/ensembl_transcript_to_biotype.pkl"
+
+    #load black listed variants file
     black_listed_variant_ids = civic_graphql_utils.load_blacklisted_variant_ids(black_list_path)
     
     #get mappings of transcript to protein identifiers for refseq transcripts
-    refseq_transcript_to_protein_map = entrez_utils.load_refseq_transcript_to_protein_map(base_dir / f"data/entrez/gene2refseq_human.tsv.gz")
+    refseq_transcript_to_protein_map = entrez_utils.load_refseq_transcript_to_protein_map(refseq_to_protein_file)
 
-    refseq_fasta_index_path = base_dir / f"data/refseq/indexed/GCF_000001405.40_GRCh38.p14_protein.faa.idx"
-    ensembl_versions_file = base_dir / f"data/ensembl/ensembl_versions.txt"
-
-    #get mappings ot transcript to protein identifier for ensembl transcripts
+    #get mappings of transcript to protein identifier for ensembl transcripts
     ensembl_transcript_to_protein_map = {}
-    transcript_to_protein_map_path = base_dir / f"data/ensembl/ensembl_transcript_to_protein.pkl"
     if os.path.exists(transcript_to_protein_map_path):
         print(f"Transcript to protein map pickle exists, loading directly from: {transcript_to_protein_map_path}")
         ensembl_transcript_to_protein_map = ensembl_utils.load_transcript_map_pickle(transcript_to_protein_map_path)
@@ -85,7 +88,6 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
 
     #get ensembl transcript biotype to transcript identifiers
     ensembl_transcript_to_biotype_map = {}
-    transcript_to_biotype_map_path = base_dir / f"data/ensembl/ensembl_transcript_to_biotype.pkl"
     if os.path.exists(transcript_to_biotype_map_path):
         print(f"Transcript to biotype map pickle exists, loading directly from: {transcript_to_biotype_map_path}")
         ensembl_transcript_to_biotype_map = ensembl_utils.load_transcript_map_pickle(transcript_to_biotype_map_path)
@@ -176,7 +178,10 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
         if clingen_gene_transcript_ids is None:
             clingen_gene_transcript_ids = clingen_ar_utils.get_reference_sequences_by_gene(gene_name)
             clingen_transcript_ids[gene_name] = clingen_gene_transcript_ids
+        
         clingen_reference_sequence_ids = clingen_ar_utils.extract_reference_sequences(clingen_gene_transcript_ids)
+
+        #when there are multiple versions of the same transcript, keep only the latest one
         clingen_reference_sequence_ids_latest = clingen_ar_utils.keep_latest_transcript_versions(clingen_reference_sequence_ids)
 
         #go through each transcript ID from clingen allele registry and see if it is worth checking for the current CIViC variant name
