@@ -59,6 +59,20 @@ def parse_args():
 
     return parser.parse_args()
 
+def get_variant_ids_to_process(variant_id, all_variants):
+    """Determine which variant IDs to work with based on user supplied choices """
+    variant_ids_to_process = []
+    if variant_id:
+        variant_ids_to_process.append(variant_id)
+    
+    if all_variants:
+        include_list = ['accepted', 'submitted']
+        variants = civic.get_all_gene_variants(include_status=include_list, allow_cached=True)
+        variant_ids_to_process = civicpy_utils.extract_variant_id_list(variants)
+        print(f"Total variant ids obtained from CIViCpy: {len(variant_ids_to_process)}\n")
+
+    return variant_ids_to_process
+
 
 def main(variant_id: int, contributor_id: int, all_variants: bool):
 
@@ -84,15 +98,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
     clingen_transcript_ids = {}
 
     #get civic variant IDs to evaluate, either from the user, or by querying CIViCpy
-    variant_ids_to_process = []
-    if variant_id:
-        variant_ids_to_process.append(variant_id)
-    
-    if all_variants:
-        include_list = ['accepted', 'submitted']
-        variants = civic.get_all_gene_variants(include_status=include_list, allow_cached=True)
-        variant_ids_to_process = civicpy_utils.extract_variant_id_list(variants)
-        print(f"Total variant ids obtained from CIViCpy: {len(variant_ids_to_process)}\n")
+    variant_ids_to_process = get_variant_ids_to_process(variant_id, all_variants)
 
     #iterate over each variant and examine revisions assocatied with it
     for vid in variant_ids_to_process:
