@@ -16,7 +16,7 @@ git clone git@github.com:malachig/civic-editor-tools.git
 ## Requirements
 This tool has been tested on MacOS only.
 
-Before running for the first time the following python dependencies will need to be installed.
+Before running for the first time the following python dependencies will need to be installed. If you are unsure it should do no harm to reinstall them.
 
 - biopython
 - civicpy
@@ -31,7 +31,7 @@ pip3 install -r requirements.txt
 
 ## Staging of reference data files
 
-Before running for the first time, run these scripts to 
+Before running for the first time, run these scripts to stage needed data files. If you are unsure it should do no harm to run these scripts again.
 
 ```bash
 cd ~/git/civic-editor-tools

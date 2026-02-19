@@ -153,7 +153,6 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
 
         #get the three components of a simple snv_coding variant: ref_aa_1, pos, var_aa_1
         ref_aa_1, pos, var_aa_1 = generic_utils.parse_snv_coding_name_components(civic_variant_name)
-        print(f"{civic_variant_name} -> ref_aa_1: {ref_aa_1} ->  pos: {pos} -> var_aa_1: {var_aa_1}")
 
         #query the graphql api for more detailed variant revision info
         variant_data = civic_graphql_utils.gather_variant_revisions(vid, contributor_id)
@@ -161,29 +160,25 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
         print(
             f"Variant revision info from gather_variant_revisions()\n"
             f"Variant ID used for graphql query: {variant_data['variant_id']}\n"
-            f"  Variant name: {variant_data['variant_name']}\n"
-            f"  Feature name: {variant_data['feature_name']}\n"
-            f"  Open gene-variant revisions (total): {variant_data['open_revision_count_variant']}\n"
-            f"  Open gene-variant revisions from specified contributor: {variant_data['contributor_revisions']}\n"
-            f"  Open gene-variant revisions from all others users: {variant_data['open_revisions_non_contributor']}\n"
-            f"  Variant coordinates id: {variant_data['variant_coordinates_id']}"
+            f"  Variant name: {variant_data['variant_name']}\tFeature name: {variant_data['feature_name']}\n"
+            f"  Open gene-variant revisions: {variant_data['open_revision_count_variant']} (total);"
+            f" {variant_data['contributor_revisions']} (contributor); {variant_data['open_revisions_non_contributor']} (others)\n"
         )
-
-        variant_revisions = variant_data['variant_revisions']
 
         #if there is an outstanding revision to the variant name itself, warn the user
         if variant_data['name_change']:
             print(f"WARNING. The variant name itself has an outstanding revision!")
-            print(f"  Since this entire exercise derives from that name, this must be resolved first\n")
+            print(f"  Since this entire exercise derives from that name, this should be resolved first. Skipping this variant\n")
+            continue
+
+        #skip a variant if it has 0 pending revisions from other users
+        if variant_data['open_revisions_non_contributor'] == 0:
+            print(f"No open revision(s) by other contributors for this variant - skipping")
+            continue
 
         #create the p. notation for the variant name (e.g. 'S459F' -> 'p.Ser459Phe')
         civic_variant_name_p_3letter = generic_utils.snv_coding_to_p_3letter(civic_variant_name)
         print(f"\nVariant name in p. notation: {civic_variant_name_p_3letter}")
-
-        #skip a variant if it has 0 pending revision from other users
-        if variant_data['open_revisions_non_contributor'] == 0:
-            print(f"No open revision for this variant - skipping")
-            continue
 
         #get all clingen allele registry transcripts supported for the gene of this variant
         #only query the clingen API if we don't already have transcripts for this gene
@@ -198,6 +193,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
 
         #when there are multiple versions of the same transcript, keep only the latest one
         clingen_reference_sequence_ids_latest = clingen_ar_utils.keep_latest_transcript_versions(clingen_reference_sequence_ids)
+
 
         #go through each transcript ID from clingen allele registry and see if it is worth checking for the current CIViC variant name
         for clingen_reference_sequence_id in clingen_reference_sequence_ids_latest:
@@ -241,6 +237,10 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
         #  - Skip CAIDs that are not a simple SNV?
         #  - Get the g. HGVS expression associated with all remaining CAIDs (make not of the MANE select)
         #  - Are there multiple distinct g. HGVS values that the variant name could refer to? If so, warn the user
+        
+        variant_revisions = variant_data['variant_revisions']
+        variant_coordinates_id = variant_data['variant_coordinates_id']
+
 
 if __name__ == "__main__":
     args = parse_args()
