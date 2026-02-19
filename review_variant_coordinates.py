@@ -28,6 +28,7 @@ from utils import refseq_utils
 base_dir = Path(__file__).resolve().parent
 
 def parse_args():
+    """Obtain command line arguments from the user"""
     parser = argparse.ArgumentParser(
         description=(
             "Review pending genomic coordinate revisions for one or more CIViC variant using "
@@ -73,6 +74,13 @@ def get_variant_ids_to_process(variant_id, all_variants):
 
     return variant_ids_to_process
 
+def variant_is_black_listed(vid, black_listed_variant_ids, black_list_path, contributor_id):
+    if vid in black_listed_variant_ids:
+        print(f"\nSkipping CIViC variant {vid} because it was found in the blacklist: {black_list_path}")
+        return True
+
+    return False
+
 
 def main(variant_id: int, contributor_id: int, all_variants: bool):
 
@@ -103,12 +111,10 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
     #iterate over each variant and examine revisions associated with it
     for vid in variant_ids_to_process:
 
-        #skip if this variant is black listed
-        if vid in black_listed_variant_ids:
-            print(f"\nSkipping CIViC variant {vid} because it was found in the blacklist: {black_list_path}")
-            continue
-
         print(f"\nReviewing CIViC variant {vid} for revisions that could be reviewed by contributor: {contributor_id}")
+
+        #skip if this variant is black listed
+        if variant_is_black_listed(vid, black_listed_variant_ids, black_list_path, contributor_id): continue
 
         #query the graphql api for basic variant info
         variant_data_basic = civic_graphql_utils.gather_variant_details(vid)
