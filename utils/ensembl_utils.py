@@ -190,13 +190,44 @@ def get_ensembl_protein_indexed(ensembl_protein_id, ensembl_versions_file):
 
 
 def save_transcript_map_pickle(transcript_map, output_path):
+    """Given a dictionary and an output path, save a pickle file"""
     with open(output_path, "wb") as f:
         pickle.dump(transcript_map, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 def load_transcript_map_pickle(input_path):
+    """Given a path to a pickle file, load it"""
     with open(input_path, "rb") as f:
         return pickle.load(f)
+
+
+def load_ensembl_transcript_to_protein_map(ensembl_versions_file):
+    """Load and return an ensembl transcript to protein map from a pickle, create it if needed"""
+    transcript_to_protein_map_path = base_dir / f"../data/ensembl/ensembl_transcript_to_protein.pkl"
+    ensembl_transcript_to_protein_map = {}
+    if os.path.exists(transcript_to_protein_map_path):
+        print(f"Transcript to protein map pickle exists, loading directly from: {transcript_to_protein_map_path}")
+        ensembl_transcript_to_protein_map = load_transcript_map_pickle(transcript_to_protein_map_path)
+    else:
+        print(f"Transcript to protein map pickle does NOT exist, creating and saving to: {transcript_to_protein_map_path}")
+        ensembl_transcript_to_protein_map = compile_transcript_to_protein_map(ensembl_versions_file)
+        save_transcript_map_pickle(ensembl_transcript_to_protein_map, transcript_to_protein_map_path)
+
+    return ensembl_transcript_to_protein_map
+
+def load_ensembl_transcript_to_biotype_map(ensembl_versions_file):
+    """Load and return an ensembl transcript to biotype map from a pickle, create it if needed"""
+    transcript_to_biotype_map_path = base_dir / f"../data/ensembl/ensembl_transcript_to_biotype.pkl"
+    ensembl_transcript_to_biotype_map = {}
+    if os.path.exists(transcript_to_biotype_map_path):
+        print(f"Transcript to biotype map pickle exists, loading directly from: {transcript_to_biotype_map_path}")
+        ensembl_transcript_to_biotype_map = load_transcript_map_pickle(transcript_to_biotype_map_path)
+    else:
+        print(f"Transcript to biotype map pickle does NOT exist, creating and saving to: {transcript_to_biotype_map_path}")
+        ensembl_transcript_to_biotype_map = compile_transcript_to_biotype_map(ensembl_versions_file)
+        save_transcript_map_pickle(ensembl_transcript_to_biotype_map, transcript_to_biotype_map_path)
+
+    return ensembl_transcript_to_biotype_map
 
 
 def main():

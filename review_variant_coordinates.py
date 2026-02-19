@@ -62,13 +62,11 @@ def parse_args():
 
 def main(variant_id: int, contributor_id: int, all_variants: bool):
 
-    #data files
+    #define input data files
     black_list_path = base_dir / f"data/civic_variant_blacklist.tsv"
     refseq_fasta_index_path = base_dir / f"data/refseq/indexed/GCF_000001405.40_GRCh38.p14_protein.faa.idx"
     ensembl_versions_file = base_dir / f"data/ensembl/ensembl_versions.txt"
     refseq_to_protein_file = base_dir / f"data/entrez/gene2refseq_human.tsv.gz"
-    transcript_to_protein_map_path = base_dir / f"data/ensembl/ensembl_transcript_to_protein.pkl"
-    transcript_to_biotype_map_path = base_dir / f"data/ensembl/ensembl_transcript_to_biotype.pkl"
 
     #load black listed variants file
     black_listed_variant_ids = civic_graphql_utils.load_blacklisted_variant_ids(black_list_path)
@@ -77,28 +75,15 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
     refseq_transcript_to_protein_map = entrez_utils.load_refseq_transcript_to_protein_map(refseq_to_protein_file)
 
     #get mappings of transcript to protein identifier for ensembl transcripts
-    ensembl_transcript_to_protein_map = {}
-    if os.path.exists(transcript_to_protein_map_path):
-        print(f"Transcript to protein map pickle exists, loading directly from: {transcript_to_protein_map_path}")
-        ensembl_transcript_to_protein_map = ensembl_utils.load_transcript_map_pickle(transcript_to_protein_map_path)
-    else:
-        print(f"Transcript to protein map pickle does NOT exist, creating and saving to: {transcript_to_protein_map_path}")
-        ensembl_transcript_to_protein_map = ensembl_utils.compile_transcript_to_protein_map(ensembl_versions_file)
-        ensembl_utils.save_transcript_map_pickle(ensembl_transcript_to_protein_map, transcript_to_protein_map_path)
+    ensembl_transcript_to_protein_map = ensembl_utils.load_ensembl_transcript_to_protein_map(ensembl_versions_file)
 
     #get ensembl transcript biotype to transcript identifiers
-    ensembl_transcript_to_biotype_map = {}
-    if os.path.exists(transcript_to_biotype_map_path):
-        print(f"Transcript to biotype map pickle exists, loading directly from: {transcript_to_biotype_map_path}")
-        ensembl_transcript_to_biotype_map = ensembl_utils.load_transcript_map_pickle(transcript_to_biotype_map_path)
-    else:
-        print(f"Transcript to biotype map pickle does NOT exist, creating and saving to: {transcript_to_biotype_map_path}")
-        ensembl_transcript_to_biotype_map = ensembl_utils.compile_transcript_to_biotype_map(ensembl_versions_file)
-        ensembl_utils.save_transcript_map_pickle(ensembl_transcript_to_biotype_map, transcript_to_biotype_map_path)
+    ensembl_transcript_to_biotype_map = ensembl_utils.load_ensembl_transcript_to_biotype_map(ensembl_versions_file)
 
+    #create a data structure that will store all clingen supported transcripts ids per gene
     clingen_transcript_ids = {}
 
-    #get civic variant IDs to evaluate, either from the user or by querying CIViCpy
+    #get civic variant IDs to evaluate, either from the user, or by querying CIViCpy
     variant_ids_to_process = []
     if variant_id:
         variant_ids_to_process.append(variant_id)
@@ -109,6 +94,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
         variant_ids_to_process = civicpy_utils.extract_variant_id_list(variants)
         print(f"Total variant ids obtained from CIViCpy: {len(variant_ids_to_process)}\n")
 
+    #iterate over each variant and examine revisions assocatied with it
     for vid in variant_ids_to_process:
         #skip if this variant is black listed
         if vid in black_listed_variant_ids:

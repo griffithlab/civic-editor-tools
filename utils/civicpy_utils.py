@@ -6,11 +6,13 @@ def extract_variant_info(v):
     """Extract useful variant info from a civicpy variant object"""
     return {
         "variant_id": v.id,
+        "feature_id": v.feature_id,
         "allele_registry_id": v.allele_registry_id,
         "variant_name": v.name,
         "variant_aliases": v.variant_aliases,
         "hgvs_expressions": v.hgvs_expressions,
         "gene": v.gene.name if v.gene else None,
+        "entrez_name": v.entrez_name,
         "variant_types": [vt.name for vt in v.variant_types],
         "subtype": v.subtype,
         "clinvar_entries": v.clinvar_entries,
@@ -24,13 +26,21 @@ def extract_variant_info(v):
     }
 
 def extract_variant_id_list(variants):
-    """Produce a list of all variant in a civicpy variants object and return it"""
-    variant_ids = []
+    """Produce a list of all variant IDs in a civicpy variants object, order by feature ID and return it"""
+    variant_info = []
+
     for v in variants:
         info = extract_variant_info(v)
-        id = info['variant_id']
-        variant_ids.append(id)
-    return variant_ids
+        variant_id = info['variant_id']
+        feature_id = info['feature_id']
+        variant_info.append((feature_id, variant_id))
+    
+    # Sort by feature_id (first element of tuple)
+    variant_info.sort(key=lambda x: x[0])
+
+    # Extract ordered variant_ids
+    return [variant_id for _, variant_id in variant_info]
+
 
 def main():
     #include_list=None #to use every single variant regardless of status
