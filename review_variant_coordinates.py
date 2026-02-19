@@ -75,9 +75,30 @@ def get_variant_ids_to_process(variant_id, all_variants):
     return variant_ids_to_process
 
 def variant_is_black_listed(vid, black_listed_variant_ids, black_list_path, contributor_id):
+    """Skip variants that are in a manually maintainted black list file"""
     if vid in black_listed_variant_ids:
         print(f"\nSkipping CIViC variant {vid} because it was found in the blacklist: {black_list_path}")
         return True
+
+    return False
+
+
+def variant_is_deprecated(vid, variant_data_basic):
+    """Skip variants that have a deprecated status"""
+    if (variant_data_basic['deprecated'] == "True"):
+        print(f"Skipping CIViC variant {vid} because it has a deprecated status")
+        return True
+    
+    return False
+
+
+def variant_type_is_unsupported(civic_variant_name, guessed_gene_variant_type, target_variant_type):
+    """Skip variants that do not have the expected variant type guessed from the name"""
+    if (guessed_gene_variant_type != target_variant_type):
+        print(f"Guessed variant type for: {civic_variant_name!r} -> {guessed_gene_variant_type} is not supported - skipping")
+        return True
+    else:
+        print(f"Guessed variant type for: {civic_variant_name!r} -> {guessed_gene_variant_type} is supported")
 
     return False
 
@@ -123,18 +144,12 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
         civic_variant_name = variant_data_basic['variant_name']
 
         #skip variants with deprecated status
-        if (variant_data_basic['deprecated'] == "True"):
-            print(f"Skipping CIViC variant {vid} because it has a deprecated status")
-            continue
+        if variant_is_deprecated(vid, variant_data_basic): continue
 
         #guess the variant type based on the CIViC variant name - skip unless it is a coding snv
         guessed_gene_variant_type = generic_utils.guess_variant_type(civic_variant_name)
-    
-        if (guessed_gene_variant_type == "snv_coding"):
-            print(f"Guessed variant type for: {civic_variant_name!r} -> {guessed_gene_variant_type}")
-        else:
-            print(f"Guessed variant type for: {civic_variant_name!r} -> {guessed_gene_variant_type} is not supported here - skipping")
-            continue
+
+        if variant_type_is_unsupported(civic_variant_name, guessed_gene_variant_type, "snv_coding"): continue
 
         #get the three components of a simple snv_coding variant: ref_aa_1, pos, var_aa_1
         ref_aa_1, pos, var_aa_1 = generic_utils.parse_snv_coding_name_components(civic_variant_name)
