@@ -100,8 +100,9 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
     #get civic variant IDs to evaluate, either from the user, or by querying CIViCpy
     variant_ids_to_process = get_variant_ids_to_process(variant_id, all_variants)
 
-    #iterate over each variant and examine revisions assocatied with it
+    #iterate over each variant and examine revisions associated with it
     for vid in variant_ids_to_process:
+
         #skip if this variant is black listed
         if vid in black_listed_variant_ids:
             print(f"\nSkipping CIViC variant {vid} because it was found in the blacklist: {black_list_path}")
@@ -112,6 +113,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
         #query the graphql api for basic variant info
         variant_data_basic = civic_graphql_utils.gather_variant_details(vid)
 
+        #get the civic variant name - much will be assumed based on this name
         civic_variant_name = variant_data_basic['variant_name']
 
         #skip variants with deprecated status
