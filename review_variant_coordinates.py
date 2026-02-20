@@ -75,7 +75,7 @@ def get_variant_ids_to_process(variant_id, all_variants):
     return variant_ids_to_process
 
 def variant_is_black_listed(vid, black_listed_variant_ids, black_list_path, contributor_id):
-    """Skip variants that are in a manually maintainted black list file"""
+    """Test if variant is in a manually maintainted black list file"""
     if vid in black_listed_variant_ids:
         print(f"\nSkipping CIViC variant {vid} because it was found in the blacklist: {black_list_path}")
         return True
@@ -84,7 +84,7 @@ def variant_is_black_listed(vid, black_listed_variant_ids, black_list_path, cont
 
 
 def variant_is_deprecated(vid, variant_data_basic):
-    """Skip variants that have a deprecated status"""
+    """Test if variant has a deprecated status"""
     if (variant_data_basic['deprecated'] == "True"):
         print(f"Skipping CIViC variant {vid} because it has a deprecated status")
         return True
@@ -93,13 +93,32 @@ def variant_is_deprecated(vid, variant_data_basic):
 
 
 def variant_type_is_unsupported(civic_variant_name, guessed_gene_variant_type, target_variant_type):
-    """Skip variants that do not have the expected variant type guessed from the name"""
+    """Test if variant has the expected variant type guessed from the name"""
     if (guessed_gene_variant_type != target_variant_type):
         print(f"Guessed variant type for: {civic_variant_name!r} -> {guessed_gene_variant_type} is not supported - skipping")
         return True
     else:
         print(f"Guessed variant type for: {civic_variant_name!r} -> {guessed_gene_variant_type} is supported")
 
+    return False
+
+
+def variant_name_has_revision(variant_data):
+    """Test is variant has a pending revision on the variant name itself"""
+    if variant_data['name_change']:
+        print(f"WARNING. The variant name itself has an outstanding revision!")
+        print(f"  Since this entire exercise derives from that name, this should be resolved first. Skipping this variant\n")
+        return True
+
+    return False
+
+
+def variant_has_no_open_revisions(variant_data):
+    """Test is variants has no open revisions """
+    if variant_data['open_revisions_non_contributor'] == 0:
+        print(f"No open revision(s) by other contributors for this variant - skipping")
+        return True
+    
     return False
 
 
@@ -157,28 +176,24 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
         #query the graphql api for more detailed variant revision info
         variant_data = civic_graphql_utils.gather_variant_revisions(vid, contributor_id)
 
+        #if there is an outstanding revision to the variant name itself, warn the user
+        if variant_name_has_revision(variant_data): continue
+
+        #skip a variant if it has 0 pending revisions from other users
+        if variant_has_no_open_revisions(variant_data): continue
+
+        #create the p. notation for the variant name (e.g. 'S459F' -> 'p.Ser459Phe')
+        civic_variant_name_p_3letter = generic_utils.snv_coding_to_p_3letter(civic_variant_name)
+
+        #provide a summary of variant info found
         print(
             f"Variant revision info from gather_variant_revisions()\n"
             f"Variant ID used for graphql query: {variant_data['variant_id']}\n"
             f"  Variant name: {variant_data['variant_name']}\tFeature name: {variant_data['feature_name']}\n"
+            f"  Variant name in p. notation: {civic_variant_name_p_3letter}\n"
             f"  Open gene-variant revisions: {variant_data['open_revision_count_variant']} (total);"
-            f" {variant_data['contributor_revisions']} (contributor); {variant_data['open_revisions_non_contributor']} (others)\n"
+            f" {variant_data['contributor_revisions']} (contributor); {variant_data['open_revisions_non_contributor']} (others)"
         )
-
-        #if there is an outstanding revision to the variant name itself, warn the user
-        if variant_data['name_change']:
-            print(f"WARNING. The variant name itself has an outstanding revision!")
-            print(f"  Since this entire exercise derives from that name, this should be resolved first. Skipping this variant\n")
-            continue
-
-        #skip a variant if it has 0 pending revisions from other users
-        if variant_data['open_revisions_non_contributor'] == 0:
-            print(f"No open revision(s) by other contributors for this variant - skipping")
-            continue
-
-        #create the p. notation for the variant name (e.g. 'S459F' -> 'p.Ser459Phe')
-        civic_variant_name_p_3letter = generic_utils.snv_coding_to_p_3letter(civic_variant_name)
-        print(f"\nVariant name in p. notation: {civic_variant_name_p_3letter}")
 
         #get all clingen allele registry transcripts supported for the gene of this variant
         #only query the clingen API if we don't already have transcripts for this gene
