@@ -288,7 +288,8 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
 
         #get a unique list of  useful/compatible CAIDs for the list of protein IDs
         clingen_allele_ids = get_clingen_allele_info(clingen_protein_sequence_ids_final, civic_variant_name_p_3letter)
-        
+        #for each clingen CAID get info that we would expect to be submited to CIViC
+        #variant aliases, clinvar ids, hgvs expressions, genomic coordinates (chr, start, stop, ref var)
 
         print(clingen_allele_ids)
 

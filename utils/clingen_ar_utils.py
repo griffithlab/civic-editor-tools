@@ -42,7 +42,10 @@ def extract_transcript_cas(pa_json):
     return cas
 
 def extract_genomic_coords(ca_json):
-    """extract genomic coordinate info from a transcript CAID json object"""
+    """extract genomic coordinate info from a transcript CAID json object
+       return a list of coordinate objects, each with:
+       assembly, chr, start, end, ref, alt, genomic hgvs 
+    """
     coords = []
     allowed_assemblies = {"GRCh37", "GRCh38"}
 
@@ -54,6 +57,12 @@ def extract_genomic_coords(ca_json):
             continue
 
         chrom = g.get("chromosome")
+        genomic_hgvs_expressions = []
+
+        for hgvs in g.get("hgvs", []):
+            if not hgvs.startswith("NC_"):
+                continue
+            genomic_hgvs_expressions.append(hgvs)
 
         for c in g.get("coordinates", []):
             coords.append({
@@ -63,9 +72,29 @@ def extract_genomic_coords(ca_json):
                 "end": c.get("end"),
                 "ref": c.get("referenceAllele"),
                 "alt": c.get("allele"),
+                "genomic_hgvs": ",".join(genomic_hgvs_expressions),
             })
 
     return coords
+
+
+def extract_mane_select_hgvs_expressions(ca_json):
+
+    mane_select_hgvs_expressions = []
+
+    for transcript in ca_json.get("transcriptAlleles", []):
+        mane = transcript.get("MANE")
+        if mane:
+            nucleotide = mane.get("nucleotide", {})
+            mane_select_hgvs_expressions.append(nucleotide.get("Ensembl", {}).get("hgvs"))
+            mane_select_hgvs_expressions.append(nucleotide.get("RefSeq", {}).get("hgvs"))
+
+            protein = mane.get("protein", {})
+            mane_select_hgvs_expressions.append(protein.get("Ensembl", {}).get("hgvs"))
+            mane_select_hgvs_expressions.append(protein.get("RefSeq", {}).get("hgvs"))
+            
+    return list(set(mane_select_hgvs_expressions))
+
 
 def extract_reference_sequences(ref_seqs_json):
     """get all supported ensembl and refseq transcript ids for a gene from clingen allele registry"""
@@ -133,21 +162,28 @@ if __name__ == "__main__":
     for tx in transcript_cas:
         print(f"\nTranscript {tx['hgvs']} ({tx['caid']})")
 
-        # extract genomic coordinates for each transcript caid found
-        ca = get_allele_by_id(tx["caid"])
-        for c in extract_genomic_coords(ca):
+        # extract genomic coordinates and hgvs expressions for each transcript caid found
+        ca_json = get_allele_by_id(tx["caid"])
+        for coord in extract_genomic_coords(ca_json):
             print(
-                f"  {c['assembly']} chr{c['chr']}:{c['start']}-{c['end']} "
-                f"{c['ref']}>{c['alt']}"
+                f"  {coord['assembly']} chr{coord['chr']}:{coord['start']}-{coord['end']} "
+                f"{coord['ref']}>{coord['alt']} {coord['genomic_hgvs']}"
             )
+        
+        # extract MANE select transcript hgvs expressions for each transcript caid found
+        mane_select_hgvs_expressions = extract_mane_select_hgvs_expressions(ca_json)
+
+        print(f"MANE Select HGVS expressions:\n  {','.join(mane_select_hgvs_expressions)}")
 
     # for a single gene, get all the CAR supported transcript identifiers
     rs = get_reference_sequences_by_gene(gene_symbol)
     reference_sequence_ids = extract_reference_sequences(rs)
-    print(f"\nClinGen supported transcript ids (excluding XR_ and NR_ transcripts):\n {reference_sequence_ids}")
+    reference_sequence_ids_string = ",".join(reference_sequence_ids)
+    print(f"\nClinGen supported transcript ids (excluding XR_ and NR_ transcripts):\n{reference_sequence_ids_string}")
 
     # produce a filtered list that keeps only the most recent version of each transcript support by CAR
     reference_sequence_ids_latest = keep_latest_transcript_versions(reference_sequence_ids)
-    print(f"\nClinGen supported transcript ids (only most recent versions):\n {reference_sequence_ids_latest}")
+    reference_sequence_ids_latest_string = ",".join(reference_sequence_ids_latest)
+    print(f"\nClinGen supported transcript ids (limited to only the most recent versions):\n{reference_sequence_ids_latest_string}")
 
 
