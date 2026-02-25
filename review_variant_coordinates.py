@@ -135,8 +135,8 @@ def get_clingen_gene_transcripts_json (gene_name, clingen_transcript_ids):
 
 def get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_transcript_to_protein_map, ensembl_transcript_to_protein_map, ensembl_transcript_to_biotype_map, refseq_fasta_index_path, ensembl_versions_file, ref_aa_1, pos, var_aa_1, civic_variant_name_p_3letter):
     """"Filter clingen allele registry transcripts to those that are useful/compatible with this variant"""
-    print(f"Identifying compatible ClinGen Allele Registry transcript IDs")
-    clingen_reference_sequence_ids_final = []
+    print(f"Identifying compatible ClinGen Allele Registry transcript IDs:")
+    clingen_protein_sequence_ids_final = []
 
     #from the json of transcript info, get a list of the transcript IDs supported by clingen allele regsitry
     clingen_reference_sequence_ids = clingen_ar_utils.extract_reference_sequences(clingen_gene_transcripts_json)
@@ -178,10 +178,29 @@ def get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_tra
 
         print(f"  transcript id: {clingen_reference_sequence_id} -> protein_id: {protein_id} -> {protein_id}:{civic_variant_name_p_3letter}")
 
-        clingen_reference_sequence_ids_final.append(clingen_reference_sequence_id)
+        clingen_protein_sequence_ids_final.append(protein_id)
 
-    return clingen_reference_sequence_ids_final
+    return clingen_protein_sequence_ids_final
 
+
+def get_clingen_allele_info(clingen_protein_sequence_ids_final, civic_variant_name_p_3letter):
+    """Get clingen allele info starting from a list of protein HGVS expressions"""
+    clingen_alleles = []
+    for protein_id in clingen_protein_sequence_ids_final:
+
+        #create the protein HGVS expression
+        protein_hgvs = f"{protein_id}:{civic_variant_name_p_3letter}"
+
+        #query clingen with protein_hgvs and get a json object of protein allele info
+        pa_json = clingen_ar_utils.get_allele_by_hgvs(protein_hgvs)
+
+        #extract transcript CAID and transcript HGVS values associated with the protein allele
+        transcript_cas = clingen_ar_utils.extract_transcript_cas(pa_json)
+
+        for tx in transcript_cas:
+            clingen_alleles.append(tx['caid'])
+
+    return list(set(clingen_alleles))
 
 
 def main(variant_id: int, contributor_id: int, all_variants: bool):
@@ -264,15 +283,21 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
         #only query the clingen API if we don't already have transcripts for this gene
         clingen_gene_transcripts_json = get_clingen_gene_transcripts_json(gene_name, clingen_transcript_ids)
 
-        #filter the transcripts to those that are useful/compatible with this variant
-        clingen_reference_sequence_ids_final = get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_transcript_to_protein_map, ensembl_transcript_to_protein_map, ensembl_transcript_to_biotype_map, refseq_fasta_index_path, ensembl_versions_file, ref_aa_1, pos, var_aa_1, civic_variant_name_p_3letter)
+        #filter the transcripts to those that are useful/compatible with this variant, return protein IDs
+        clingen_protein_sequence_ids_final = get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_transcript_to_protein_map, ensembl_transcript_to_protein_map, ensembl_transcript_to_biotype_map, refseq_fasta_index_path, ensembl_versions_file, ref_aa_1, pos, var_aa_1, civic_variant_name_p_3letter)
+
+        #get a unique list of  useful/compatible CAIDs for the list of protein IDs
+        clingen_allele_ids = get_clingen_allele_info(clingen_protein_sequence_ids_final, civic_variant_name_p_3letter)
+        
+
+        print(clingen_allele_ids)
 
         #- Variant ambiguity check (consider an example variant "BRAF V600E"
         #  - For a given gene get all transcripts (RefSeq and Ensembl) in ClinGen Allele Registry (CAR)
         #  - Check which of these transcripts have the expected ref AA at the expected position
         #  - Starting from variant name, contruct possible p. hgvs expressions for all RefSeq and Ensembl transcript in CAR
-        #  - Check each of these p. hgvs expressions and get PAIDs. Get all CAIDs associated with these
-        #  - Skip CAIDs that are not a simple SNV?
+        #  - Check each of these p. hgvs expressions and get PAIDs. Get all unique CAIDs associated with these
+        #  - Skip CAIDs that are not a simple SNV? Or show to the user and ask them to pick?
         #  - Get the g. HGVS expression associated with all remaining CAIDs (make not of the MANE select)
         #  - Are there multiple distinct g. HGVS values that the variant name could refer to? If so, warn the user
         

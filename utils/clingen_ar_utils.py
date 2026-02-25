@@ -14,7 +14,9 @@ def get_allele_by_hgvs(hgvs):
     return r.json()
 
 def get_allele_by_id(allele_id):
-    """query clingen API using a transcript level CAID"""
+    """query clingen API using a transcript level CAID
+       e.g. https://reg.genome.network/allele/CA387358756
+    """
     url = f"{BASE_URL}/allele/{allele_id}"
     r = requests.get(url, headers={"Accept": "application/json"})
     r.raise_for_status()
