@@ -79,7 +79,7 @@ def extract_genomic_coords(ca_json):
 
 
 def extract_mane_select_hgvs_expressions(ca_json):
-
+    """extract mane select hgvs expression from a transcript CAID json object"""
     mane_select_hgvs_expressions = []
 
     for transcript in ca_json.get("transcriptAlleles", []):
@@ -94,6 +94,16 @@ def extract_mane_select_hgvs_expressions(ca_json):
             mane_select_hgvs_expressions.append(protein.get("RefSeq", {}).get("hgvs"))
             
     return list(set(mane_select_hgvs_expressions))
+
+
+def extract_clinvar_ids(ca_json):
+    """"extract clinvar ids from a transcript CAID json object"""
+    clinvar_ids = []
+    external_records = ca_json.get("externalRecords")
+    for clinvar_allele in external_records.get("ClinVarAlleles", []):
+        clinvar_ids.append(clinvar_allele.get("alleleId"))
+
+    return list(set(clinvar_ids))
 
 
 def extract_reference_sequences(ref_seqs_json):
@@ -118,6 +128,7 @@ def extract_reference_sequences(ref_seqs_json):
             sys.exit("Error: No transcript ID found in NCBI or Ensembl external records.")
         tid_list.append(tid)
     return tid_list
+
 
 def keep_latest_transcript_versions(reference_sequence_ids):
     latest = {}
@@ -172,8 +183,11 @@ if __name__ == "__main__":
         
         # extract MANE select transcript hgvs expressions for each transcript caid found
         mane_select_hgvs_expressions = extract_mane_select_hgvs_expressions(ca_json)
-
         print(f"MANE Select HGVS expressions:\n  {','.join(mane_select_hgvs_expressions)}")
+
+        # extract ClinVar IDs for each transcript caid found
+        clinvar_ids = extract_clinvar_ids(ca_json)
+        print(f"ClinVar IDs:\n  {','.join(str(id) for id in clinvar_ids)}")
 
     # for a single gene, get all the CAR supported transcript identifiers
     rs = get_reference_sequences_by_gene(gene_symbol)
