@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 
 import re
+import urllib.request
+import urllib.error
+import socket
+import sys
+import ssl
+import requests
 
 def aa_1_to_3(aa):
     """Convert single letter AA abbreviations into three letter AA abbreviations"""
@@ -127,8 +133,56 @@ def reference_aa_positions_matches(ref_aa_1, pos, protein_seq):
 
     return protein_seq[pos - 1] == ref_aa_1
 
+
+def check_connection(timeout: int = 5) -> bool:
+    """
+    Returns True if internet access is available, False otherwise.
+    Tests by making a lightweight HEAD request to relevant hosts.
+    """
+    test_urls = [
+        "https://www.google.com",
+        "https://www.civicdb.org",
+        "https://reg.genome.network",
+    ]
+    for url in test_urls:
+        try:
+            context = ssl._create_unverified_context()
+            req = urllib.request.Request(url, method="HEAD")
+            with urllib.request.urlopen(req, timeout=timeout, context=context):
+                return True
+        except (urllib.error.URLError, socket.timeout, OSError):
+            continue
+    return False
+
+
+def check_apis(timeout: int = 5) -> bool:
+    """
+    Returns True if both required APIs are reachable, False otherwise.
+    """
+    api_urls = [
+        "https://www.civicdb.org",
+        "https://reg.genome.network",
+    ]
+    for url in api_urls:
+        try:
+            response = requests.head(url, timeout=timeout)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            print(f"API unreachable: {url} — {e}")
+            return False
+    return True
+
+
 def main():
     
+    if not check_connection():
+        print("No internet access. Aborting.")
+        sys.exit(1)
+
+    if not check_apis():
+        print("Required APIs are unavailable. Aborting.")
+        sys.exit(1)
+
     test_aa_1 = "W"
     test_aa_3 = aa_1_to_3(test_aa_1)
     print (f"test_aa_1: {test_aa_1}\ttest_aa_3: {test_aa_3}")

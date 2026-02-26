@@ -60,6 +60,19 @@ def parse_args():
 
     return parser.parse_args()
 
+def verify_connectivity():
+    """Tests whether internet access is working and then if we can actually access the APIs needed before attempting anything """
+    if not generic_utils.check_connection():
+        print("No internet access. Aborting.")
+        sys.exit(1)
+
+    if not generic_utils.check_apis():
+        print("Required APIs are unavailable. Aborting.")
+        sys.exit(1)
+
+    print("Internet and API connectivity verified.")
+
+
 def get_variant_ids_to_process(variant_id, all_variants):
     """Determine which variant IDs to work with based on user supplied choices """
     variant_ids_to_process = []
@@ -210,6 +223,9 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
     refseq_fasta_index_path = base_dir / f"data/refseq/indexed/GCF_000001405.40_GRCh38.p14_protein.faa.idx"
     ensembl_versions_file = base_dir / f"data/ensembl/ensembl_versions.txt"
     refseq_to_protein_file = base_dir / f"data/entrez/gene2refseq_human.tsv.gz"
+
+    #make sure internet and API access is working before attempting anything
+    verify_connectivity()
 
     #load black listed variants file
     black_listed_variant_ids = civic_graphql_utils.load_blacklisted_variant_ids(black_list_path)
