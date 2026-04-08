@@ -300,12 +300,13 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
         #filter the transcripts to those that are useful/compatible with this variant, return protein IDs
         clingen_protein_sequence_ids_final = get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_transcript_to_protein_map, ensembl_transcript_to_protein_map, ensembl_transcript_to_biotype_map, refseq_fasta_index_path, ensembl_versions_file, ref_aa_1, pos, var_aa_1, civic_variant_name_p_3letter)
 
-        #get a unique list of  useful/compatible CAIDs for the list of protein IDs
+        #get a unique list of useful/compatible CAIDs for the list of protein IDs
         clingen_allele_ids = get_clingen_allele_info(clingen_protein_sequence_ids_final, civic_variant_name_p_3letter)
+        print(clingen_allele_ids)
+        
         #for each clingen CAID get info that we would expect to be submited to CIViC
         #variant aliases, clinvar ids, hgvs expressions, genomic coordinates (chr, start, stop, ref var)
 
-        print(clingen_allele_ids)
 
         #- Variant ambiguity check (consider an example variant "BRAF V600E"
         #  - For a given gene get all transcripts (RefSeq and Ensembl) in ClinGen Allele Registry (CAR)
@@ -314,8 +315,10 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
         #  - Check each of these p. hgvs expressions and get PAIDs. Get all unique CAIDs associated with these
         #  - Skip CAIDs that are not a simple SNV? Or show to the user and ask them to pick?
         #  - Get the g. HGVS expression associated with all remaining CAIDs (make note of the MANE select)
-        #  - Are there multiple distinct g. HGVS values that the variant name could refer to? If so, warn the user
+        #  - Are there multiple distinct genomic HGVS values that the variant name could refer to? If so, warn the user
         
+
+
         variant_revisions = variant_data['variant_revisions']
         variant_coordinates_id = variant_data['variant_coordinates_id']
 
