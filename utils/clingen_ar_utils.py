@@ -80,6 +80,38 @@ def extract_genomic_coords(ca_json):
     return coords
 
 
+def extract_possible_variant_aliases(ca_json):
+    """extract possible variant aliases from a transcript CAID json object
+       return a list of aliases to check CIViC proposed aliases against
+    """
+    possible_variant_aliases = []
+    for transcript in ca_json.get("transcriptAlleles", []):
+        protein_effect = transcript.get("proteinEffect")
+        if protein_effect:
+            hgvs = protein_effect.get("hgvs")
+            possible_variant_aliases.append(hgvs)
+
+
+    possible_variant_aliases_filtered = []
+
+    for alias in possible_variant_aliases:
+        seq_id, rest = alias.split(':', 1)
+    
+        # Skip unwanted sequence IDs
+        if seq_id.startswith(('XP_', 'XR_')):
+            continue
+    
+        # Skip nucleotide variants
+        if rest.startswith('n.'):
+            continue
+    
+        # Extract variant name
+        variant_name = rest.split('.', 1)[1]
+        possible_variant_aliases_filtered.append(variant_name)
+
+    return list(set(possible_variant_aliases_filtered))
+
+
 def extract_mane_select_hgvs_expressions(ca_json):
     """extract mane select hgvs expression from a transcript CAID json object"""
     mane_select_hgvs_expressions = []
@@ -185,11 +217,15 @@ if __name__ == "__main__":
         
         # extract MANE select transcript hgvs expressions for each transcript caid found
         mane_select_hgvs_expressions = extract_mane_select_hgvs_expressions(ca_json)
-        print(f"MANE Select HGVS expressions:\n  {','.join(mane_select_hgvs_expressions)}")
+        print(f"\nMANE Select HGVS expressions:\n  {','.join(mane_select_hgvs_expressions)}")
+
+        # extract possible variant aliases across all transcripts
+        variant_aliases = extract_possible_variant_aliases(ca_json)
+        print(f"\nPossible variant aliases:\n {','.join(variant_aliases)}")
 
         # extract ClinVar IDs for each transcript caid found
         clinvar_ids = extract_clinvar_ids(ca_json)
-        print(f"ClinVar IDs:\n  {','.join(str(id) for id in clinvar_ids)}")
+        print(f"\nClinVar IDs:\n  {','.join(str(id) for id in clinvar_ids)}")
 
     # for a single gene, get all the CAR supported transcript identifiers
     rs = get_reference_sequences_by_gene(gene_symbol)

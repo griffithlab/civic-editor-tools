@@ -148,7 +148,7 @@ def get_clingen_gene_transcripts_json (gene_name, clingen_transcript_ids):
 
 def get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_transcript_to_protein_map, ensembl_transcript_to_protein_map, ensembl_transcript_to_biotype_map, refseq_fasta_index_path, ensembl_versions_file, ref_aa_1, pos, var_aa_1, civic_variant_name_p_3letter):
     """"Filter clingen allele registry transcripts to those that are useful/compatible with this variant"""
-    print(f"Identifying compatible ClinGen Allele Registry transcript IDs:")
+    print(f"\nIdentifying compatible ClinGen Allele Registry transcript IDs:")
     clingen_protein_sequence_ids_final = []
 
     #from the json of transcript info, get a list of the transcript IDs supported by clingen allele regsitry
@@ -284,7 +284,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
 
         #provide a summary of variant info found
         print(
-            f"Variant revision info:\n"
+            f"\nVariant revision info:\n"
             f"  Feature name: {variant_data['feature_name']}\tVariant name: {variant_data['variant_name']}\tVariant name in p. notation: {civic_variant_name_p_3letter}\n"
             f"  Open gene-variant revisions: {variant_data['open_revision_count_variant']} (total);"
             f"  {variant_data['contributor_revisions']} (contributor); {variant_data['open_revisions_non_contributor']} (others)"
@@ -302,10 +302,19 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
 
         #get a unique list of useful/compatible CAIDs for the list of protein IDs
         clingen_allele_ids = get_clingen_allele_info(clingen_protein_sequence_ids_final, civic_variant_name_p_3letter)
-        print(clingen_allele_ids)
         
-        #for each clingen CAID get info that we would expect to be submited to CIViC
-        #variant aliases, clinvar ids, hgvs expressions, genomic coordinates (chr, start, stop, ref var)
+        #iterate through each useful/compatible CAID and display information that helps the user review outstanding edits
+        for caid in clingen_allele_ids:
+            print(f"\nCAID: {caid}")
+
+            #get the list of MANE Select HGVS expression for this CAID
+            ca_json = clingen_ar_utils.get_allele_by_id(caid)
+            mane_select_hgvs_expressions = clingen_ar_utils.extract_mane_select_hgvs_expressions(ca_json)
+            print(f"MANE Select HGVS expressions: {', '.join(mane_select_hgvs_expressions)}")
+
+
+            #for each clingen CAID get info that we would expect to be submited to CIViC:
+            #variant aliases, clinvar ids, hgvs expressions, genomic coordinates (chr, start, stop, ref var)
 
 
         #- Variant ambiguity check (consider an example variant "BRAF V600E"
@@ -316,7 +325,9 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
         #  - Skip CAIDs that are not a simple SNV? Or show to the user and ask them to pick?
         #  - Get the g. HGVS expression associated with all remaining CAIDs (make note of the MANE select)
         #  - Are there multiple distinct genomic HGVS values that the variant name could refer to? If so, warn the user
-        
+        #  - Add a check for methionine counting ambiguity (is there a matching ref AA one position to the right?)
+        #  - Add method that gathers EID sources (PMID links) for each variant (to help user confirm variant in source literature)
+        #  - Add summary of currently *accepted* variant coordinate info in CIViC.
 
 
         variant_revisions = variant_data['variant_revisions']
