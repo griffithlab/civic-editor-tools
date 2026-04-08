@@ -23,7 +23,9 @@ def get_allele_by_id(allele_id):
     return r.json()
 
 def get_reference_sequences_by_gene(gene_name):
-    """query clinen API using a gene name"""
+    """query clinen API using a gene name
+       e.g. https://reg.genome.network/refseqs?gene=POLE
+    """
     url = f"{BASE_URL}/refseqs?gene={gene_name}"
     r = requests.get(url, headers={"Accept": "application/json"})
     r.raise_for_status()

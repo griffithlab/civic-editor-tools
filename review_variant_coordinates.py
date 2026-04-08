@@ -284,12 +284,10 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
 
         #provide a summary of variant info found
         print(
-            f"Variant revision info from gather_variant_revisions()\n"
-            f"Variant ID used for graphql query: {variant_data['variant_id']}\n"
-            f"  Variant name: {variant_data['variant_name']}\tFeature name: {variant_data['feature_name']}\n"
-            f"  Variant name in p. notation: {civic_variant_name_p_3letter}\n"
+            f"Variant revision info:\n"
+            f"  Feature name: {variant_data['feature_name']}\tVariant name: {variant_data['variant_name']}\tVariant name in p. notation: {civic_variant_name_p_3letter}\n"
             f"  Open gene-variant revisions: {variant_data['open_revision_count_variant']} (total);"
-            f" {variant_data['contributor_revisions']} (contributor); {variant_data['open_revisions_non_contributor']} (others)"
+            f"  {variant_data['contributor_revisions']} (contributor); {variant_data['open_revisions_non_contributor']} (others)"
         )
         
         #get the gene name for the current variant
@@ -315,7 +313,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
         #  - Starting from variant name, contruct possible p. hgvs expressions for all RefSeq and Ensembl transcript in CAR
         #  - Check each of these p. hgvs expressions and get PAIDs. Get all unique CAIDs associated with these
         #  - Skip CAIDs that are not a simple SNV? Or show to the user and ask them to pick?
-        #  - Get the g. HGVS expression associated with all remaining CAIDs (make not of the MANE select)
+        #  - Get the g. HGVS expression associated with all remaining CAIDs (make note of the MANE select)
         #  - Are there multiple distinct g. HGVS values that the variant name could refer to? If so, warn the user
         
         variant_revisions = variant_data['variant_revisions']
