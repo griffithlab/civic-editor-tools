@@ -39,6 +39,43 @@ def aa_1_to_3(aa):
         raise ValueError(f"Invalid amino acid code: {aa}")
 
 
+def aa_3_to_1(aa_3):
+    """Convert three letter AA abbreviations into single letter AA abbreviations"""
+    # Mapping in reverse: 3-letter -> 1-letter
+    aa_map_rev = {
+        "ALA": "A",
+        "ARG": "R",
+        "ASN": "N",
+        "ASP": "D",
+        "CYS": "C",
+        "GLU": "E",
+        "GLN": "Q",
+        "GLY": "G",
+        "HIS": "H",
+        "ILE": "I",
+        "LEU": "L",
+        "LYS": "K",
+        "MET": "M",
+        "PHE": "F",
+        "PRO": "P",
+        "SER": "S",
+        "THR": "T",
+        "TRP": "W",
+        "TYR": "Y",
+        "VAL": "V",
+        "TER": "*",  # Stop codon
+        "STOP": "*"  # Common alternative for stop
+    }
+    
+    # Normalize input to uppercase
+    aa_3_upper = aa_3.upper()
+    
+    try:
+        return aa_map_rev[aa_3_upper]
+    except KeyError:
+        raise ValueError(f"Invalid three-letter amino acid code: {aa_3}")
+
+
 def is_valid_aa(aa):
     """Test is a single AA value is valid"""
     valid_aas = {
@@ -186,6 +223,9 @@ def main():
     test_aa_1 = "W"
     test_aa_3 = aa_1_to_3(test_aa_1)
     print (f"test_aa_1: {test_aa_1}\ttest_aa_3: {test_aa_3}")
+    
+    test_aa_1 = aa_3_to_1(test_aa_3)
+    print (f"test_aa_3: {test_aa_3}\ttest_aa_1: {test_aa_1}")
 
     test_aa = "K"
     if len(test_aa) == 1 and is_valid_aa(test_aa):
