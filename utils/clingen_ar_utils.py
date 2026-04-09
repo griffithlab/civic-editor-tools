@@ -3,6 +3,8 @@
 import requests
 import urllib.parse
 import sys
+import re
+import generic_utils
 
 BASE_URL = "https://reg.genome.network"
 
@@ -109,7 +111,17 @@ def extract_possible_variant_aliases(ca_json):
         variant_name = rest.split('.', 1)[1]
         possible_variant_aliases_filtered.append(variant_name)
 
-    return list(set(possible_variant_aliases_filtered))
+        # Convert 3-letter AA codes to 1-letter and append as additional alias
+        # Matches patterns like Ser432Phe, Ala123Val, etc.
+        variant_name_1_aa = re.sub(
+            r'([A-Z][a-z]{2})(\d+)([A-Z][a-z]{2})',
+            lambda m: f"{generic_utils.aa_3_to_1(m.group(1))}{m.group(2)}{generic_utils.aa_3_to_1(m.group(3))}",
+            variant_name
+        )
+        if variant_name_1_aa != variant_name:
+            possible_variant_aliases_filtered.append(variant_name_1_aa)
+
+    return list(dict.fromkeys(possible_variant_aliases_filtered))
 
 
 def extract_mane_select_hgvs_expressions(ca_json):
