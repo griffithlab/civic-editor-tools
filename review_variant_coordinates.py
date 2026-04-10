@@ -312,6 +312,10 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
             mane_select_hgvs_expressions = clingen_ar_utils.extract_mane_select_hgvs_expressions(ca_json)
             print(f"MANE Select HGVS expressions: {', '.join(mane_select_hgvs_expressions)}")
 
+            # extract possible variant aliases across all transcripts
+            variant_aliases = clingen_ar_utils.extract_possible_variant_aliases(ca_json)
+            print(f"\nPossible variant aliases:\n {','.join(variant_aliases)}")
+
 
             #for each clingen CAID get info that we would expect to be submited to CIViC:
             #variant aliases, clinvar ids, hgvs expressions, genomic coordinates (chr, start, stop, ref var)

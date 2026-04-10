@@ -4,7 +4,12 @@ import requests
 import urllib.parse
 import sys
 import re
-import generic_utils
+
+# handle both package and standalone execution
+try:
+    from . import generic_utils
+except ImportError:
+    import generic_utils
 
 BASE_URL = "https://reg.genome.network"
 
