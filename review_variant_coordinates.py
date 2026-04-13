@@ -215,6 +215,34 @@ def get_clingen_allele_info(clingen_protein_sequence_ids_final, civic_variant_na
 
     return list(set(clingen_alleles))
 
+def variant_is_ambiguous_in_genome(clingen_allele_ids):
+    """
+    Check if a set of clingen alleles resolve to multiple distinct genomic variants
+    The goal here is to find cases where a variant like BRAF V600E could be two distinct things
+    This can happen when distinct transcripts both have a V at their position 600, but these correspond to distinct genomic positions
+    """
+
+    build_37_positions = []
+
+    for caid in clingen_allele_ids:
+        ca_json = clingen_ar_utils.get_allele_by_id(caid)
+
+        clingen_coords = clingen_ar_utils.extract_genomic_coords(ca_json)
+        for coord in clingen_coords:
+            assembly = coord['assembly']
+            if assembly != "GRCh37":
+                continue
+            genomic_variant = f"chr{coord['chr']}:{coord['start']}-{coord['end']}{coord['ref']}>{coord['alt']}"
+            build_37_positions.append(genomic_variant)
+
+    unique_positions = list(set(build_37_positions))
+
+    if len(unique_positions) > 1:
+        print(f"\nWARNING! Ambiguous genomic positions found: {unique_positions}")
+        return True
+
+    print(f"Checked {len(clingen_allele_ids)} CAID(s) - no ambiguous genomic variants found.")
+    return False
 
 def main(variant_id: int, contributor_id: int, all_variants: bool):
 
@@ -302,23 +330,37 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
 
         #get a unique list of useful/compatible CAIDs for the list of protein IDs
         clingen_allele_ids = get_clingen_allele_info(clingen_protein_sequence_ids_final, civic_variant_name_p_3letter)
-        
+
+        #TODO: look across these alleles for ambiguous genomic variants. 
+        variant_is_ambiguous_in_genome(clingen_allele_ids)
+       
         #iterate through each useful/compatible CAID and display information that helps the user review outstanding edits
         for caid in clingen_allele_ids:
             print(f"\nCAID: {caid}")
-
-            #get the list of MANE Select HGVS expression for this CAID
+            
+            #query the clingen API with a CAID and get a json of relevant info
             ca_json = clingen_ar_utils.get_allele_by_id(caid)
-            mane_select_hgvs_expressions = clingen_ar_utils.extract_mane_select_hgvs_expressions(ca_json)
-            print(f"MANE Select HGVS expressions: {', '.join(mane_select_hgvs_expressions)}")
-
-            # extract possible variant aliases across all transcripts
-            variant_aliases = clingen_ar_utils.extract_possible_variant_aliases(ca_json)
-            print(f"\nPossible variant aliases:\n {','.join(variant_aliases)}")
-
 
             #for each clingen CAID get info that we would expect to be submited to CIViC:
             #variant aliases, clinvar ids, hgvs expressions, genomic coordinates (chr, start, stop, ref var)
+
+            #get genomic coordinate information for this CAID
+            clingen_coords = clingen_ar_utils.extract_genomic_coords(ca_json)
+            for coord in clingen_coords:
+                print(f"  {coord['assembly']} chr{coord['chr']}:{coord['start']}-{coord['end']} {coord['ref']}>{coord['alt']} {coord['genomic_hgvs']}")
+
+            #get the list of MANE Select HGVS expression for this CAID
+            mane_select_hgvs_expressions = clingen_ar_utils.extract_mane_select_hgvs_expressions(ca_json)
+            print(f"  MANE Select HGVS expressions: {', '.join(mane_select_hgvs_expressions)}")
+
+            # extract possible variant aliases across all transcripts for this CAID
+            variant_aliases = clingen_ar_utils.extract_possible_variant_aliases(ca_json)
+            print(f"  Possible variant aliases: {','.join(variant_aliases)}")
+
+            # extract ClinVar IDs for this CAID
+            clinvar_ids = clingen_ar_utils.extract_clinvar_ids(ca_json)
+            print(f"  ClinVar IDs: {','.join(str(id) for id in clinvar_ids)}")
+
 
 
         #- Variant ambiguity check (consider an example variant "BRAF V600E"
