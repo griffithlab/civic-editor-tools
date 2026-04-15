@@ -173,6 +173,7 @@ def reference_aa_positions_matches(ref_aa_1, pos, protein_seq, protein_id):
     if pos > len(protein_seq):
         return False  # position out of range
 
+    # Check for AA match at the position used in the name
     primary_match = protein_seq[pos - 1] == ref_aa_1
 
     # Check for methionine counting ambiguity at pos+1
