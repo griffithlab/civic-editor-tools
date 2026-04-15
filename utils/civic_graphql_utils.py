@@ -7,8 +7,8 @@ import pdb
 api_url = "https://civicdb.org/api/graphql"
 base_dir = Path(__file__).resolve().parent
 
-#update a template graphql object string to inject the query ID to be used
 def populate_variables_id(variables_template: str, graphql_id: int) -> str:
+    """update a template graphql object string to inject the query ID to be used"""
     placeholder = "graphql_query_id1"
 
     count = variables_template.count(placeholder)
@@ -26,9 +26,8 @@ def populate_variables_id(variables_template: str, graphql_id: int) -> str:
 
     return populated
 
-#load graphql query and variable json objects from file, update with a query id, and submit the query to the API
 def run_graphql_operation(api_url, operation_name, query_id, timeout=(10, 200)):
-
+    """load graphql query and variable json objects from file, update with a query id, and submit the query to the API"""
     query_path = base_dir / f"../graphql/{operation_name}_query.json"
     variables_path = base_dir / f"../graphql/{operation_name}_variables.json"
 
@@ -58,8 +57,8 @@ def run_graphql_operation(api_url, operation_name, query_id, timeout=(10, 200)):
 
     return resp
 
-#execute graphql queries, parse json returns, return basic variant info
 def gather_variant_details(variant_id):
+    """execute graphql queries, parse json returns, return basic variant info"""
     #variant_VariantDetail
     resp = run_graphql_operation(api_url, "variant_VariantDetail", variant_id)
     json = resp.json()
@@ -75,8 +74,8 @@ def gather_variant_details(variant_id):
 
     return variant_data    
 
-#execute graphql queries, parse json returns, build a simplied data structure with the variant revision info needed
 def gather_variant_revisions(variant_id, contributor_id):
+    """execute graphql queries, parse json returns, build a simplied data structure with the variant revision info needed"""
     #Get coordinate ids for variant (takes a variant id)
     resp = run_graphql_operation(api_url, "variant_CoordinateIdsForVariant", variant_id)
     json = resp.json()
@@ -184,6 +183,23 @@ def gather_variant_revisions(variant_id, contributor_id):
     #json['data']['revisions']['edges'][0]['node']['fieldName']
     return variant_data
 
+
+def gather_user_details(user_id):
+    """execute graphql queries, parse json returns, build a simplied data structure with the user info needed"""
+    #user_Data
+
+    resp = run_graphql_operation(api_url, "user_Data", user_id)
+    json = resp.json()
+    #user_name = json['data']['variant']['name']
+    user_data = {
+        "user_name": user_name,
+        "feature_name": feature_name,
+    }
+    #pdb.set_trace()
+
+    return user_data
+
+
 def load_blacklisted_variant_ids(filepath):
 	"""Load blacklisted variant IDs from a file. One per line. Each line must start with the ID, anything else on the line will be ignored"""
 	variant_ids = set()
@@ -207,8 +223,8 @@ def load_blacklisted_variant_ids(filepath):
 	return variant_ids
 
 
-#demonstrate functionality of the methods above and variant data retrieved
 def main (variant_id, contributor_id):
+    """demonstrate functionality of the methods above and variant data retrieved"""
 	variant_data = gather_variant_revisions(variant_id, contributor_id)
 	print(
 		f"\n\nVariant revision info from gather_variant_revisions()\n"
