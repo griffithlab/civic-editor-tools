@@ -187,7 +187,8 @@ def get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_tra
             )
 
         #unless the protein sequence has the expected reference amino acid at the expected position, skip it
-        if not generic_utils.reference_aa_positions_matches(ref_aa_1, pos, protein_seq):
+        #also check for methionine counting ambiguity (is there a matching ref AA one position to the right of the named position?)
+        if not generic_utils.reference_aa_positions_matches(ref_aa_1, pos, protein_seq, protein_id):
             continue
 
         print(f"  Transcript ID: {clingen_reference_sequence_id} -> protein_id: {protein_id} -> {protein_id}:{civic_variant_name_p_3letter}")

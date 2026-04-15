@@ -153,10 +153,15 @@ def parse_snv_coding_name_components(snv_coding_name):
     return ref_aa_1, int(pos), var_aa_1
 
 
-def reference_aa_positions_matches(ref_aa_1, pos, protein_seq):
+def reference_aa_positions_matches(ref_aa_1, pos, protein_seq, protein_id):
     """
     Check whether the amino acid at position `pos` in `protein_seq`
     matches `ref_aa_1`.
+
+    Also checks for methionine counting ambiguity: if the amino acid at
+    pos+1 matches ref_aa_1, a warning is issued. This can occur when the 
+    variant was named without counting the initiator methionine, shifting 
+    all positions by one.
     """
     # Basic validation
     if not isinstance(ref_aa_1, str) or len(ref_aa_1) != 1:
@@ -168,7 +173,17 @@ def reference_aa_positions_matches(ref_aa_1, pos, protein_seq):
     if pos > len(protein_seq):
         return False  # position out of range
 
-    return protein_seq[pos - 1] == ref_aa_1
+    primary_match = protein_seq[pos - 1] == ref_aa_1
+
+    # Check for methionine counting ambiguity at pos+1
+    secondary_pos = pos + 1
+    if secondary_pos <= len(protein_seq):
+        secondary_match = protein_seq[secondary_pos - 1] == ref_aa_1
+        if secondary_match:
+            print(f"\nWARNING! Possible methionine counting ambiguity detected for AA:{ref_aa_1} in {protein_id}:")
+            print(f"\nPrimary position {pos} match: {primary_match}\tSecondary position {secondary_pos} match: {secondary_match}")
+
+    return primary_match
 
 
 def check_connection(timeout: int = 5) -> bool:
