@@ -1,0 +1,78 @@
+query UserDetail($userId: Int!) {
+  user(id: $userId) {
+    ...UserDetailFields
+    __typename
+  }
+}
+
+fragment UserDetailFields on User {
+  id
+  name
+  displayName
+  username
+  email
+  profileImagePath(size: 128)
+  role
+  url
+  bio
+  areaOfExpertise
+  orcid
+  twitterHandle
+  facebookProfile
+  linkedinProfile
+  organizations {
+    id
+    name
+    url
+    __typename
+  }
+  country {
+    id
+    name
+    __typename
+  }
+  statsHash {
+    comments
+    revisions
+    appliedRevisions
+    submittedEvidenceItems
+    acceptedEvidenceItems
+    suggestedSources
+    submittedAssertions
+    acceptedAssertions
+    __typename
+  }
+  ranks {
+    commentsRank {
+      rank
+      actionCount
+      __typename
+    }
+    moderationRank {
+      rank
+      actionCount
+      __typename
+    }
+    revisionsRank {
+      rank
+      actionCount
+      __typename
+    }
+    submissionsRank {
+      rank
+      actionCount
+      __typename
+    }
+    __typename
+  }
+  mostRecentConflictOfInterestStatement {
+    id
+    coiPresent
+    coiStatement
+    coiStatus
+    createdAt
+    expiresAt
+    __typename
+  }
+  __typename
+}
