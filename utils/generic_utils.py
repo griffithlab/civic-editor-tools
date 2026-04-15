@@ -148,7 +148,7 @@ def parse_snv_coding_name_components(snv_coding_name):
         raise ValueError(f"Invalid variant format: {snv_coding_name}")
 
     ref_aa_1, pos, var_aa_1 = match.groups()
-    print(f"Variant name components: {snv_coding_name} -> ref_aa_1: {ref_aa_1} |  pos: {pos} | var_aa_1: {var_aa_1}")
+    print(f"Variant name components for {snv_coding_name}: ref_aa_1: {ref_aa_1} |  pos: {pos} | var_aa_1: {var_aa_1}")
 
     return ref_aa_1, int(pos), var_aa_1
 

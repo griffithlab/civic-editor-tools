@@ -108,10 +108,10 @@ def variant_is_deprecated(vid, variant_data_basic):
 def variant_type_is_unsupported(civic_variant_name, guessed_gene_variant_type, target_variant_type):
     """Test if variant has the expected variant type guessed from the name"""
     if (guessed_gene_variant_type != target_variant_type):
-        print(f"Guessed variant type for: {civic_variant_name!r} -> {guessed_gene_variant_type} is not supported - skipping")
+        print(f"Guessed variant type for variant name {civic_variant_name}: {guessed_gene_variant_type} (not supported - skipping)")
         return True
     else:
-        print(f"Guessed variant type for: {civic_variant_name!r} -> {guessed_gene_variant_type} is supported")
+        print(f"Guessed variant type for variant name {civic_variant_name}: {guessed_gene_variant_type} (is supported)")
 
     return False
 
@@ -148,6 +148,7 @@ def get_clingen_gene_transcripts_json (gene_name, clingen_transcript_ids):
 
 def get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_transcript_to_protein_map, ensembl_transcript_to_protein_map, ensembl_transcript_to_biotype_map, refseq_fasta_index_path, ensembl_versions_file, ref_aa_1, pos, var_aa_1, civic_variant_name_p_3letter):
     """"Filter clingen allele registry transcripts to those that are useful/compatible with this variant"""
+    
     print(f"\nIdentifying compatible ClinGen Allele Registry transcript IDs:")
     clingen_protein_sequence_ids_final = []
 
@@ -157,7 +158,7 @@ def get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_tra
     #when there are multiple versions of the same transcript, keep only the latest one
     clingen_reference_sequence_ids_latest = clingen_ar_utils.keep_latest_transcript_versions(clingen_reference_sequence_ids)
 
-    #go through each transcript ID from clingen allele registry and see if it is worth checking for the current CIViC variant name
+    #go through each transcript ID from CAR and see if it is worth checking for the current CIViC variant name
     for clingen_reference_sequence_id in clingen_reference_sequence_ids_latest:
         #skip invalid ensembl transcripts
         if clingen_reference_sequence_id.startswith("ENST"):
@@ -189,14 +190,13 @@ def get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_tra
         if not generic_utils.reference_aa_positions_matches(ref_aa_1, pos, protein_seq):
             continue
 
-        print(f"  transcript id: {clingen_reference_sequence_id} -> protein_id: {protein_id} -> {protein_id}:{civic_variant_name_p_3letter}")
+        print(f"  Transcript ID: {clingen_reference_sequence_id} -> protein_id: {protein_id} -> {protein_id}:{civic_variant_name_p_3letter}")
 
         clingen_protein_sequence_ids_final.append(protein_id)
 
     return clingen_protein_sequence_ids_final
 
-
-def get_clingen_allele_info(clingen_protein_sequence_ids_final, civic_variant_name_p_3letter):
+def get_clingen_alleles_from_p_hgvs(clingen_protein_sequence_ids_final, civic_variant_name_p_3letter):
     """Get clingen allele info starting from a list of protein HGVS expressions"""
     clingen_alleles = []
     for protein_id in clingen_protein_sequence_ids_final:
@@ -204,7 +204,7 @@ def get_clingen_allele_info(clingen_protein_sequence_ids_final, civic_variant_na
         #create the protein HGVS expression
         protein_hgvs = f"{protein_id}:{civic_variant_name_p_3letter}"
 
-        #query clingen with protein_hgvs and get a json object of protein allele info
+        #query clingen API with protein_hgvs and get a json object of protein allele info
         pa_json = clingen_ar_utils.get_allele_by_hgvs(protein_hgvs)
 
         #extract transcript CAID and transcript HGVS values associated with the protein allele
@@ -215,16 +215,30 @@ def get_clingen_allele_info(clingen_protein_sequence_ids_final, civic_variant_na
 
     return list(set(clingen_alleles))
 
-def variant_is_ambiguous_in_genome(clingen_allele_ids):
+def get_clingen_allele_jsons(clingen_allele_ids):
+    """ 
+    For a list of CAIDs get the json object for each from clingen API
+    Returns a dict of {caid: json_object}
+    """     
+    allele_jsons = {}
+    
+    for caid in clingen_allele_ids:
+        ca_json = clingen_ar_utils.get_allele_by_id(caid)
+        allele_jsons[caid] = ca_json
+
+    return allele_jsons
+
+def variant_is_ambiguous_in_genome(clingen_allele_info):
     """
     Check if a set of clingen alleles resolve to multiple distinct genomic variants
     The goal here is to find cases where a variant like BRAF V600E could be two distinct things
-    This can happen when distinct transcripts both have a V at their position 600, but these correspond to distinct genomic positions
+    This can happen when distinct transcripts both have a V at their position 600 ...
+    but these correspond to distinct genomic positions
     """
 
     build_37_positions = []
-
-    for caid in clingen_allele_ids:
+        
+    for caid, ca_json in clingen_allele_info.items():
         ca_json = clingen_ar_utils.get_allele_by_id(caid)
 
         clingen_coords = clingen_ar_utils.extract_genomic_coords(ca_json)
@@ -241,7 +255,7 @@ def variant_is_ambiguous_in_genome(clingen_allele_ids):
         print(f"\nWARNING! Ambiguous genomic positions found: {unique_positions}")
         return True
 
-    print(f"Checked {len(clingen_allele_ids)} CAID(s) - no ambiguous genomic variants found.")
+    print(f"\nChecked {len(clingen_allele_info)} CAID(s) - no ambiguous genomic variants found.")
     return False
 
 def main(variant_id: int, contributor_id: int, all_variants: bool):
@@ -276,7 +290,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
     #iterate over each variant and examine revisions associated with it
     for vid in variant_ids_to_process:
 
-        print(f"\nReviewing CIViC variant {vid} for revisions that could be reviewed by contributor: {contributor_id}")
+        print(f"\nReviewing CIViC variant ID {vid} for revisions that could be reviewed by contributor ID: {contributor_id}")
 
         #skip if this variant is black listed
         if variant_is_black_listed(vid, black_listed_variant_ids, black_list_path, contributor_id): continue
@@ -310,7 +324,10 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
         #create the p. notation for the variant name (e.g. 'S459F' -> 'p.Ser459Phe')
         civic_variant_name_p_3letter = generic_utils.snv_coding_to_p_3letter(civic_variant_name)
 
-        #provide a summary of variant info found
+        #get the gene name for the current variant
+        gene_name = variant_data['feature_name']
+
+        #provide a basic summary of variant info from civic
         print(
             f"\nVariant revision info:\n"
             f"  Feature name: {variant_data['feature_name']}\tVariant name: {variant_data['variant_name']}\tVariant name in p. notation: {civic_variant_name_p_3letter}\n"
@@ -318,9 +335,6 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
             f"  {variant_data['contributor_revisions']} (contributor); {variant_data['open_revisions_non_contributor']} (others)"
         )
         
-        #get the gene name for the current variant
-        gene_name = variant_data['feature_name']
-
         #get all clingen allele registry transcripts supported for the gene of this variant
         #only query the clingen API if we don't already have transcripts for this gene
         clingen_gene_transcripts_json = get_clingen_gene_transcripts_json(gene_name, clingen_transcript_ids)
@@ -328,14 +342,17 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
         #filter the transcripts to those that are useful/compatible with this variant, return protein IDs
         clingen_protein_sequence_ids_final = get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_transcript_to_protein_map, ensembl_transcript_to_protein_map, ensembl_transcript_to_biotype_map, refseq_fasta_index_path, ensembl_versions_file, ref_aa_1, pos, var_aa_1, civic_variant_name_p_3letter)
 
-        #get a unique list of useful/compatible CAIDs for the list of protein IDs
-        clingen_allele_ids = get_clingen_allele_info(clingen_protein_sequence_ids_final, civic_variant_name_p_3letter)
+        #get a unique list of useful/compatible CAIDs for the list of protein HGVS expressions
+        clingen_allele_ids = get_clingen_alleles_from_p_hgvs(clingen_protein_sequence_ids_final, civic_variant_name_p_3letter)
 
-        #TODO: look across these alleles for ambiguous genomic variants. 
-        variant_is_ambiguous_in_genome(clingen_allele_ids)
+        #using the list of CAIDs, get the json allele info object for each from the clingen API
+        clingen_allele_info = get_clingen_allele_jsons(clingen_allele_ids)
+
+        #look across the clingen alleles for ambiguous genomic variants - warn the user if found
+        variant_is_ambiguous_in_genome(clingen_allele_info)
        
         #iterate through each useful/compatible CAID and display information that helps the user review outstanding edits
-        for caid in clingen_allele_ids:
+        for caid, ca_json in clingen_allele_info.items():
             print(f"\nCAID: {caid}")
             
             #query the clingen API with a CAID and get a json of relevant info
@@ -346,13 +363,18 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
 
             #get genomic coordinate information for this CAID
             clingen_coords = clingen_ar_utils.extract_genomic_coords(ca_json)
+            genomic_hgvs_expressions = []
             for coord in clingen_coords:
-                print(f"  {coord['assembly']} chr{coord['chr']}:{coord['start']}-{coord['end']} {coord['ref']}>{coord['alt']} {coord['genomic_hgvs']}")
+                genomic_hgvs_expressions.append(coord['genomic_hgvs'])
+                print(f"  {coord['assembly']} chr{coord['chr']}:{coord['start']}-{coord['end']} {coord['ref']}>{coord['alt']}")
 
-            #get the list of MANE Select HGVS expression for this CAID
+            #show the genomic HGVS expression for this CAID
+            print(f"  Genomic HGVS expressions: {', '.join(genomic_hgvs_expressions)}")
+
+            #get the list of MANE Select HGVS expressions for this CAID
             mane_select_hgvs_expressions = clingen_ar_utils.extract_mane_select_hgvs_expressions(ca_json)
             print(f"  MANE Select HGVS expressions: {', '.join(mane_select_hgvs_expressions)}")
-
+ 
             # extract possible variant aliases across all transcripts for this CAID
             variant_aliases = clingen_ar_utils.extract_possible_variant_aliases(ca_json)
             print(f"  Possible variant aliases: {','.join(variant_aliases)}")
