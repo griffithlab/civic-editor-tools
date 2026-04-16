@@ -205,7 +205,7 @@ def get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_tra
         if not generic_utils.reference_aa_positions_matches(ref_aa_1, pos, protein_seq, protein_id):
             continue
 
-        print(f"  Transcript ID: {clingen_reference_sequence_id} -> protein_id: {protein_id} -> {protein_id}:{civic_variant_name_p_3letter}")
+        print(f"  Transcript ID: {clingen_reference_sequence_id} -> Protein ID: {protein_id} -> HGVS: {protein_id}:{civic_variant_name_p_3letter}")
 
         clingen_protein_sequence_ids_final.append(protein_id)
 
@@ -351,7 +351,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
         #provide a basic summary of variant info from civic
         print(
             f"\nVariant revision info:\n"
-            f"  Feature name: {variant_data['feature_name']}\tVariant name: {variant_data['variant_name']}\tVariant name in p. notation: {civic_variant_name_p_3letter}\n"
+            f"  Feature name: {variant_data['feature_name']}\tVariant name in p. notation: {civic_variant_name_p_3letter}\n"
             f"  Open gene-variant revisions: {variant_data['open_revision_count_variant']} (total);"
             f"  {variant_data['contributor_revisions']} by you; {variant_data['open_revisions_non_contributor']} by others"
         )
