@@ -236,10 +236,19 @@ def main (variant_id, contributor_id):
     #get user/contributor information from the contributor id
     user_details = gather_user_details(contributor_id)
     print(
-        f"\n\nContributor/user info for contributor id: {contributor_id}\n"
+        f"\nContributor/user info for contributor id: {contributor_id}\n"
         f"  User name: {user_details['user_name']}\n"
         f"  User display name: {user_details['user_display_name']}\n"
         f"  User role: {user_details['user_role']}"
+    )
+
+    #get basic variant ino
+    variant_data = gather_variant_details(variant_id)
+    print(
+        f"\nBasic variant details for variant id: {variant_id}\n"
+        f"  Variant name: {variant_data['variant_name']}\n"
+        f"  Feature name: {variant_data['feature_name']}\n"
+        f"  Deprecated: {variant_data['deprecated']}"
     )
 
     #get variant revision summary information
