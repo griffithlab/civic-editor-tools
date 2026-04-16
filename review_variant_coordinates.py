@@ -407,21 +407,24 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
 
 
         #- Variant ambiguity check (consider an example variant "BRAF V600E"
-        #  - For a given gene get all transcripts (RefSeq and Ensembl) in ClinGen Allele Registry (CAR)
-        #  - Check which of these transcripts have the expected ref AA at the expected position
-        #  - Starting from variant name, contruct possible p. hgvs expressions for all RefSeq and Ensembl transcript in CAR
-        #  - Check each of these p. hgvs expressions and get PAIDs. Get all unique CAIDs associated with these
-        #  - Skip CAIDs that are not a simple SNV? Or show to the user and ask them to pick?
-        #  - Get the g. HGVS expression associated with all remaining CAIDs (make note of the MANE select)
-        #  - Are there multiple distinct genomic HGVS values that the variant name could refer to? If so, warn the user
-        #  - Add a check for methionine counting ambiguity (is there a matching ref AA one position to the right?)
+        #  - For a given gene get all transcripts (RefSeq and Ensembl) in ClinGen Allele Registry (CAR) - done
+        #  - Check which of these transcripts have the expected ref AA at the expected position - done
+        #  - Add a check for methionine counting ambiguity (is there a matching ref AA one position to the right?) - done
+        #  - Starting from variant name, contruct possible p. hgvs expressions for all RefSeq and Ensembl transcript in CAR - done
+        #  - Check each of these p. hgvs expressions and get PAIDs. Get all unique CAIDs associated with these - done
+        #  - Skip CAIDs that are not a simple SNV? - done 
+        #  - Get the g. HGVS expression associated with all remaining CAIDs (make note of the MANE select) - done
+        #  - Are there multiple distinct genomic HGVS values that the variant name could refer to? If so, warn the user - done
+
         #  - Add method that gathers EID sources (PMID links) for each variant (to help user confirm variant in source literature)
         #  - Add summary of currently *accepted* variant coordinate info in CIViC.
+        #  - Perform comparison between the ClinGen Allele Info and revisions 
 
-
+        #Move these above, and compare to each CAID processed?
         variant_revisions = variant_data['variant_revisions']
         variant_coordinates_id = variant_data['variant_coordinates_id']
     
+        #Pause before moving on to the next CIViC variant
         prompt_to_proceed("Processing complete for variant ({vid}: civic_variant_name)")
 
 
