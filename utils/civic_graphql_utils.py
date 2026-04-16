@@ -102,12 +102,15 @@ def gather_accepted_variant_data(variant_id):
     resp = run_graphql_operation(api_url, "variant_VariantSummary", variant_id)
     json = resp.json()
 
-    #json['data']['variant']['variantAliases']
-
+    #pdb.set_trace()
     accepted_variant_data = {
-        "variant_aliases": json['data']['variant']['variantAliases']
+        "name": json['data']['variant']['name'],
+        "allele_registry_id": json['data']['variant']['alleleRegistryId'],
+        "variant_aliases": json['data']['variant']['variantAliases'],
+        "hgvs_descriptions": json['data']['variant']['hgvsDescriptions'],
+        "clinvar_ids": json['data']['variant']['clinvarIds']
+
     }
-    pdb.set_trace()
 
     return accepted_variant_data
 
@@ -273,6 +276,14 @@ def main (variant_id, contributor_id):
     #get much more detailed info on already accepted variant fields
     accepted_variant_data = gather_accepted_variant_data(variant_id)
 
+    print(
+        f"\nAccepted variant details for variant id: {variant_id}\n"
+        f"  Name: {accepted_variant_data['name']}\n"
+        f"  Allele Registry ID: {accepted_variant_data['allele_registry_id']}\n"
+        f"  Variant Aliases: {accepted_variant_data['variant_aliases']}\n"
+        f"  HGVS Descriptions: {accepted_variant_data['hgvs_descriptions']}\n"
+        f"  ClinVar IDs: {accepted_variant_data['clinvar_ids']}\n"
+    )
 
     #get variant revision summary information
     variant_data = gather_variant_revisions(variant_id, contributor_id)
