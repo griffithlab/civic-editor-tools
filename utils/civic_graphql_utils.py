@@ -102,14 +102,22 @@ def gather_accepted_variant_data(variant_id):
     resp = run_graphql_operation(api_url, "variant_VariantSummary", variant_id)
     json = resp.json()
 
-    #pdb.set_trace()
+    pdb.set_trace()
     accepted_variant_data = {
         "name": json['data']['variant']['name'],
         "allele_registry_id": json['data']['variant']['alleleRegistryId'],
         "variant_aliases": json['data']['variant']['variantAliases'],
         "hgvs_descriptions": json['data']['variant']['hgvsDescriptions'],
-        "clinvar_ids": json['data']['variant']['clinvarIds']
-
+        "clinvar_ids": json['data']['variant']['clinvarIds'],
+        "reference_build": json['data']['variant']['coordinates']['referenceBuild'],
+        "chromosome": json['data']['variant']['coordinates']['chromosome'],
+        "start": json['data']['variant']['coordinates']['start'],
+        "stop": json['data']['variant']['coordinates']['stop'],
+        "reference_bases": json['data']['variant']['coordinates']['referenceBases'],
+        "variant_bases": json['data']['variant']['coordinates']['variantBases'],
+        "representative_transcript": json['data']['variant']['coordinates']['representativeTranscript'],
+        "ensembl_version": json['data']['variant']['coordinates']['ensemblVersion'],
+        "coordinate_type": json['data']['variant']['coordinates']['coordinateType']
     }
 
     return accepted_variant_data
@@ -283,6 +291,27 @@ def main (variant_id, contributor_id):
         f"  Variant Aliases: {accepted_variant_data['variant_aliases']}\n"
         f"  HGVS Descriptions: {accepted_variant_data['hgvs_descriptions']}\n"
         f"  ClinVar IDs: {accepted_variant_data['clinvar_ids']}\n"
+        f"  Reference Build: {accepted_variant_data['reference_build']}\n"
+        f"  Chromosome: {accepted_variant_data['chromosome']}\n"
+        f"  : {accepted_variant_data['']}\n"
+        f"  : {accepted_variant_data['']}\n"
+        f"  : {accepted_variant_data['']}\n"
+        f"  : {accepted_variant_data['']}\n"
+        f"  : {accepted_variant_data['']}\n"
+        f"  : {accepted_variant_data['']}\n"
+        f"  : {accepted_variant_data['']}\n"
+
+        "chromosome": json['data']['variant']['coordinates']['chromosome'],
+        "start": json['data']['variant']['coordinates']['start'],
+        "stop": json['data']['variant']['coordinates']['stop'],
+        "reference_bases": json['data']['variant']['coordinates']['referenceBases'],
+        "variant_bases": json['data']['variant']['coordinates']['variantBases'],
+        "representative_transcript": json['data']['variant']['coordinates']['representativeTranscript'],
+        "ensembl_version": json['data']['variant']['coordinates']['ensemblVersion'],
+        "coordinate_type": json['data']['variant']['coordinates']['coordinateType']
+
+
+
     )
 
     #get variant revision summary information
