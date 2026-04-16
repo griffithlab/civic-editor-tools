@@ -73,6 +73,19 @@ def verify_connectivity():
     print("Internet and API connectivity verified.")
 
 
+def prompt_to_proceed(message: str = None) -> None:
+    print("\n" + "=" * 80)
+    if message:
+        print(message)
+    print("Press Enter to proceed or Ctrl+C to cancel...")
+    print("=" * 80)
+    try:
+        input()
+    except KeyboardInterrupt:
+        print("\nAborted.")
+        sys.exit(0)
+
+
 def get_variant_ids_to_process(variant_id, all_variants):
     """Determine which variant IDs to work with based on user supplied choices """
     variant_ids_to_process = []
@@ -86,6 +99,7 @@ def get_variant_ids_to_process(variant_id, all_variants):
         print(f"Total variant ids obtained from CIViCpy: {len(variant_ids_to_process)}\n")
 
     return variant_ids_to_process
+
 
 def variant_is_black_listed(vid, black_listed_variant_ids, black_list_path, contributor_id):
     """Test if variant is in a manually maintainted black list file"""
@@ -272,7 +286,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
 
     #load black listed variants file
     black_listed_variant_ids = civic_graphql_utils.load_blacklisted_variant_ids(black_list_path)
-    
+ 
     #get mappings of transcript to protein identifiers for refseq transcripts
     refseq_transcript_to_protein_map = entrez_utils.load_refseq_transcript_to_protein_map(refseq_to_protein_file)
 
@@ -281,6 +295,12 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
 
     #get ensembl transcript biotype to transcript identifiers
     ensembl_transcript_to_biotype_map = ensembl_utils.load_ensembl_transcript_to_biotype_map(ensembl_versions_file)
+
+    #summarize user info based on contributor id
+    user_details = civic_graphql_utils.gather_user_details(contributor_id)
+    print(f"\nContributor (id: {contributor_id}) is {user_details['user_name']} aka {user_details['user_display_name']} ({user_details['user_role']})")
+
+    prompt_to_proceed("Verify your user info above. Revisions by this user will be ignored/skipped. \nYou can't moderate your own submissions.")
 
     #create a data structure that will store all clingen supported transcripts ids per gene
     clingen_transcript_ids = {}
@@ -333,7 +353,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
             f"\nVariant revision info:\n"
             f"  Feature name: {variant_data['feature_name']}\tVariant name: {variant_data['variant_name']}\tVariant name in p. notation: {civic_variant_name_p_3letter}\n"
             f"  Open gene-variant revisions: {variant_data['open_revision_count_variant']} (total);"
-            f"  {variant_data['contributor_revisions']} (contributor); {variant_data['open_revisions_non_contributor']} (others)"
+            f"  {variant_data['contributor_revisions']} by you; {variant_data['open_revisions_non_contributor']} by others"
         )
         
         #get all clingen allele registry transcripts supported for the gene of this variant

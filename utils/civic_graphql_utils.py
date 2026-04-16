@@ -26,6 +26,7 @@ def populate_variables_id(variables_template: str, graphql_id: int) -> str:
 
     return populated
 
+
 def run_graphql_operation(api_url, operation_name, query_id, timeout=(10, 200)):
     """load graphql query and variable json objects from file, update with a query id, and submit the query to the API"""
     query_path = base_dir / f"../graphql/{operation_name}_query.json"
@@ -57,6 +58,26 @@ def run_graphql_operation(api_url, operation_name, query_id, timeout=(10, 200)):
 
     return resp
 
+
+def gather_user_details(user_id):
+    """execute graphql queries, parse json returns, build a simplied data structure with the user info needed"""
+    #user_Data
+    resp = run_graphql_operation(api_url, "user_Data", user_id)
+    json = resp.json()
+    
+    user_name = json['data']['user']['name']
+    user_display_name = json['data']['user']['displayName']
+    user_role = json['data']['user']['role']
+    user_data = {
+        "user_name": user_name,
+        "user_display_name": user_display_name,
+        "user_role": user_role
+    }
+    #pdb.set_trace()
+
+    return user_data
+
+
 def gather_variant_details(variant_id):
     """execute graphql queries, parse json returns, return basic variant info"""
     #variant_VariantDetail
@@ -73,6 +94,7 @@ def gather_variant_details(variant_id):
     #pdb.set_trace()
 
     return variant_data    
+
 
 def gather_variant_revisions(variant_id, contributor_id):
     """execute graphql queries, parse json returns, build a simplied data structure with the variant revision info needed"""
@@ -184,21 +206,6 @@ def gather_variant_revisions(variant_id, contributor_id):
     return variant_data
 
 
-def gather_user_details(user_id):
-    """execute graphql queries, parse json returns, build a simplied data structure with the user info needed"""
-    #user_Data
-
-    resp = run_graphql_operation(api_url, "user_Data", user_id)
-    json = resp.json()
-    #user_name = json['data']['variant']['name']
-    user_data = {
-        "user_name": user_name,
-        "feature_name": feature_name,
-    }
-    #pdb.set_trace()
-
-    return user_data
-
 
 def load_blacklisted_variant_ids(filepath):
 	"""Load blacklisted variant IDs from a file. One per line. Each line must start with the ID, anything else on the line will be ignored"""
@@ -225,34 +232,47 @@ def load_blacklisted_variant_ids(filepath):
 
 def main (variant_id, contributor_id):
     """demonstrate functionality of the methods above and variant data retrieved"""
-	variant_data = gather_variant_revisions(variant_id, contributor_id)
-	print(
-		f"\n\nVariant revision info from gather_variant_revisions()\n"
-		f"Variant ID used for graphql query: {variant_data['variant_id']}\n"
-		f"  Variant name: {variant_data['variant_name']}\n"
-		f"  Feature name: {variant_data['feature_name']}\n"
-		f"  Open gene-variant revisions (total): {variant_data['open_revision_count_variant']}\n"
-        f"  Open gene-variant revisions from specified contributor: {variant_data['contributor_revisions']}\n"
-		f"  Open gene-variant revisions from all others users: {variant_data['open_revisions_non_contributor']}\n"
-		f"  Variant coordinates id: {variant_data['variant_coordinates_id']}"
-	)
-	variant_revisions = variant_data['variant_revisions']
-	for variant_revision in variant_revisions:
-		print(
-			f"\nInformation for variant revision: {variant_revision['revision_id']}\n"
-			f"  Revision user display name: {variant_revision['user_display_name']} (id: {variant_revision['user_id']})\n"
-			f"  Revision field name: {variant_revision['field_name']}\n"
-			f"  Revision value(s): {variant_revision['revision_values_string']}"
-		)
+    
+    #get user/contributor information from the contributor id
+    user_details = gather_user_details(contributor_id)
+    print(
+        f"\n\nContributor/user info for contributor id: {contributor_id}\n"
+        f"  User name: {user_details['user_name']}\n"
+        f"  User display name: {user_details['user_display_name']}\n"
+        f"  User role: {user_details['user_role']}"
+    )
 
-	coordinate_revisions = variant_data['coordinate_revisions']
-	for coordinate_revision in coordinate_revisions:
-		print(
-			f"\nInformation for coordinate revision: {coordinate_revision['revision_id']}\n"
-			f"  Revision user display name: {coordinate_revision['user_display_name']} (id: {coordinate_revision['user_id']})\n"
-			f"  Revision field name: {coordinate_revision['field_name']}\n"
-			f"  Revision value(s): {coordinate_revision['suggested_value']}"
-		)
+    #get variant revision summary information
+    variant_data = gather_variant_revisions(variant_id, contributor_id)
+    print(
+        f"\nVariant revision info from gather_variant_revisions()\n"
+        f"Variant ID used for graphql query: {variant_data['variant_id']}\n"
+        f"  Variant name: {variant_data['variant_name']}\n"
+        f"  Feature name: {variant_data['feature_name']}\n"
+        f"  Open gene-variant revisions (total): {variant_data['open_revision_count_variant']}\n"
+        f"  Open gene-variant revisions from specified contributor: {variant_data['contributor_revisions']}\n"
+        f"  Open gene-variant revisions from all others users: {variant_data['open_revisions_non_contributor']}\n"
+        f"  Variant coordinates id: {variant_data['variant_coordinates_id']}"
+    )
+    #iterate through individual revisions
+    variant_revisions = variant_data['variant_revisions']
+    for variant_revision in variant_revisions:
+        print(
+            f"\nInformation for variant revision: {variant_revision['revision_id']}\n"
+            f"  Revision user display name: {variant_revision['user_display_name']} (id: {variant_revision['user_id']})\n"
+            f"  Revision field name: {variant_revision['field_name']}\n"
+            f"  Revision value(s): {variant_revision['revision_values_string']}"
+        )
+
+    #iterate through coordinate revisions
+    coordinate_revisions = variant_data['coordinate_revisions']
+    for coordinate_revision in coordinate_revisions:
+        print(
+            f"\nInformation for coordinate revision: {coordinate_revision['revision_id']}\n"
+            f"  Revision user display name: {coordinate_revision['user_display_name']} (id: {coordinate_revision['user_id']})\n"
+            f"  Revision field name: {coordinate_revision['field_name']}\n"
+            f"  Revision value(s): {coordinate_revision['suggested_value']}"
+        )
 
 #only run the main function if this script is being run directly
 if __name__ == "__main__":
