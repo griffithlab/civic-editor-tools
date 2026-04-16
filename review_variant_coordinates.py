@@ -421,6 +421,8 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
 
         variant_revisions = variant_data['variant_revisions']
         variant_coordinates_id = variant_data['variant_coordinates_id']
+    
+        prompt_to_proceed("Processing complete for variant ({vid}: civic_variant_name)")
 
 
 if __name__ == "__main__":
