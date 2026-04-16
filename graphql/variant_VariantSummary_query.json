@@ -1,0 +1,442 @@
+query VariantSummary($variantId: Int!) {
+  variant(id: $variantId) {
+    ...VariantSummaryFields
+    __typename
+  }
+}
+
+fragment VariantSummaryFields on VariantInterface {
+  id
+  name
+  feature {
+    __typename
+    id
+    name
+    link
+    deprecated
+    flagged
+  }
+  variantAliases
+  variantTypes {
+    id
+    link
+    soid
+    name
+    __typename
+  }
+  flags(state: OPEN) {
+    totalCount
+    __typename
+  }
+  revisions(status: NEW) {
+    totalCount
+    __typename
+  }
+  comments {
+    totalCount
+    __typename
+  }
+  lastSubmittedRevisionEvent {
+    originatingUser {
+      id
+      displayName
+      role
+      profileImagePath(size: 32)
+      __typename
+    }
+    __typename
+  }
+  lastAcceptedRevisionEvent {
+    originatingUser {
+      id
+      displayName
+      role
+      profileImagePath(size: 32)
+      __typename
+    }
+    __typename
+  }
+  creationActivity {
+    user {
+      id
+      displayName
+      role
+      profileImagePath(size: 32)
+      __typename
+    }
+    createdAt
+    __typename
+  }
+  deprecationActivity {
+    user {
+      id
+      displayName
+      role
+      profileImagePath(size: 32)
+      __typename
+    }
+    createdAt
+    parsedNote {
+      ...parsedCommentFragment
+      __typename
+    }
+    __typename
+  }
+  detailedClinicalSignificanceCounts {
+    ...DetailedClinicalSignificanceCounts
+    __typename
+  }
+  ... on GeneVariant {
+    ...GeneVariantSummaryFields
+    __typename
+  }
+  ... on FactorVariant {
+    ...FactorVariantSummaryFields
+    __typename
+  }
+  ... on FusionVariant {
+    ...FusionVariantSummaryFields
+    __typename
+  }
+  ... on RegionVariant {
+    ...RegionVariantSummaryFields
+    __typename
+  }
+  __typename
+}
+
+fragment parsedCommentFragment on CommentBodySegment {
+  __typename
+  ... on CommentTagSegment {
+    entityId
+    displayName
+    tagType
+    link
+    revisionSetId
+    feature {
+      id
+      name
+      link
+      deprecated
+      flagged
+      __typename
+    }
+    __typename
+  }
+  ... on CommentTagSegmentFlagged {
+    entityId
+    displayName
+    tagType
+    flagged
+    link
+    revisionSetId
+    feature {
+      id
+      name
+      link
+      deprecated
+      flagged
+      __typename
+    }
+    __typename
+  }
+  ... on CommentTagSegmentFlaggedAndWithStatus {
+    entityId
+    displayName
+    tagType
+    status
+    flagged
+    link
+    revisionSetId
+    feature {
+      id
+      name
+      link
+      deprecated
+      flagged
+      __typename
+    }
+    __typename
+  }
+  ... on CommentTagSegmentFlaggedAndDeprecated {
+    entityId
+    displayName
+    tagType
+    flagged
+    deprecated
+    link
+    revisionSetId
+    feature {
+      id
+      name
+      link
+      deprecated
+      flagged
+      __typename
+    }
+    __typename
+  }
+  ... on CommentTagSegmentDeprecated {
+    entityId
+    displayName
+    tagType
+    deprecated
+    link
+    revisionSetId
+    feature {
+      id
+      name
+      link
+      deprecated
+      flagged
+      __typename
+    }
+    __typename
+  }
+  ... on CommentTextSegment {
+    text
+    __typename
+  }
+  ... on User {
+    ...commenterFields
+    __typename
+  }
+}
+
+fragment commenterFields on User {
+  id
+  username
+  displayName
+  name
+  role
+  profileImagePath(size: 32)
+  organizations {
+    id
+    name
+    profileImagePath(size: 32)
+    __typename
+  }
+  __typename
+}
+
+fragment DetailedClinicalSignificanceCounts on ClinicalSignificanceCounts {
+  type
+  direction
+  significance
+  disease {
+    id
+    name
+    link
+    deprecated
+    __typename
+  }
+  therapies {
+    id
+    name
+    link
+    deprecated
+    __typename
+  }
+  therapyInteractionType
+  assertions {
+    id
+    name
+    link
+    status
+    flagged
+    __typename
+  }
+  count
+  __typename
+}
+
+fragment GeneVariantSummaryFields on GeneVariant {
+  alleleRegistryId
+  openCravatUrl
+  maneSelectTranscript
+  hgvsDescriptions
+  clinvarIds
+  coordinates {
+    ...CoordinateFields
+    __typename
+  }
+  myVariantInfo {
+    ...MyVariantInfoFields
+    __typename
+  }
+  openCravatAnnotations
+  __typename
+}
+
+fragment CoordinateFields on VariantCoordinate {
+  referenceBuild
+  ensemblVersion
+  chromosome
+  representativeTranscript
+  start
+  stop
+  referenceBases
+  variantBases
+  coordinateType
+  __typename
+}
+
+fragment MyVariantInfoFields on MyVariantInfo {
+  myVariantInfoId
+  caddConsequence
+  caddDetail
+  caddScore
+  caddPhred
+  clinvarClinicalSignificance
+  clinvarHgvsCoding
+  clinvarHgvsGenomic
+  clinvarHgvsNonCoding
+  clinvarHgvsProtein
+  clinvarId
+  clinvarOmim
+  cosmicId
+  dbnsfpInterproDomain
+  dbsnpRsid
+  eglClass
+  eglHgvs
+  eglProtein
+  eglTranscript
+  exacAlleleCount
+  exacAlleleFrequency
+  exacAlleleNumber
+  fathmmMklPrediction
+  fathmmMklScore
+  fathmmPrediction
+  fathmmScore
+  fitconsScore
+  gerp
+  gnomadExomeAlleleCount
+  gnomadExomeAlleleFrequency
+  gnomadExomeAlleleNumber
+  gnomadExomeFilter
+  gnomadGenomeAlleleCount
+  gnomadGenomeAlleleFrequency
+  gnomadGenomeAlleleNumber
+  gnomadGenomeFilter
+  lrtPrediction
+  lrtScore
+  metalrPrediction
+  metalrScore
+  metasvmPrediction
+  metasvmScore
+  mutationassessorPrediction
+  mutationassessorScore
+  mutationtasterPrediction
+  mutationtasterScore
+  phastcons100way
+  phastcons30way
+  phyloP100way
+  phyloP30way
+  polyphen2HdivPrediction
+  polyphen2HdivScore
+  polyphen2HvarPrediction
+  polyphen2HvarScore
+  proveanPrediction
+  proveanScore
+  revelScore
+  siftPrediction
+  siftScore
+  siphy
+  snpeffSnpEffect
+  snpeffSnpImpact
+  __typename
+}
+
+fragment FactorVariantSummaryFields on FactorVariant {
+  ncitId
+  ncitDetails {
+    ...NcitDetails
+    __typename
+  }
+  __typename
+}
+
+fragment NcitDetails on NcitDetails {
+  synonyms {
+    name
+    source
+    __typename
+  }
+  definitions {
+    definition
+    source
+    __typename
+  }
+  __typename
+}
+
+fragment FusionVariantSummaryFields on FusionVariant {
+  viccCompliantName
+  fusion {
+    fivePrimePartnerStatus
+    fivePrimeGene {
+      id
+      name
+      link
+      deprecated
+      flagged
+      __typename
+    }
+    threePrimePartnerStatus
+    threePrimeGene {
+      id
+      name
+      link
+      deprecated
+      flagged
+      __typename
+    }
+    __typename
+  }
+  fivePrimeCoordinates {
+    ...CoordinateFields
+    __typename
+  }
+  threePrimeCoordinates {
+    ...CoordinateFields
+    __typename
+  }
+  fivePrimeStartExonCoordinates {
+    ...ExonCoordinateFields
+    __typename
+  }
+  fivePrimeEndExonCoordinates {
+    ...ExonCoordinateFields
+    __typename
+  }
+  threePrimeStartExonCoordinates {
+    ...ExonCoordinateFields
+    __typename
+  }
+  threePrimeEndExonCoordinates {
+    ...ExonCoordinateFields
+    __typename
+  }
+  __typename
+}
+
+fragment ExonCoordinateFields on ExonCoordinate {
+  referenceBuild
+  ensemblVersion
+  chromosome
+  representativeTranscript
+  start
+  stop
+  exon
+  exonOffset
+  exonOffsetDirection
+  ensemblId
+  strand
+  coordinateType
+  __typename
+}
+
+fragment RegionVariantSummaryFields on RegionVariant {
+  iscnName
+  __typename
+}

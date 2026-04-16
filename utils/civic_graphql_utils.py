@@ -60,8 +60,8 @@ def run_graphql_operation(api_url, operation_name, query_id, timeout=(10, 200)):
 
 
 def gather_user_details(user_id):
-    """execute graphql queries, parse json returns, build a simplied data structure with the user info needed"""
-    #user_Data
+    """execute graphql queries, parse json, build a simplied data structure with the user info needed"""
+    #graphql template name: "user_Data"
     resp = run_graphql_operation(api_url, "user_Data", user_id)
     json = resp.json()
     
@@ -79,8 +79,8 @@ def gather_user_details(user_id):
 
 
 def gather_variant_details(variant_id):
-    """execute graphql queries, parse json returns, return basic variant info"""
-    #variant_VariantDetail
+    """execute graphql queries, parse json, return basic variant info"""
+    #graphql template name: "variant_VariantDetail"
     resp = run_graphql_operation(api_url, "variant_VariantDetail", variant_id)
     json = resp.json()
     variant_name = json['data']['variant']['name']
@@ -96,9 +96,27 @@ def gather_variant_details(variant_id):
     return variant_data    
 
 
+def gather_accepted_variant_data(variant_id):
+    """execute graphql queries, parse json, return detailed info on already accepted variant fields"""
+    #graphql template name: "variant_VariantSummary"
+    resp = run_graphql_operation(api_url, "variant_VariantSummary", variant_id)
+    json = resp.json()
+
+    #json['data']['variant']['variantAliases']
+
+    accepted_variant_data = {
+        "variant_aliases": json['data']['variant']['variantAliases']
+    }
+    pdb.set_trace()
+
+    return accepted_variant_data
+
+
 def gather_variant_revisions(variant_id, contributor_id):
-    """execute graphql queries, parse json returns, build a simplied data structure with the variant revision info needed"""
+    """execute graphql queries, parse json, build a simplied data structure with the variant revision info needed"""
+
     #Get coordinate ids for variant (takes a variant id)
+    #graphql template name: "variant_CoordinateIdsForVariant"
     resp = run_graphql_operation(api_url, "variant_CoordinateIdsForVariant", variant_id)
     json = resp.json()
 
@@ -116,7 +134,7 @@ def gather_variant_revisions(variant_id, contributor_id):
         "coordinate_revisions": []
     }	
 
-    #variant_VariantDetail
+    #graphql template name: "variant_VariantDetail"
     resp = run_graphql_operation(api_url, "variant_VariantDetail", variant_id)
     json = resp.json()
     variant_name = json['data']['variant']['name']
@@ -127,6 +145,7 @@ def gather_variant_revisions(variant_id, contributor_id):
     variant_data['name_change'] = False
 
     #variant_Revisions-Variant (takes a variant id)
+    #graphql template name: "variant_Revisions-Variant"
     resp = run_graphql_operation(api_url, 'variant_Revisions-Variant', variant_id)
     json = resp.json()
 
@@ -170,6 +189,7 @@ def gather_variant_revisions(variant_id, contributor_id):
         i += 1
 
     #variant_Revisions-VariantCoordinates (takes a variant _coordinates_ id)
+    #graphql template name: "variant_Revisions-VariantCoordinates"
     resp = run_graphql_operation(api_url, "variant_Revisions-VariantCoordinates", variant_coordinates_id)
     json = resp.json()
     coordinate_revisions = json["data"]["revisions"]["edges"]
@@ -204,7 +224,6 @@ def gather_variant_revisions(variant_id, contributor_id):
     #json['data']['revisions']['edges'][0]['node']['linkoutData']['diffValue']['addedObjects'][0]['displayName']
     #json['data']['revisions']['edges'][0]['node']['fieldName']
     return variant_data
-
 
 
 def load_blacklisted_variant_ids(filepath):
@@ -250,6 +269,10 @@ def main (variant_id, contributor_id):
         f"  Feature name: {variant_data['feature_name']}\n"
         f"  Deprecated: {variant_data['deprecated']}"
     )
+
+    #get much more detailed info on already accepted variant fields
+    accepted_variant_data = gather_accepted_variant_data(variant_id)
+
 
     #get variant revision summary information
     variant_data = gather_variant_revisions(variant_id, contributor_id)
