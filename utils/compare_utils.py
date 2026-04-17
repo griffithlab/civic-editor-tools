@@ -23,6 +23,7 @@ class RevisionComparator:
 
     def compare(self, field_name, revision_value):
         """method that matches a civic revision field to appropriate comparison logic method below"""
+        self.current_field_name = field_name
         handler = self._dispatch.get(field_name)
         if handler is None:
             raise NotImplementedError(f"No comparator defined for field: '{field_name}'")
@@ -50,9 +51,11 @@ class RevisionComparator:
 
     def compare_chromosome(self, civic_chromosome):
         clingen_chromosome = self.clingen_data["chromosome"]
-        if clingen_chromosome == civic_chromosome:
-        	return True
+        if clingen_chromosome.removeprefix("chr") == civic_chromosome:
+            print(f"{self.current_field_name}: clingen_value ({clingen_chromosome}) matches civic_value ({civic_chromosome})")
+            return True
         else:
+            print(f"{self.current_field_name}: clingen_value ({clingen_chromosome}) does NOT match civic_value ({civic_chromosome})")
             return False
 
     def compare_start(self, revision_value):
@@ -90,20 +93,13 @@ def main():
     }
 
 
-    clingen_value = "chr1"
-
     #example revision info from CIViC
     civic_field_name = "chromosome"
-    civic_revision_value = "1"
+    civic_revision_value = "12"
 
     comparator = RevisionComparator(clingen_data)
 
     is_consistent = comparator.compare(civic_field_name, civic_revision_value)
-
-    if is_consistent:
-        print(f"{civic_field_name}: clingen_value ({clingen_value}) matches civic_value ({civic_revision_value})")
-    else:
-        print(f"{civic_field_name}: clingen_value ({clingen_value}) does NOT match civic_value ({civic_revision_value})")
 
     return
 
