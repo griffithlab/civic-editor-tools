@@ -104,8 +104,9 @@ def gather_accepted_variant_data(variant_id):
 
     #pdb.set_trace()
     accepted_variant_data = {
-        "name": json['data']['variant']['name'],
         "allele_registry_id": json['data']['variant']['alleleRegistryId'],
+        "name": json['data']['variant']['name'],
+        "variant_types": json['data']['variant']['variantTypes'],
         "variant_aliases": json['data']['variant']['variantAliases'],
         "hgvs_descriptions": json['data']['variant']['hgvsDescriptions'],
         "clinvar_ids": json['data']['variant']['clinvarIds'],
@@ -332,8 +333,8 @@ def main (variant_id, contributor_id):
 
     print(
         f"\nAccepted variant details for variant id: {variant_id}\n"
-        f"  Name: {accepted_variant_data['name']}\n"
         f"  Allele Registry ID: {accepted_variant_data['allele_registry_id']}\n"
+        f"  Name: {accepted_variant_data['name']}\n"
         f"  Variant Aliases: {accepted_variant_data['variant_aliases']}\n"
         f"  HGVS Descriptions: {accepted_variant_data['hgvs_descriptions']}\n"
         f"  ClinVar IDs: {accepted_variant_data['clinvar_ids']}\n"
@@ -367,7 +368,8 @@ def main (variant_id, contributor_id):
             f"\nInformation for variant revision: {variant_revision['revision_id']}\n"
             f"  Revision user display name: {variant_revision['user_display_name']} (id: {variant_revision['user_id']})\n"
             f"  Revision field name: {variant_revision['field_name']}\n"
-            f"  Revision value(s): {variant_revision['revision_values_string']}"
+            f"  Revision values(s): {variant_revision['revision_values_list']}\n"
+            f"  Revision value(s) string: {variant_revision['revision_values_string']}"
         )
 
     #iterate through coordinate revisions
@@ -380,7 +382,7 @@ def main (variant_id, contributor_id):
             f"  Revision value(s): {coordinate_revision['suggested_value']}"
         )
 
-    #TODO: create a unified revisions object that combines all the revisions together and order them logically
+    #create a unified revisions object that combines all the revisions together and order them logically
     variant_data = merge_revision_data(variant_data)
 
     all_revisions = variant_data['all_revisions']

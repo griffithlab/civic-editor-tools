@@ -279,6 +279,25 @@ def variant_is_ambiguous_in_genome(clingen_allele_info):
     print(f"\nChecked {len(clingen_allele_info)} CAID(s) - no ambiguous genomic variants found.")
     return False
 
+def display_accepted_variant_info(variant_id, accepted_variant_data):
+    print(
+        f"\nAccepted variant details for variant id: {variant_id}\n"
+        f"  Allele Registry ID: {accepted_variant_data['allele_registry_id']}\n"
+        f"  Name: {accepted_variant_data['name']}\n"
+        f"  Variant Aliases: {accepted_variant_data['variant_aliases']}\n"
+        f"  HGVS Descriptions: {accepted_variant_data['hgvs_descriptions']}\n"
+        f"  ClinVar IDs: {accepted_variant_data['clinvar_ids']}\n"
+        f"  Reference Build: {accepted_variant_data['reference_build']}\n"
+        f"  Chromosome: {accepted_variant_data['chromosome']}\n"
+        f"  Start: {accepted_variant_data['start']}\n"
+        f"  Stop: {accepted_variant_data['stop']}\n"
+        f"  Reference Bases {accepted_variant_data['reference_bases']}\n"
+        f"  Variant Bases: {accepted_variant_data['variant_bases']}\n"
+        f"  Representative Transcript {accepted_variant_data['representative_transcript']}\n"
+        f"  Ensembl Version: {accepted_variant_data['ensembl_version']}\n"
+    )
+    return
+
 def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variants_without_revisions: bool):
 
     #define input data files
@@ -286,6 +305,12 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
     refseq_fasta_index_path = base_dir / f"data/refseq/indexed/GCF_000001405.40_GRCh38.p14_protein.faa.idx"
     ensembl_versions_file = base_dir / f"data/ensembl/ensembl_versions.txt"
     refseq_to_protein_file = base_dir / f"data/entrez/gene2refseq_human.tsv.gz"
+
+    revision_value_key = {
+        "variant": "revision_values_list",
+        "coordinate": "suggested_value",
+    }
+
 
     #make sure internet and API access is working before attempting anything
     verify_connectivity()
@@ -341,6 +366,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
 
         #query the graphql api for more detailed variant revision info
         variant_data = civic_graphql_utils.gather_variant_revisions(vid, contributor_id)
+        variant_data = civic_graphql_utils.merge_revision_data(variant_data)
 
         #if there is an outstanding revision to the variant name itself, warn the user
         if variant_name_has_revision(variant_data): continue
@@ -371,8 +397,8 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
         #get currently *accepted* variant and variant coordinate info in CIViC for this variant
         accepted_variant_data = civic_graphql_utils.gather_accepted_variant_data(vid)
 
-        #TODO: print out a summary of accepted variant info
-
+        #print out a summary of accepted variant info
+        display_accepted_variant_info(variant_id, accepted_variant_data)
 
         #get all clingen allele registry transcripts supported for the gene of this variant
         #only query the clingen API if we don't already have transcripts for this gene
@@ -402,47 +428,37 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
 
             #get genomic coordinate information for this CAID
             clingen_coords = clingen_ar_utils.extract_genomic_coords(ca_json)
-            genomic_hgvs_expressions = []
-            for coord in clingen_coords:
-                genomic_hgvs_expressions.append(coord['genomic_hgvs'])
-                print(f"  {coord['assembly']} chr{coord['chr']}:{coord['start']}-{coord['end']} {coord['ref']}>{coord['alt']}")
+            clingen_genomic_hgvs_expressions = []
+            for clingen_coord in clingen_coords:
+                clingen_genomic_hgvs_expressions.append(clingen_coord['genomic_hgvs'])
+                print(f"  {clingen_coord['assembly']} chr{clingen_coord['chr']}:{clingen_coord['start']}-{clingen_coord['end']} {clingen_coord['ref']}>{clingen_coord['alt']}")
 
             #show the genomic HGVS expression for this CAID
-            print(f"  Genomic HGVS expressions: {', '.join(genomic_hgvs_expressions)}")
+            print(f"  Genomic HGVS expressions: {', '.join(clingen_genomic_hgvs_expressions)}")
 
             #get the list of MANE Select HGVS expressions for this CAID
-            mane_select_hgvs_expressions = clingen_ar_utils.extract_mane_select_hgvs_expressions(ca_json)
-            print(f"  MANE Select HGVS expressions: {', '.join(mane_select_hgvs_expressions)}")
+            clingen_mane_select_hgvs_expressions = clingen_ar_utils.extract_mane_select_hgvs_expressions(ca_json)
+            print(f"  MANE Select HGVS expressions: {', '.join(clingen_mane_select_hgvs_expressions)}")
  
             # extract possible variant aliases across all transcripts for this CAID
-            variant_aliases = clingen_ar_utils.extract_possible_variant_aliases(ca_json)
-            print(f"  Possible variant aliases: {','.join(variant_aliases)}")
+            clingen_variant_aliases = clingen_ar_utils.extract_possible_variant_aliases(ca_json)
+            print(f"  Possible variant aliases: {','.join(clingen_variant_aliases)}")
 
             # extract ClinVar IDs for this CAID
-            clinvar_ids = clingen_ar_utils.extract_clinvar_ids(ca_json)
-            print(f"  ClinVar IDs: {','.join(str(id) for id in clinvar_ids)}")
+            clingen_clinvar_ids = clingen_ar_utils.extract_clinvar_ids(ca_json)
+            print(f"  ClinVar IDs: {','.join(str(id) for id in clingen_clinvar_ids)}")
 
+            #############################################################################################
             #Perform comparison between the ClinGen Allele Info for this CAID and CIViC Variant Revisions
-            #Move these above, and compare to each CAID processed?
-            variant_revisions = variant_data['variant_revisions']
-            coordinate_revisions = variant_data['coordinate_revisions']
-
-            for variant_revision in variant_revisions:
-                print(
-                    f"\nInformation for variant revision: {variant_revision['revision_id']}\n"
-                    f"  Revision user display name: {variant_revision['user_display_name']} (id: {variant_revision['user_id']})\n"
-                    f"  Revision field name: {variant_revision['field_name']}\n"
-                    f"  Revision value(s): {variant_revision['revision_values_string']}"
-            )
-            for coordinate_revision in coordinate_revisions:
-                print(
-                    f"\nInformation for coordinate revision: {coordinate_revision['revision_id']}\n"
-                    f"  Revision user display name: {coordinate_revision['user_display_name']} (id: {coordinate_revision['user_id']})\n"
-                    f"  Revision field name: {coordinate_revision['field_name']}\n"
-                    f"  Revision value(s): {coordinate_revision['suggested_value']}"
-                )
-
-
+            all_revisions = variant_data['all_revisions']
+ 
+            for revision in all_revisions:
+                #get revision value from correct dictionary slot according to revision type
+                revision_value = revision[revision_value_key[revision["revision_type"]]]
+                revision_id = revision['revision_id']
+                user_display_name = revision['user_display_name']
+                user_id = revision['user_id']
+                field_name = revision['field_name']
 
         #Pause before moving on to the next CIViC variant
         prompt_to_proceed("Processing complete for variant ({vid}: civic_variant_name)")
