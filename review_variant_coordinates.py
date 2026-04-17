@@ -57,6 +57,12 @@ def parse_args():
         action="store_true",
         help="Review all CIViC variants"
     )
+    group.add_argument(
+        "--allow-variants-without-revisions",
+        dest="allow_variants_without_revisions",
+        action="store_true",
+        help="Even if a variant has no outstanding revisions, process it anyway"
+    )
 
     return parser.parse_args()
 
@@ -140,9 +146,9 @@ def variant_name_has_revision(variant_data):
     return False
 
 
-def variant_has_no_open_revisions(variant_data):
+def variant_has_no_open_revisions(variant_data, allow_variants_without_revisions):
     """Test is variants has no open revisions """
-    if variant_data['open_revisions_non_contributor'] == 0:
+    if variant_data['open_revisions_non_contributor'] == 0 and not allow_variants_without_revisions:
         print(f"No open revision(s) by other contributors for this variant - skipping")
         return True
     
@@ -273,7 +279,7 @@ def variant_is_ambiguous_in_genome(clingen_allele_info):
     print(f"\nChecked {len(clingen_allele_info)} CAID(s) - no ambiguous genomic variants found.")
     return False
 
-def main(variant_id: int, contributor_id: int, all_variants: bool):
+def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variants_without_revisions: bool):
 
     #define input data files
     black_list_path = base_dir / f"data/civic_variant_blacklist.tsv"
@@ -339,8 +345,8 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
         #if there is an outstanding revision to the variant name itself, warn the user
         if variant_name_has_revision(variant_data): continue
 
-        #skip a variant if it has 0 pending revisions from other users
-        if variant_has_no_open_revisions(variant_data): continue
+        #skip a variant if it has 0 pending revisions from other users - unless the user wishes to bypass this
+        if variant_has_no_open_revisions(variant_data, allow_variants_without_revisions): continue
 
         #create the p. notation for the variant name (e.g. 'S459F' -> 'p.Ser459Phe')
         civic_variant_name_p_3letter = generic_utils.snv_coding_to_p_3letter(civic_variant_name)
@@ -355,7 +361,10 @@ def main(variant_id: int, contributor_id: int, all_variants: bool):
             f"  Open gene-variant revisions: {variant_data['open_revision_count_variant']} (total);"
             f"  {variant_data['contributor_revisions']} by you; {variant_data['open_revisions_non_contributor']} by others"
         )
-        
+ 
+        #get currently *accepted* variant and variant coordinate info in CIViC for this variant
+        accepted_variant_data = civic_graphql_utils.gather_accepted_variant_data(vid)
+
         #get all clingen allele registry transcripts supported for the gene of this variant
         #only query the clingen API if we don't already have transcripts for this gene
         clingen_gene_transcripts_json = get_clingen_gene_transcripts_json(gene_name, clingen_transcript_ids)
@@ -434,6 +443,7 @@ if __name__ == "__main__":
     main(
         contributor_id=args.contributor_id,
         variant_id=args.variant_id,
-        all_variants=args.all_variants
+        all_variants=args.all_variants,
+        allow_variants_without_revisions=args.allow_variants_without_revisions
     )
 
