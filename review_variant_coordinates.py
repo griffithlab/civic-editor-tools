@@ -24,6 +24,7 @@ from utils import clingen_ar_utils
 from utils import entrez_utils
 from utils import ensembl_utils
 from utils import refseq_utils
+from utils import compare_utils
 
 base_dir = Path(__file__).resolve().parent
 
@@ -311,7 +312,6 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
         "coordinate": "suggested_value",
     }
 
-
     #make sure internet and API access is working before attempting anything
     verify_connectivity()
 
@@ -426,12 +426,21 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
             #for each clingen CAID get info that we would expect to be submited to CIViC:
             #variant aliases, clinvar ids, hgvs expressions, genomic coordinates (chr, start, stop, ref var)
 
-            #get genomic coordinate information for this CAID
+            #get and disply genomic coordinate information for this CAID (all builds)
+            #save coord info for build37 specifically
+            clingen_assembly = clingen_chromosome = clingen_start = clingen_end = clingen_ref_bases = clingen_alt_bases = None
             clingen_coords = clingen_ar_utils.extract_genomic_coords(ca_json)
             clingen_genomic_hgvs_expressions = []
             for clingen_coord in clingen_coords:
                 clingen_genomic_hgvs_expressions.append(clingen_coord['genomic_hgvs'])
                 print(f"  {clingen_coord['assembly']} chr{clingen_coord['chr']}:{clingen_coord['start']}-{clingen_coord['end']} {clingen_coord['ref']}>{clingen_coord['alt']}")
+                if clingen_coord['assembly'] == "GRCh37":
+                    clingen_assembly = clingen_coord['assembly']
+                    clingen_chromosome = clingen_coord['chr']
+                    clingen_start = clingen_coord['start']
+                    clingen_end = clingen_coord['end']
+                    clingen_ref_bases = clingen_coord['ref']
+                    clingen_alt_bases = clingen_coord['alt']
 
             #show the genomic HGVS expression for this CAID
             print(f"  Genomic HGVS expressions: {', '.join(clingen_genomic_hgvs_expressions)}")
@@ -440,18 +449,41 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
             clingen_mane_select_hgvs_expressions = clingen_ar_utils.extract_mane_select_hgvs_expressions(ca_json)
             print(f"  MANE Select HGVS expressions: {', '.join(clingen_mane_select_hgvs_expressions)}")
  
-            # extract possible variant aliases across all transcripts for this CAID
+            #combine genomic and MANE select HGVS expressions into a single list of valid options
+            clingen_combined_hgvs_expressions = clingen_genomic_hgvs_expressions + clingen_mane_select_hgvs_expressions
+
+            #extract possible variant aliases across all transcripts for this CAID
             clingen_variant_aliases = clingen_ar_utils.extract_possible_variant_aliases(ca_json)
             print(f"  Possible variant aliases: {','.join(clingen_variant_aliases)}")
 
-            # extract ClinVar IDs for this CAID
+            #extract ClinVar IDs for this CAID
             clingen_clinvar_ids = clingen_ar_utils.extract_clinvar_ids(ca_json)
             print(f"  ClinVar IDs: {','.join(str(id) for id in clingen_clinvar_ids)}")
 
+            #create a clingen data bundle that will be used for comparisons to civic revisions
+            #TODO: assign expected variant type when guessing type from name above?
+            #TODO: extract an ideal representative transcript
+            #TODO: what to do about "ensembl_version". Ignore?
+            clingen_data = {
+                "variant_type": "Missense Variant",
+                "variant_aliases": clingen_variant_aliases,
+                "hgvs_expressions": clingen_combined_hgvs_expressions,
+                "clinvar_ids": clingen_clinvar_ids,
+                "assembly": clingen_assembly,
+                "chromosome": clingen_chromosome, 
+                "start": clingen_start,
+                "end": clingen_end,
+                "ref_bases": clingen_ref_bases,
+                "alt_bases": clingen_alt_bases,
+                "representative_transcript": None,
+                "ensembl_version": None
+            }
+
             #############################################################################################
             #Perform comparison between the ClinGen Allele Info for this CAID and CIViC Variant Revisions
+            print(f"Comparing existing revisions to the values of this CAID ({caid}):")
+            comparator = compare_utils.RevisionComparator(clingen_data)
             all_revisions = variant_data['all_revisions']
- 
             for revision in all_revisions:
                 #get revision value from correct dictionary slot according to revision type
                 revision_value = revision[revision_value_key[revision["revision_type"]]]
@@ -459,6 +491,12 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
                 user_display_name = revision['user_display_name']
                 user_id = revision['user_id']
                 field_name = revision['field_name']
+
+                is_consistent = comparator.compare(field_name, revision_value)
+
+
+
+
 
         #Pause before moving on to the next CIViC variant
         prompt_to_proceed("Processing complete for variant ({vid}: civic_variant_name)")
