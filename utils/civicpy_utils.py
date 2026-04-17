@@ -42,6 +42,28 @@ def extract_variant_id_list(variants):
     return [variant_id for _, variant_id in variant_info]
 
 
+def get_sources_for_variant(variant_id):
+    """Starting with a variant id, get associated molecular profiles, and their associated evidence, and their associated sources """
+    sources = {}
+    
+    variant = civic.get_variant_by_id(variant_id)
+    molecular_profiles = variant.molecular_profiles
+    for mp in molecular_profiles:
+        evidence_items = mp.evidence_items
+        for ei in evidence_items:
+            source = ei.source
+            source_url = source.source_url
+
+            if source_url not in sources:
+                sources[source_url] = {
+                    "citation": source.citation,
+                    "source_type": source.source_type,
+                    "source_url": source_url,
+                }
+
+    return sources
+
+
 def main():
     #include_list=None #to use every single variant regardless of status
     include_list = ['accepted', 'submitted']
@@ -56,6 +78,12 @@ def main():
         print(info)
         print("-" * 80)
     print(len(variant_ids))
+
+    #for a specific variant get all associated evidence sources
+    variant_id = 1832
+    sources = get_sources_for_variant(variant_id)
+
+
 
 if __name__ == "__main__":
     main()
