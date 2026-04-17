@@ -371,6 +371,9 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
         #get currently *accepted* variant and variant coordinate info in CIViC for this variant
         accepted_variant_data = civic_graphql_utils.gather_accepted_variant_data(vid)
 
+        #TODO: print out a summary of accepted variant info
+
+
         #get all clingen allele registry transcripts supported for the gene of this variant
         #only query the clingen API if we don't already have transcripts for this gene
         clingen_gene_transcripts_json = get_clingen_gene_transcripts_json(gene_name, clingen_transcript_ids)
@@ -419,26 +422,28 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
             clinvar_ids = clingen_ar_utils.extract_clinvar_ids(ca_json)
             print(f"  ClinVar IDs: {','.join(str(id) for id in clinvar_ids)}")
 
+            #Perform comparison between the ClinGen Allele Info for this CAID and CIViC Variant Revisions
+            #Move these above, and compare to each CAID processed?
+            variant_revisions = variant_data['variant_revisions']
+            coordinate_revisions = variant_data['coordinate_revisions']
+
+            for variant_revision in variant_revisions:
+                print(
+                    f"\nInformation for variant revision: {variant_revision['revision_id']}\n"
+                    f"  Revision user display name: {variant_revision['user_display_name']} (id: {variant_revision['user_id']})\n"
+                    f"  Revision field name: {variant_revision['field_name']}\n"
+                    f"  Revision value(s): {variant_revision['revision_values_string']}"
+            )
+            for coordinate_revision in coordinate_revisions:
+                print(
+                    f"\nInformation for coordinate revision: {coordinate_revision['revision_id']}\n"
+                    f"  Revision user display name: {coordinate_revision['user_display_name']} (id: {coordinate_revision['user_id']})\n"
+                    f"  Revision field name: {coordinate_revision['field_name']}\n"
+                    f"  Revision value(s): {coordinate_revision['suggested_value']}"
+                )
 
 
-        #- Variant ambiguity check (consider an example variant "BRAF V600E"
-        #  - For a given gene get all transcripts (RefSeq and Ensembl) in ClinGen Allele Registry (CAR) - done
-        #  - Check which of these transcripts have the expected ref AA at the expected position - done
-        #  - Add a check for methionine counting ambiguity (is there a matching ref AA one position to the right?) - done
-        #  - Starting from variant name, contruct possible p. hgvs expressions for all RefSeq and Ensembl transcript in CAR - done
-        #  - Check each of these p. hgvs expressions and get PAIDs. Get all unique CAIDs associated with these - done
-        #  - Skip CAIDs that are not a simple SNV? - done 
-        #  - Get the g. HGVS expression associated with all remaining CAIDs (make note of the MANE select) - done
-        #  - Are there multiple distinct genomic HGVS values that the variant name could refer to? If so, warn the user - done
 
-        #  - Add method that gathers EID sources (PMID links) for each variant (to help user confirm variant in source literature)
-        #  - Add summary of currently *accepted* variant coordinate info in CIViC.
-        #  - Perform comparison between the ClinGen Allele Info and revisions 
-
-        #Move these above, and compare to each CAID processed?
-        variant_revisions = variant_data['variant_revisions']
-        variant_coordinates_id = variant_data['variant_coordinates_id']
-    
         #Pause before moving on to the next CIViC variant
         prompt_to_proceed("Processing complete for variant ({vid}: civic_variant_name)")
 

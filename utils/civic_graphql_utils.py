@@ -195,6 +195,7 @@ def gather_variant_revisions(variant_id, contributor_id):
             "user_id": user_id,
             "user_display_name": user_display_name,
             "field_name": field_name,
+            "revision_values_list": revision_values_list,
             "revision_values_string": revision_values_string
         })
         i += 1
@@ -234,6 +235,51 @@ def gather_variant_revisions(variant_id, contributor_id):
     #json['data']['revisions']['edges'][0]['node']['creationActivity']['user']['displayName']
     #json['data']['revisions']['edges'][0]['node']['linkoutData']['diffValue']['addedObjects'][0]['displayName']
     #json['data']['revisions']['edges'][0]['node']['fieldName']
+    return variant_data
+
+
+def merge_revision_data(variant_data):
+    
+    #Define the priority order for field names
+    FIELD_NAME_PRIORITY = {
+        "name": 0,
+        "variant_type_ids": 1,
+        "variant_alias_ids": 2,
+        "hgvs_description_ids": 3,
+        "clinvar_entry_ids": 4,
+        "reference_build": 5,
+        "chromosome": 6,
+        "start": 7,
+        "stop": 8,
+        "reference_bases": 9,
+        "variant_bases": 10,
+        "representative_transcript": 11,
+        "ensembl_version": 12
+        # ... add all known field names here
+    }
+    #First tag each entry with its revision type then combine into "all_revisions"
+    all_revisions = [
+        {**entry, "revision_type": "variant"}
+        for entry in variant_data["variant_revisions"]
+    ] + [
+        {**entry, "revision_type": "coordinate"}
+        for entry in variant_data["coordinate_revisions"]
+    ]
+
+    # Validate all field names before sorting
+    unknown_fields = {
+       entry["field_name"]
+       for entry in all_revisions
+       if entry["field_name"] not in FIELD_NAME_PRIORITY
+    }
+    if unknown_fields:
+        raise ValueError(f"Fatal: unexpected field_name(s) encountered: {unknown_fields}")
+
+    #Sort revisions by the hard coded priority order of the features
+    all_revisions.sort(key=lambda entry: FIELD_NAME_PRIORITY[entry["field_name"]])
+
+    variant_data["all_revisions"] = all_revisions
+
     return variant_data
 
 
@@ -314,7 +360,7 @@ def main (variant_id, contributor_id):
         f"  Open gene-variant revisions from all others users: {variant_data['open_revisions_non_contributor']}\n"
         f"  Variant coordinates id: {variant_data['variant_coordinates_id']}"
     )
-    #iterate through individual revisions
+    #iterate through individual variant revisions
     variant_revisions = variant_data['variant_revisions']
     for variant_revision in variant_revisions:
         print(
@@ -334,10 +380,31 @@ def main (variant_id, contributor_id):
             f"  Revision value(s): {coordinate_revision['suggested_value']}"
         )
 
+    #TODO: create a unified revisions object that combines all the revisions together and order them logically
+    variant_data = merge_revision_data(variant_data)
+
+    all_revisions = variant_data['all_revisions']
+
+    for revision in all_revisions:
+        revision_value = ""
+        if revision["revision_type"] == "variant":
+            revision_value = revision['revision_values_string']
+        elif revision["revision_type"] == "coordinate":
+            revision_value = revision['suggested_value']
+
+        print(
+            f"\nInformation for combined and ordered revisions: {revision['revision_id']}\n"
+            f"  Revision user display name: {revision['user_display_name']} (id: {revision['user_id']})\n"
+            f"  Revision field name: {revision['field_name']}\n"
+            f"  Revision value(s): {revision_value}"
+        )
+
+
+
 #only run the main function if this script is being run directly
 if __name__ == "__main__":
-    #test_variant = 1832 #Example variant POLE S459F (civic.vid: 1832)
-    test_variant = 785 #Example variant giving error
+    test_variant = 1832 #Example variant POLE S459F (civic.vid: 1832)
+    #test_variant = 785 #Example variant giving error
     contributor_id = 15 #Example user (Malachi Griffith, user id 15)
     main(test_variant, contributor_id)
 
