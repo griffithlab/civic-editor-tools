@@ -109,7 +109,7 @@ def guess_variant_type(variant):
         ref_aa, pos, alt_aa = match.groups()
 
         if is_valid_aa(ref_aa) and is_valid_aa(alt_aa):
-            return "snv_coding"
+            return "Missense Variant"
     
     # 3) splice site
     if variant.startswith("Splice Site"):
@@ -272,9 +272,9 @@ def main():
 
     protein = "MSTNPKPQRKTKRNTNRRPQDVKFPGGG"
     print(f"\nTesting amino acid position matches for sequence: {protein}")
-    print(f"  Does P at position 5 match? {reference_aa_positions_matches('P', 5, protein)}") #True
-    print(f"  Does A at position 5 match? {reference_aa_positions_matches('A', 5, protein)}") #False
-    print(f"  Does P at position 100 match? {reference_aa_positions_matches('P', 100, protein)}") #False
+    print(f"  Does P at position 5 match? {reference_aa_positions_matches('P', 5, protein, 'test_id')}") #True
+    print(f"  Does A at position 5 match? {reference_aa_positions_matches('A', 5, protein, 'test_id')}") #False
+    print(f"  Does P at position 100 match? {reference_aa_positions_matches('P', 100, protein, 'test_id')}") #False
 
 
 if __name__ == "__main__":
