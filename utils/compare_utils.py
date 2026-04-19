@@ -1,6 +1,23 @@
 #!/usr/bin/env python3
 
+from enum import Enum
+
+from enum import Enum
+
+class MatchLevel(Enum):
+    """A class that defines colors to print out summary text based on the quality of matching information"""
+    MATCH = "match"
+    QUALIFIED_MATCH = "qualified_match"
+    MISMATCH = "mismatch"
+
+_MATCH_COLORS = {
+    MatchLevel.MATCH: "\033[32m",           # green
+    MatchLevel.QUALIFIED_MATCH: "\033[33m", # yellow
+    MatchLevel.MISMATCH: "\033[31m",        # red
+}
+
 class RevisionComparator:
+    """A class that facilitates use of an arbitrary set of methods that compare civic revision info to clingen info"""
 
     def __init__(self, clingen_data):
         self.clingen_data = clingen_data  # your externally gathered info
@@ -20,6 +37,10 @@ class RevisionComparator:
             "ensembl_version":           self.compare_ensembl_version
             # add more field_names here as needed
         }
+    def _print_match(self, level: MatchLevel, message: str):
+        """Helper script that prints out a message with color matched to the quality of the matching information"""
+        color = _MATCH_COLORS[level]
+        print(f"{color}{message}\033[0m")
 
     def compare(self, field_name, revision_value):
         """method that matches a civic revision field to appropriate comparison logic method below"""
@@ -53,9 +74,11 @@ class RevisionComparator:
         clingen_chromosome = self.clingen_data["chromosome"]
         if clingen_chromosome.removeprefix("chr") == civic_chromosome:
             print(f"{self.current_field_name}: clingen_value ({clingen_chromosome}) matches civic_value ({civic_chromosome})")
+            self._print_match(MatchLevel.MATCH, f"{self.current_field_name}: clingen_value ({clingen_chromosome}) matches civic_value ({civic_chromosome})")
             return True
         else:
             print(f"{self.current_field_name}: clingen_value ({clingen_chromosome}) does NOT match civic_value ({civic_chromosome})")
+            self._print_match(MatchLevel.MISMATCH, f"{self.current_field_name}: clingen_value ({clingen_chromosome}) does NOT match civic_value ({civic_chromosome})")
             return False
 
     def compare_start(self, revision_value):
