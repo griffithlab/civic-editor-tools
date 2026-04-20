@@ -6,6 +6,8 @@ cd "$SCRIPT_DIR"
 mkdir -p build37
 
 #Get the last version of Ensembl annotations that were actually predicted for build37 (v75)
+#NOTE: this doesn't actually get us the transcript version numbers we need! 
+#See: get_ensembl_v75_version_numbers.py for how to get this directly from Ensembl database
 GTF_URL="https://ftp.ensembl.org/pub/release-75/gtf/homo_sapiens/Homo_sapiens.GRCh37.75.gtf.gz"
 GTF_FILE=$(basename "$GTF_URL")
 GTF_FILE_OUT="build37/${GTF_FILE}"

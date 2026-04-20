@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import re
 import gzip
 import pickle
 from Bio import SeqIO
@@ -188,6 +189,67 @@ def get_ensembl_protein_indexed(ensembl_protein_id, ensembl_versions_file):
             f"No protein sequence found for {ensembl_protein_id} in ensembl versions: {ensembl_versions_file}"
         )
 
+def parse_gtf_attributes(attr_string: str) -> dict:
+    """Parse the semicolon-separated key-value attributes in column 9 of a GTF."""
+    return {m.group(1): m.group(2) for m in re.finditer(r'(\w+) "([^"]+)"', attr_string)}
+
+def compile_build37_transcripts():
+    """
+    Parse old ensembl build37 files and build an index of Ensembl transcript IDs (with version numbers) grouped by the Ensembl annotation version
+    """
+
+    #First get the v75 transcript ids with versions (parsing a TSV obtained by SQL query of Ensembl database)
+    ensembl_v75_input_path = base_dir / f"../data/ensembl/build37/ensembl75_transcripts.tsv"
+    annotations_v75 = {}
+    with open(ensembl_v75_input_path) as f:
+        header = f.readline().strip().split("\t")
+        col = {name: i for i, name in enumerate(header)}
+
+        for line in f:
+            parts = line.strip().split("\t")
+            if not parts or parts == [""]:
+                continue
+
+            versioned_id = f"{parts[col['transcript_id']]}.{parts[col['transcript_version']]}"
+            annotations_v75[versioned_id] = {
+                "gene_id": parts[col["gene_id"]],
+                "gene_name": parts[col["gene_name"]],
+                "biotype": parts[col["biotype"]],
+            }
+    
+    #Now get the v87 build37 imported transcript ids with verions (parsing a GTF that contains this info)
+    ensembl_v87_input_path = base_dir / f"../data/ensembl/build37/Homo_sapiens.GRCh37.87.gtf.gz"
+    annotations_v87 = {}
+    opener = gzip.open if str(ensembl_v87_input_path).endswith(".gz") else open
+    with opener(ensembl_v87_input_path, "rt") as f:
+        for line in f:
+            if line.startswith("#"):
+                continue
+
+            fields = line.strip().split("\t")
+            if fields[2] != "transcript":
+                continue
+
+            attrs = parse_gtf_attributes(fields[8])
+
+            # Skip if missing required fields
+            if not all(k in attrs for k in ("transcript_id", "transcript_version", "gene_id", "gene_name", "transcript_biotype")):
+                continue
+
+            versioned_id = f"{attrs['transcript_id']}.{attrs['transcript_version']}"
+            annotations_v87[versioned_id] = {
+                "gene_id": attrs["gene_id"],
+                "gene_name": attrs["gene_name"],
+                "biotype": attrs["transcript_biotype"],
+            }
+
+    build37_ensembl_transcripts = {
+        "v75": annotations_v75,
+        "v87": annotations_v87,
+    }
+
+    return build37_ensembl_transcripts
+
 
 def save_transcript_map_pickle(transcript_map, output_path):
     """Given a dictionary and an output path, save a pickle file"""
@@ -301,6 +363,30 @@ def main():
 
     print(f"\nProtein sequence for ensembl protein: {ensp1}")
     print(f"{ensp_seq}")
+
+    #Extract build37 transcript IDs with versions from ensembl v75 and imported ensembl v87
+    print(f"\nGet build 37 Ensembl transcripts with versions:")
+    build37_ensembl_transcripts = {}
+    build37_ensembl_transcripts_path = base_dir / f"../data/ensembl/build37/build37_ensembl_transcripts.pkl"
+
+    if os.path.exists(build37_ensembl_transcripts_path):
+        print(f"Build 37 ensembl transcripts pickle exists, loading directly from: {build37_ensembl_transcripts_path}")
+        build37_ensembl_transcripts = load_transcript_map_pickle(build37_ensembl_transcripts_path)
+    else:
+        print(f"Build37 ensembl transcripts pickle does NOT exist, creating and saving to: {build37_ensembl_transcripts_path}")
+        build37_ensembl_transcripts = compile_build37_transcripts()
+        save_transcript_map_pickle(build37_ensembl_transcripts, build37_ensembl_transcripts_path)
+
+    build37_ensembl_transcripts_v75 = build37_ensembl_transcripts["v75"]
+    build37_ensembl_transcripts_v87 = build37_ensembl_transcripts["v87"]
+
+    print(f"\nEnsembl v75:")
+    for versioned_id, entry in list(build37_ensembl_transcripts_v75.items())[:5]:
+        print(versioned_id, entry)
+    print(f"\nEnsembl v87:")
+    for versioned_id, entry in list(build37_ensembl_transcripts_v87.items())[:5]:
+        print(versioned_id, entry)
+
 
 
 if __name__ == "__main__":
