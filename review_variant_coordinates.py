@@ -511,7 +511,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
             #compare the CIViC variant name to the MANE select variant name and warning if it doesn't match
             mane_select_names = clingen_ar_utils.extract_mane_select_names_and_compare(ca_json, civic_variant_name_p_3letter)
 
-            #TODO: what to do about "ensembl_version". Ignore?
+            #assemble the payload of clingen allele data that will be compared against each revision according to type
             clingen_data = {
                 "variant_type": guessed_gene_variant_type,
                 "variant_aliases": clingen_variant_aliases,
@@ -524,7 +524,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
                 "ref_bases": clingen_ref_bases,
                 "alt_bases": clingen_alt_bases,
                 "representative_transcript": variant_build37_ensembl_transcripts,
-                "ensembl_version": None
+                "ensembl_version": None #what to do about "ensembl_version". Ignore?
             }
 
             #############################################################################################
