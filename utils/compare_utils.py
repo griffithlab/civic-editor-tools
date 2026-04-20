@@ -114,14 +114,17 @@ class RevisionComparator:
         rid = self.current_revision_id
         civic_base = civic_representative_transcript.split(".")[0]
 
-        partial_match_result = False
-        partial_match_transcript = None
+        v75_partial_match_result = False
+        v75_partial_match_transcript = None
+        v87_partial_match_result = False
+        v87_partial_match_transcript = None
         v75_match_result = False
         v75_match_transcript = None
         v87_match_result = False
         v87_match_transcript = None
 
         for clingen_id, v75_match, v87_match in variant_build37_ensembl_transcripts:
+            #check for exact matches against either v75 or v87
             if civic_representative_transcript == v75_match:
                 v75_match_result = True
                 v75_match_transcript = v75_match
@@ -129,19 +132,21 @@ class RevisionComparator:
                 v87_match_result = True
                 v87_match_transcript = v87_match
 
-            # Check partial match (base ID only) against either v75 or v87
-            for match in (v75_match, v87_match):
-                if match is not None and match.split(".")[0] == civic_base:
-                    partial_match_result = True
-                    partial_match_transcript = match
+            #check for partial matches (base ID only) against either v75 or v87
+            if v75_match is not None and v75_match.split(".")[0] == civic_base:
+                v75_partial_match_result = True
+                v75_partial_match_transcript = v75_match
+            if v87_match is not None and v87_match.split(".")[0] == civic_base:
+                v87_partial_match_result = True
+                v87_partial_match_transcript = v87_match
 
         #evaluate the match results
         if v75_match_result or v87_match_result:
             self._print_match(MatchLevel.MATCH, f"    {self.current_field_name} (revision: {self.current_revision_id}). {v75_match_transcript}(v75) or {v87_match_transcript}(v87) matches civic_value: ({civic_representative_transcript})")
             return True
 
-        if partial_match_result:
-            self._print_match(MatchLevel.QUALIFIED_MATCH, f"    {self.current_field_name} (revision: {self.current_revision_id}). {partial_match_transcript} partially matches civic_value: ({civic_representative_transcript}) (but no exact match to v75/v87 ensembl build37 transcripts)")
+        if v75_partial_match_result or v87_partial_match_result:
+            self._print_match(MatchLevel.QUALIFIED_MATCH, f"    {self.current_field_name} (revision: {self.current_revision_id}). {v75_partial_match_transcript}(v75) or {v87_partial_match_transcript}(v87) partially matches civic_value: ({civic_representative_transcript}) (but no exact match)")
             return True
 
         self._print_match(MatchLevel.MISMATCH, f"    {self.current_field_name} (revision: {self.current_revision_id}). No match found to civic_value: ({civic_representative_transcript})")
