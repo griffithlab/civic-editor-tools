@@ -38,13 +38,14 @@ class RevisionComparator:
             # add more field_names here as needed
         }
     def _print_match(self, level: MatchLevel, message: str):
-        """Helper script that prints out a message with color matched to the quality of the matching information"""
+        """Helper method that prints out a message with color matched to the quality of the matching information"""
         color = _MATCH_COLORS[level]
         print(f"{color}{message}\033[0m")
 
-    def compare(self, field_name, revision_value):
-        """method that matches a civic revision field to appropriate comparison logic method below"""
+    def compare(self, field_name, revision_value, revision_id):
+        """Method that matches a civic revision field to appropriate comparison logic method below"""
         self.current_field_name = field_name
+        self.current_revision_id = revision_id
         handler = self._dispatch.get(field_name)
         if handler is None:
             raise NotImplementedError(f"No comparator defined for field: '{field_name}'")
@@ -71,14 +72,17 @@ class RevisionComparator:
         return revision_value == self.clingen_data["assembly"]
 
     def compare_chromosome(self, civic_chromosome):
+        """Method that compares the chromosome values from a CIViC revision to one from ClinGen Allele Registry """
         clingen_chromosome = self.clingen_data["chromosome"]
-        if clingen_chromosome.removeprefix("chr") == civic_chromosome:
-            print(f"{self.current_field_name}: clingen_value ({clingen_chromosome}) matches civic_value ({civic_chromosome})")
-            self._print_match(MatchLevel.MATCH, f"{self.current_field_name}: clingen_value ({clingen_chromosome}) matches civic_value ({civic_chromosome})")
+        clingen_chromosome_normalized = clingen_chromosome.removeprefix("chr")
+        field_name = self.current_field_name
+        rid = self.current_revision_id
+
+        if clingen_chromosome_normalized == civic_chromosome:
+            self._print_match(MatchLevel.MATCH, f"  {self.current_field_name} (revision: {self.current_revision_id}). clingen_value: ({clingen_chromosome}) matches civic_value: ({civic_chromosome})")
             return True
         else:
-            print(f"{self.current_field_name}: clingen_value ({clingen_chromosome}) does NOT match civic_value ({civic_chromosome})")
-            self._print_match(MatchLevel.MISMATCH, f"{self.current_field_name}: clingen_value ({clingen_chromosome}) does NOT match civic_value ({civic_chromosome})")
+            self._print_match(MatchLevel.MISMATCH, f"  {self.current_field_name} (revision: {self.current_revision_id}). clingen_value: ({clingen_chromosome}) mismatch civic_value: ({civic_chromosome})")
             return False
 
     def compare_start(self, revision_value):
@@ -117,12 +121,13 @@ def main():
 
 
     #example revision info from CIViC
+    civic_revision_id = 1
     civic_field_name = "chromosome"
     civic_revision_value = "12"
 
     comparator = RevisionComparator(clingen_data)
 
-    is_consistent = comparator.compare(civic_field_name, civic_revision_value)
+    is_consistent = comparator.compare(civic_field_name, civic_revision_value, civic_revision_id)
 
     return
 

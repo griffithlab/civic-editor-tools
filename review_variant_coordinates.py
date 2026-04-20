@@ -359,9 +359,9 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
         #guess the variant type based on the CIViC variant name - skip unless it is a coding snv
         guessed_gene_variant_type = generic_utils.guess_variant_type(civic_variant_name)
 
-        if variant_type_is_unsupported(civic_variant_name, guessed_gene_variant_type, "snv_coding"): continue
+        if variant_type_is_unsupported(civic_variant_name, guessed_gene_variant_type, "Missense Variant"): continue
 
-        #get the three components of a simple snv_coding variant: ref_aa_1, pos, var_aa_1
+        #get the three components of a simple "Missense Variant" variant: ref_aa_1, pos, var_aa_1
         ref_aa_1, pos, var_aa_1 = generic_utils.parse_snv_coding_name_components(civic_variant_name)
 
         #query the graphql api for more detailed variant revision info
@@ -465,7 +465,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
             #TODO: extract an ideal representative transcript
             #TODO: what to do about "ensembl_version". Ignore?
             clingen_data = {
-                "variant_type": "Missense Variant",
+                "variant_type": guessed_gene_variant_type,
                 "variant_aliases": clingen_variant_aliases,
                 "hgvs_expressions": clingen_combined_hgvs_expressions,
                 "clinvar_ids": clingen_clinvar_ids,
@@ -481,7 +481,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
 
             #############################################################################################
             #Perform comparison between the ClinGen Allele Info for this CAID and CIViC Variant Revisions
-            print(f"Comparing existing revisions to the values of this CAID ({caid}):")
+            print(f"Comparing existing CIViC revisions to the values of this CAID ({caid}):")
             comparator = compare_utils.RevisionComparator(clingen_data)
             all_revisions = variant_data['all_revisions']
             for revision in all_revisions:
@@ -492,7 +492,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
                 user_id = revision['user_id']
                 field_name = revision['field_name']
 
-                is_consistent = comparator.compare(field_name, revision_value)
+                is_consistent = comparator.compare(field_name, revision_value, revision_id)
 
 
 

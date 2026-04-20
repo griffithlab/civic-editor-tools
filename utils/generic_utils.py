@@ -122,12 +122,12 @@ def guess_variant_type(variant):
 def snv_coding_to_p_3letter(variant):
     """Convert a coding SNV like 'S459F' to 'p.Ser459Phe'"""
     
-    if guess_variant_type(variant) != "snv_coding":
-        return None
+    if guess_variant_type(variant) != "Missense Variant":
+        raise ValueError(f"Expected 'Missense Variant', got '{variant_type}' for variant '{variant}'")
 
     match = re.match(r"^([A-Za-z])(\d+)([A-Za-z])", variant)
     if not match:
-        return None
+        raise ValueError(f"Variant '{variant}' does not match expected coding SNV format (e.g. 'S459F')")
 
     ref_aa, pos, alt_aa = match.groups()
 
