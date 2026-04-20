@@ -291,6 +291,20 @@ def load_ensembl_transcript_to_biotype_map(ensembl_versions_file):
 
     return ensembl_transcript_to_biotype_map
 
+def load_build37_ensembl_transcripts():
+    """Load and return a build37 ensembl transcripts with version numbers man from a pickle, create it if needed"""
+    build37_ensembl_transcripts = {}
+    build37_ensembl_transcripts_path = base_dir / f"../data/ensembl/build37/build37_ensembl_transcripts.pkl"
+    
+    if os.path.exists(build37_ensembl_transcripts_path):
+        print(f"Build 37 ensembl transcripts pickle exists, loading directly from: {build37_ensembl_transcripts_path}")
+        build37_ensembl_transcripts = load_transcript_map_pickle(build37_ensembl_transcripts_path)
+    else:
+        print(f"Build37 ensembl transcripts pickle does NOT exist, creating and saving to: {build37_ensembl_transcripts_path}")
+        build37_ensembl_transcripts = compile_build37_transcripts()
+        save_transcript_map_pickle(build37_ensembl_transcripts, build37_ensembl_transcripts_path)
+
+    return build37_ensembl_transcripts
 
 def main():
 
@@ -336,7 +350,7 @@ def main():
     #load ensembl transcript to biotype map from a single file
     fasta_files = [base_dir / f"../data/ensembl/version_data/Homo_sapiens.GRCh38.cdna.all.v115.fa.gz", 
                    base_dir / f"../data/ensembl/version_data/Homo_sapiens.GRCh38.ncrna.v115.fa.gz"]
-    ensembl_transcript_to_biotype_map= build_transcript_biotype_map(fasta_files)
+    ensembl_transcript_to_biotype_map = build_transcript_biotype_map(fasta_files)
 
     print(f"\nImported {len(ensembl_transcript_to_biotype_map)} Ensembl transcript to biotype mappings")
     print(f"{enst1} -> {ensembl_transcript_to_biotype_map[enst1]}\n")
@@ -363,6 +377,7 @@ def main():
 
     print(f"\nProtein sequence for ensembl protein: {ensp1}")
     print(f"{ensp_seq}")
+
 
     #Extract build37 transcript IDs with versions from ensembl v75 and imported ensembl v87
     print(f"\nGet build 37 Ensembl transcripts with versions:")

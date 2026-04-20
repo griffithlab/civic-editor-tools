@@ -331,6 +331,9 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
     #get ensembl transcript biotype to transcript identifiers
     ensembl_transcript_to_biotype_map = ensembl_utils.load_ensembl_transcript_to_biotype_map(ensembl_versions_file)
 
+    #get build37 ensembl transcript IDs with version numbers for (ensembl v75 and build37 imported ensembl v87)
+    build37_ensembl_transcripts = ensembl_utils.load_build37_ensembl_transcripts()
+
     #summarize user info based on contributor id
     user_details = civic_graphql_utils.gather_user_details(contributor_id)
     print(f"\nContributor (id: {contributor_id}) is {user_details['user_name']} aka {user_details['user_display_name']} ({user_details['user_role']})")
@@ -412,7 +415,10 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
         clingen_transcript_sequence_ids_final, clingen_protein_sequence_ids_final = get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_transcript_to_protein_map, ensembl_transcript_to_protein_map, ensembl_transcript_to_biotype_map, refseq_fasta_index_path, ensembl_versions_file, ref_aa_1, pos, var_aa_1, civic_variant_name_p_3letter)
 
         #for the list of valid transcript IDs from ClinGen, obtain old build37 compatible versions (from v75, and v87 import)
-        build37_ensembl_transcripts = get_build37_ensembl_transcripts(clingen_transcript_sequence_ids_final)
+        #build37_ensembl_transcripts = get_build37_ensembl_transcripts(clingen_transcript_sequence_ids_final)
+
+
+
 
         #get a unique list of useful/compatible CAIDs for the list of protein HGVS expressions
         clingen_allele_ids = get_clingen_alleles_from_p_hgvs(clingen_protein_sequence_ids_final, civic_variant_name_p_3letter)
