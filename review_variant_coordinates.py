@@ -170,7 +170,7 @@ def get_clingen_gene_transcripts_json (gene_name, clingen_transcript_ids):
 def get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_transcript_to_protein_map, ensembl_transcript_to_protein_map, ensembl_transcript_to_biotype_map, refseq_fasta_index_path, ensembl_versions_file, ref_aa_1, pos, var_aa_1, civic_variant_name_p_3letter):
     """"Filter clingen allele registry transcripts to those that are useful/compatible with this variant"""
     
-    print(f"\nIdentifying compatible ClinGen Allele Registry transcript IDs:")
+    #print(f"\nIdentifying compatible ClinGen Allele Registry transcript IDs:")
     clingen_transcript_sequence_ids_final = []
     clingen_protein_sequence_ids_final = []
 
@@ -213,7 +213,7 @@ def get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_tra
         if not generic_utils.reference_aa_positions_matches(ref_aa_1, pos, protein_seq, protein_id):
             continue
 
-        print(f"  Transcript ID: {clingen_reference_sequence_id} -> Protein ID: {protein_id} -> HGVS: {protein_id}:{civic_variant_name_p_3letter}")
+        #print(f"  Transcript ID: {clingen_reference_sequence_id} -> Protein ID: {protein_id} -> HGVS: {protein_id}:{civic_variant_name_p_3letter}")
 
         clingen_transcript_sequence_ids_final.append(clingen_reference_sequence_id)
         clingen_protein_sequence_ids_final.append(protein_id)
@@ -318,7 +318,7 @@ def get_build37_ensembl_transcripts_for_variant(clingen_transcript_sequence_ids_
 def display_accepted_variant_info(variant_id, accepted_variant_data):
     """Create a human readable summary of variant info already accepted in CIViC """
     print(
-        f"\nAlready accepted variant details for variant id: {variant_id}\n"
+        f"\nVariant details that are already accepted in CIViC for variant id: {variant_id}\n"
         f"  Allele Registry ID: {accepted_variant_data['allele_registry_id']}\n"
         f"  Name: {accepted_variant_data['name']}\n"
         f"  Variant Aliases: {accepted_variant_data['variant_aliases']}\n"
@@ -331,7 +331,7 @@ def display_accepted_variant_info(variant_id, accepted_variant_data):
         f"  Reference Bases {accepted_variant_data['reference_bases']}\n"
         f"  Variant Bases: {accepted_variant_data['variant_bases']}\n"
         f"  Representative Transcript {accepted_variant_data['representative_transcript']}\n"
-        f"  Ensembl Version: {accepted_variant_data['ensembl_version']}\n"
+        f"  Ensembl Version: {accepted_variant_data['ensembl_version']}"
     )
     return
 
@@ -450,6 +450,11 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
         #returns a list of tuples: clingen_transcript_id, ensembl_v75_match, ensembl_v87_match
         variant_build37_ensembl_transcripts = get_build37_ensembl_transcripts_for_variant(clingen_transcript_sequence_ids_final, build37_ensembl_transcripts)
 
+        #summarize possible build37 ensembl representative transcripts for this variant
+        print(f"\nPossible build37 ensembl representative transcripts for this variant:")
+        for clingen_id, v75_match, v87_match in variant_build37_ensembl_transcripts:
+            print(f"  ClinGen Id: {clingen_id} (b38). Ensembl_v75: {v75_match} (b37). Ensembl_v87: {v87_match} (b37)")
+
         #get a unique list of useful/compatible CAIDs for the list of protein HGVS expressions
         clingen_allele_ids = get_clingen_alleles_from_p_hgvs(clingen_protein_sequence_ids_final, civic_variant_name_p_3letter)
 
@@ -492,9 +497,6 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
             clingen_mane_select_hgvs_expressions = clingen_ar_utils.extract_mane_select_hgvs_expressions(ca_json)
             print(f"  MANE Select HGVS expressions: {', '.join(clingen_mane_select_hgvs_expressions)}")
  
-            #compare the CIViC variant name to the MANE select variant name and warning if it doesn't match
-            mane_select_names = clingen_ar_utils.extract_mane_select_names_and_compare(ca_json, civic_variant_name_p_3letter)
-
             #combine genomic and MANE select HGVS expressions into a single list of valid options
             clingen_combined_hgvs_expressions = clingen_genomic_hgvs_expressions + clingen_mane_select_hgvs_expressions
 
@@ -505,6 +507,9 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
             #extract ClinVar IDs for this CAID
             clingen_clinvar_ids = clingen_ar_utils.extract_clinvar_ids(ca_json)
             print(f"  ClinVar IDs: {','.join(str(id) for id in clingen_clinvar_ids)}")
+
+            #compare the CIViC variant name to the MANE select variant name and warning if it doesn't match
+            mane_select_names = clingen_ar_utils.extract_mane_select_names_and_compare(ca_json, civic_variant_name_p_3letter)
 
             #TODO: what to do about "ensembl_version". Ignore?
             clingen_data = {
