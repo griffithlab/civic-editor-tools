@@ -101,9 +101,52 @@ class RevisionComparator:
         # field specific logic here
         return revision_value == self.clingen_data["alt_bases"]
 
-    def compare_representative_transcript(self, revision_value):
+    def compare_representative_transcript(self, civic_representative_transcript):
+        """
+        Method that compares the representative transcript entry from a CIViC revision to values from ClinGen Allele Registry.
+        The ClinGen values come from "valid" transcripts that would make sense for the CIViC variant
+        From these, matching build37 versioned ensembl transcripts are obtained from Ensembl v75 and build37 imported Ensembl v87
+        """
         # field specific logic here
-        return revision_value == self.clingen_data["representative_transcript"]
+
+        variant_build37_ensembl_transcripts = self.clingen_data["representative_transcript"]
+        field_name = self.current_field_name
+        rid = self.current_revision_id
+        civic_base = civic_representative_transcript.split(".")[0]
+
+        partial_match_result = False
+        partial_match_transcript = None
+        v75_match_result = False
+        v75_match_transcript = None
+        v87_match_result = False
+        v87_match_transcript = None
+
+        for clingen_id, v75_match, v87_match in variant_build37_ensembl_transcripts:
+            if civic_representative_transcript == v75_match:
+                v75_match_result = True
+                v75_match_transcript = v75_match
+            if civic_representative_transcript == v87_match:
+                v87_match_result = True
+                v87_match_transcript = v87_match
+
+            # Check partial match (base ID only) against either v75 or v87
+            for match in (v75_match, v87_match):
+                if match is not None and match.split(".")[0] == civic_base:
+                    partial_match_result = True
+                    partial_match_transcript = match
+
+        #evaluate the match results
+        if v75_match_result or v87_match_result:
+            self._print_match(MatchLevel.MATCH, f"    {self.current_field_name} (revision: {self.current_revision_id}). {v75_match_transcript}(v75) or {v87_match_transcript}(v87) matches civic_value: ({civic_representative_transcript})")
+            return True
+
+        if partial_match_result:
+            self._print_match(MatchLevel.QUALIFIED_MATCH, f"    {self.current_field_name} (revision: {self.current_revision_id}). {partial_match_transcript} partially matches civic_value: ({civic_representative_transcript}) (but no exact match to v75/v87 ensembl build37 transcripts)")
+            return True
+
+        self._print_match(MatchLevel.MISMATCH, f"    {self.current_field_name} (revision: {self.current_revision_id}). No match found to civic_value: ({civic_representative_transcript})")
+        return False
+
 
     def compare_ensembl_version(self, revision_value):
         # field specific logic here
