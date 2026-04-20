@@ -540,7 +540,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
                 user_id = revision['user_id']
                 field_name = revision['field_name']
 
-                is_consistent = comparator.compare(field_name, revision_value, revision_id)
+                is_consistent = comparator.compare(field_name, revision_value, revision_id, user_display_name)
 
 
 

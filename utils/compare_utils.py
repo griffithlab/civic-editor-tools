@@ -42,10 +42,11 @@ class RevisionComparator:
         color = _MATCH_COLORS[level]
         print(f"{color}{message}\033[0m")
 
-    def compare(self, field_name, revision_value, revision_id):
+    def compare(self, field_name, revision_value, revision_id, user_display_name):
         """Method that matches a civic revision field to appropriate comparison logic method below"""
         self.current_field_name = field_name
         self.current_revision_id = revision_id
+        self.current_user_display_name = user_display_name
         handler = self._dispatch.get(field_name)
         if handler is None:
             raise NotImplementedError(f"No comparator defined for field: '{field_name}'")
@@ -77,12 +78,13 @@ class RevisionComparator:
         clingen_chromosome_normalized = clingen_chromosome.removeprefix("chr")
         field_name = self.current_field_name
         rid = self.current_revision_id
+        user = self.current_user_display_name
 
         if clingen_chromosome_normalized == civic_chromosome:
-            self._print_match(MatchLevel.MATCH, f"    {self.current_field_name} (revision: {self.current_revision_id}). clingen_value: ({clingen_chromosome}) matches civic_value: ({civic_chromosome})")
+            self._print_match(MatchLevel.MATCH, f"    {self.current_field_name} (revision: {self.current_revision_id}). clingen_value: ({clingen_chromosome}) matches civic_value: ({civic_chromosome}) [{user}]")
             return True
         else:
-            self._print_match(MatchLevel.MISMATCH, f"    {self.current_field_name} (revision: {self.current_revision_id}). clingen_value: ({clingen_chromosome}) mismatch civic_value: ({civic_chromosome})")
+            self._print_match(MatchLevel.MISMATCH, f"    {self.current_field_name} (revision: {self.current_revision_id}). clingen_value: ({clingen_chromosome}) mismatch civic_value: ({civic_chromosome}) [{user}]")
             return False
 
     def compare_start(self, revision_value):
@@ -112,6 +114,7 @@ class RevisionComparator:
         variant_build37_ensembl_transcripts = self.clingen_data["representative_transcript"]
         field_name = self.current_field_name
         rid = self.current_revision_id
+        user = self.current_user_display_name
         civic_base = civic_representative_transcript.split(".")[0]
 
         v75_partial_match_result = False
@@ -142,14 +145,14 @@ class RevisionComparator:
 
         #evaluate the match results
         if v75_match_result or v87_match_result:
-            self._print_match(MatchLevel.MATCH, f"    {self.current_field_name} (revision: {self.current_revision_id}). {v75_match_transcript}(v75) or {v87_match_transcript}(v87) matches civic_value: ({civic_representative_transcript})")
+            self._print_match(MatchLevel.MATCH, f"    {self.current_field_name} (revision: {self.current_revision_id}). {v75_match_transcript}(v75) or {v87_match_transcript}(v87) matches civic_value: ({civic_representative_transcript}) [{user}]")
             return True
 
         if v75_partial_match_result or v87_partial_match_result:
-            self._print_match(MatchLevel.QUALIFIED_MATCH, f"    {self.current_field_name} (revision: {self.current_revision_id}). {v75_partial_match_transcript}(v75) or {v87_partial_match_transcript}(v87) partially matches civic_value: ({civic_representative_transcript}) (but no exact match)")
+            self._print_match(MatchLevel.QUALIFIED_MATCH, f"    {self.current_field_name} (revision: {self.current_revision_id}). {v75_partial_match_transcript}(v75) or {v87_partial_match_transcript}(v87) partially matches civic_value: ({civic_representative_transcript}) (but no exact match) [{user}]")
             return True
 
-        self._print_match(MatchLevel.MISMATCH, f"    {self.current_field_name} (revision: {self.current_revision_id}). No match found to civic_value: ({civic_representative_transcript})")
+        self._print_match(MatchLevel.MISMATCH, f"    {self.current_field_name} (revision: {self.current_revision_id}). No match found to civic_value: ({civic_representative_transcript}) [{user}]")
         return False
 
 
