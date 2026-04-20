@@ -79,10 +79,10 @@ class RevisionComparator:
         rid = self.current_revision_id
 
         if clingen_chromosome_normalized == civic_chromosome:
-            self._print_match(MatchLevel.MATCH, f"  {self.current_field_name} (revision: {self.current_revision_id}). clingen_value: ({clingen_chromosome}) matches civic_value: ({civic_chromosome})")
+            self._print_match(MatchLevel.MATCH, f"    {self.current_field_name} (revision: {self.current_revision_id}). clingen_value: ({clingen_chromosome}) matches civic_value: ({civic_chromosome})")
             return True
         else:
-            self._print_match(MatchLevel.MISMATCH, f"  {self.current_field_name} (revision: {self.current_revision_id}). clingen_value: ({clingen_chromosome}) mismatch civic_value: ({civic_chromosome})")
+            self._print_match(MatchLevel.MISMATCH, f"    {self.current_field_name} (revision: {self.current_revision_id}). clingen_value: ({clingen_chromosome}) mismatch civic_value: ({civic_chromosome})")
             return False
 
     def compare_start(self, revision_value):

@@ -171,6 +171,7 @@ def get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_tra
     """"Filter clingen allele registry transcripts to those that are useful/compatible with this variant"""
     
     print(f"\nIdentifying compatible ClinGen Allele Registry transcript IDs:")
+    clingen_transcript_sequence_ids_final = []
     clingen_protein_sequence_ids_final = []
 
     #from the json of transcript info, get a list of the transcript IDs supported by clingen allele regsitry
@@ -214,9 +215,10 @@ def get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_tra
 
         print(f"  Transcript ID: {clingen_reference_sequence_id} -> Protein ID: {protein_id} -> HGVS: {protein_id}:{civic_variant_name_p_3letter}")
 
+        clingen_transcript_sequence_ids_final.append(clingen_reference_sequence_id)
         clingen_protein_sequence_ids_final.append(protein_id)
 
-    return clingen_protein_sequence_ids_final
+    return clingen_transcript_sequence_ids_final, clingen_protein_sequence_ids_final
 
 def get_clingen_alleles_from_p_hgvs(clingen_protein_sequence_ids_final, civic_variant_name_p_3letter):
     """Get clingen allele info starting from a list of protein HGVS expressions"""
@@ -284,7 +286,7 @@ def variant_is_ambiguous_in_genome(clingen_allele_info):
 
 def display_accepted_variant_info(variant_id, accepted_variant_data):
     print(
-        f"\nAccepted variant details for variant id: {variant_id}\n"
+        f"\nAlready accepted variant details for variant id: {variant_id}\n"
         f"  Allele Registry ID: {accepted_variant_data['allele_registry_id']}\n"
         f"  Name: {accepted_variant_data['name']}\n"
         f"  Variant Aliases: {accepted_variant_data['variant_aliases']}\n"
@@ -407,7 +409,10 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
         clingen_gene_transcripts_json = get_clingen_gene_transcripts_json(gene_name, clingen_transcript_ids)
 
         #filter the transcripts to those that are useful/compatible with this variant, return protein IDs
-        clingen_protein_sequence_ids_final = get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_transcript_to_protein_map, ensembl_transcript_to_protein_map, ensembl_transcript_to_biotype_map, refseq_fasta_index_path, ensembl_versions_file, ref_aa_1, pos, var_aa_1, civic_variant_name_p_3letter)
+        clingen_transcript_sequence_ids_final, clingen_protein_sequence_ids_final = get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_transcript_to_protein_map, ensembl_transcript_to_protein_map, ensembl_transcript_to_biotype_map, refseq_fasta_index_path, ensembl_versions_file, ref_aa_1, pos, var_aa_1, civic_variant_name_p_3letter)
+
+        #for the list of valid transcript IDs from ClinGen, obtain old build37 compatible versions (from v75, and v87 import)
+        build37_ensembl_transcripts = get_build37_ensembl_transcripts(clingen_transcript_sequence_ids_final)
 
         #get a unique list of useful/compatible CAIDs for the list of protein HGVS expressions
         clingen_allele_ids = get_clingen_alleles_from_p_hgvs(clingen_protein_sequence_ids_final, civic_variant_name_p_3letter)
@@ -466,8 +471,16 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
             print(f"  ClinVar IDs: {','.join(str(id) for id in clingen_clinvar_ids)}")
 
             #create a clingen data bundle that will be used for comparisons to civic revisions
-            #TODO: extract an ideal representative transcript
+            #TODO: extract an ideal representative transcript (e.g. the MANE select ensembl transcript from ClinGen? Weird because we are using b37 coordinates)
+            #  - could get the ensembl transcript ID from last b37 version of Ensembl (v75)? And if it matches the MANE select (ignoring transcript version), use that?
             #TODO: what to do about "ensembl_version". Ignore?
+
+            #One possible solution: (1) Use b37 variant genomic coordinates, (2) Get ensembl transcripts from the b37 ensembl project (v87 annotations imported to b37) that overlap these coordinates
+            #                       (3) If one of these ENSTs matches the modern MANE select ENSTs (ignoring transcript version), keep it.
+
+            #Or simpler, just look for the MANE select transcripts from ClinGen in the b37 ensembl project and figure out the old transcript version number.
+            #If the user submitted something that matches this, consider it valid? Or do this for original v75 and imported v87. Allow match to either?
+
             clingen_data = {
                 "variant_type": guessed_gene_variant_type,
                 "variant_aliases": clingen_variant_aliases,
