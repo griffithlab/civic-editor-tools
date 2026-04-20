@@ -23,6 +23,7 @@ def get_allele_by_hgvs(hgvs):
 def get_allele_by_id(allele_id):
     """query clingen API using a transcript level CAID
        e.g. https://reg.genome.network/allele/CA387358756
+       e.g. https://reg.genome.network/allele/CA123643 (has MANE Select Clinical)
     """
     url = f"{BASE_URL}/allele/{allele_id}"
     r = requests.get(url, headers={"Accept": "application/json"})
@@ -133,6 +134,7 @@ def extract_mane_select_hgvs_expressions(ca_json):
     """extract mane select hgvs expression from a transcript CAID json object"""
     mane_select_hgvs_expressions = []
 
+    #get the MANE select transcript+protein HGVS expressions, note that this should retreive both "MANE Select" and "MANE Plus Clinical" records
     for transcript in ca_json.get("transcriptAlleles", []):
         mane = transcript.get("MANE")
         if mane:
@@ -145,6 +147,40 @@ def extract_mane_select_hgvs_expressions(ca_json):
             mane_select_hgvs_expressions.append(protein.get("RefSeq", {}).get("hgvs"))
             
     return list(set(mane_select_hgvs_expressions))
+
+
+def extract_mane_select_names_and_compare(ca_json, p_dot_var_name):
+    """extract variant name that would correspond to the mane select p. hgvs expressions from a transcript CAID json object"""
+    mane_select_hgvs_expressions = []
+    mane_select_names = []
+
+    #get the MANE select protein HGVS expressions, note that this should retreive both "MANE Select" and "MANE Plus Clinical" records
+    for transcript in ca_json.get("transcriptAlleles", []):
+        mane = transcript.get("MANE")
+        if mane:
+            protein = mane.get("protein", {})
+            mane_select_hgvs_expressions.append(protein.get("Ensembl", {}).get("hgvs"))
+            mane_select_hgvs_expressions.append(protein.get("RefSeq", {}).get("hgvs"))
+
+    #parese the three letter AA names from the p. HGVS expressions
+    for expression in mane_select_hgvs_expressions:
+        if expression and ":p." in expression:
+            mane_select_names.append(expression.split(":")[1])
+
+    #warn if no MANE select names were found
+    if not mane_select_names:
+        print(f"\nWARNING: No MANE select names could be extracted from {ca_json}")
+        return None
+
+    #evaluate whether the passed in variant name matches at least one MANE select name (often there is just one)
+    unique_mane_select_names = set(mane_select_names)
+    GREEN, YELLOW, RESET = "\033[32m", "\033[33m", "\033[0m"
+    if p_dot_var_name in unique_mane_select_names:
+        print(f"{GREEN}  CIViC name {p_dot_var_name} matches a MANE select name: {','.join(unique_mane_select_names)}{RESET}")
+    else:
+        print(f"{YELLOW}  WARNING: CIViC name {p_dot_var_name} does not match any MANE select name: {','.join(unique_mane_select_names)}{RESET}")
+
+    return unique_mane_select_names
 
 
 def extract_clinvar_ids(ca_json):
@@ -206,8 +242,8 @@ if __name__ == "__main__":
 
     gene_symbol = "POLE"
     protein_id = "NP_006222.2"
-    p_dot_var = "p.Ser459Phe" #S459F
-    hgvs_protein = f"{protein_id}:{p_dot_var}"
+    p_dot_var_name = "p.Ser459Phe" #S459F
+    hgvs_protein = f"{protein_id}:{p_dot_var_name}"
 
     print("\nHGVS protein query:", hgvs_protein)
 
@@ -232,9 +268,13 @@ if __name__ == "__main__":
                 f"{coord['ref']}>{coord['alt']} {coord['genomic_hgvs']}"
             )
         
-        # extract MANE select transcript hgvs expressions for each transcript caid found
+        # extract MANE select transcript and protein hgvs expressions for each transcript caid found
         mane_select_hgvs_expressions = extract_mane_select_hgvs_expressions(ca_json)
         print(f"\nMANE Select HGVS expressions:\n  {','.join(mane_select_hgvs_expressions)}")
+
+        # extract MANE select names the protein HGVS expression
+        mane_select_names = extract_mane_select_names_and_compare(ca_json, p_dot_var_name)
+        print(f"\nMANE Select names(s):\n  {','.join(mane_select_names)}")
 
         # extract possible variant aliases across all transcripts
         variant_aliases = extract_possible_variant_aliases(ca_json)

@@ -277,7 +277,9 @@ def variant_is_ambiguous_in_genome(clingen_allele_info):
         print(f"\nWARNING! Ambiguous genomic positions found: {unique_positions}")
         return True
 
-    print(f"\nChecked {len(clingen_allele_info)} CAID(s) - no ambiguous genomic variants found.")
+    if len(clingen_allele_info) > 1:
+        print(f"\nChecked {len(clingen_allele_info)} CAID(s) - no ambiguous genomic variants found.")
+
     return False
 
 def display_accepted_variant_info(variant_id, accepted_variant_data):
@@ -449,6 +451,9 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
             clingen_mane_select_hgvs_expressions = clingen_ar_utils.extract_mane_select_hgvs_expressions(ca_json)
             print(f"  MANE Select HGVS expressions: {', '.join(clingen_mane_select_hgvs_expressions)}")
  
+            #compare the CIViC variant name to the MANE select variant name and warning if it doesn't match
+            mane_select_names = clingen_ar_utils.extract_mane_select_names_and_compare(ca_json, civic_variant_name_p_3letter)
+
             #combine genomic and MANE select HGVS expressions into a single list of valid options
             clingen_combined_hgvs_expressions = clingen_genomic_hgvs_expressions + clingen_mane_select_hgvs_expressions
 
@@ -461,7 +466,6 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
             print(f"  ClinVar IDs: {','.join(str(id) for id in clingen_clinvar_ids)}")
 
             #create a clingen data bundle that will be used for comparisons to civic revisions
-            #TODO: assign expected variant type when guessing type from name above?
             #TODO: extract an ideal representative transcript
             #TODO: what to do about "ensembl_version". Ignore?
             clingen_data = {
@@ -481,7 +485,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
 
             #############################################################################################
             #Perform comparison between the ClinGen Allele Info for this CAID and CIViC Variant Revisions
-            print(f"Comparing existing CIViC revisions to the values of this CAID ({caid}):")
+            print(f"\n  Comparing existing CIViC revisions to the values of this CAID ({caid}):")
             comparator = compare_utils.RevisionComparator(clingen_data)
             all_revisions = variant_data['all_revisions']
             for revision in all_revisions:
