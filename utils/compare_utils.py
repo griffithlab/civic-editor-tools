@@ -17,12 +17,16 @@ _MATCH_COLORS = {
 }
 
 class ValueComparator:
-    """A class that facilitates use of an arbitrary set of methods that compare civic values (accepted or revisions) to clingen info"""
+    """
+    A class that facilitates use of an arbitrary set of methods that compare civic values (accepted or revisions) to clingen info
+    Each method will be called based on a field name that triggers use of a method with logic specific to that field
+    """
 
     def __init__(self, clingen_data):
         self.clingen_data = clingen_data  # your externally gathered info
 
         self._dispatch = {
+            "allele_registry_id":        self.compare_allele_registry_id,
             "variant_type_ids":          self.compare_variant_types,
             "variant_alias_ids":         self.compare_variant_aliases,
             "hgvs_description_ids":      self.compare_hgvs_expressions,
@@ -58,6 +62,11 @@ class ValueComparator:
         if handler is None:
             raise NotImplementedError(f"No comparator defined for field: '{field_name}'")
         return handler(comparison_value)
+
+    def compare_allele_registry_id(self, civic_allele_registry_id):
+        # field specific logic here
+        return comparison_value == self.clingen_data["allele_registry_id"]
+
 
     def compare_variant_types(self, civic_variant_type):
         guessed_gene_variant_type = self.clingen_data["variant_type"]

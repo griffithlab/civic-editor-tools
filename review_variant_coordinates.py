@@ -544,6 +544,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
 
             #assemble the payload of clingen allele data that will be compared against each accepted or revision value according to civic field name
             clingen_data = {
+                "allele_registry_id": caid,
                 "variant_type": guessed_gene_variant_type,
                 "variant_aliases": clingen_variant_aliases,
                 "hgvs_expressions": clingen_combined_hgvs_expressions,
