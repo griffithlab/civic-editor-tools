@@ -524,7 +524,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
                 "ref_bases": clingen_ref_bases,
                 "alt_bases": clingen_alt_bases,
                 "representative_transcript": variant_build37_ensembl_transcripts,
-                "ensembl_version": None #what to do about "ensembl_version". Ignore?
+                "ensembl_version": ["75", "87"] #expected version for build37 ensembl transcripts
             }
 
             #############################################################################################
@@ -541,10 +541,6 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
                 field_name = revision['field_name']
 
                 is_consistent = comparator.compare(field_name, revision_value, revision_id, user_display_name)
-
-
-
-
 
         #Pause before moving on to the next CIViC variant
         prompt_to_proceed("Processing complete for variant ({vid}: civic_variant_name)")

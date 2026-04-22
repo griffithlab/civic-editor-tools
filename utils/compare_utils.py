@@ -81,10 +81,18 @@ class RevisionComparator:
         user = self.current_user_display_name
 
         if clingen_chromosome_normalized == civic_chromosome:
-            self._print_match(MatchLevel.MATCH, f"    {self.current_field_name} (revision: {self.current_revision_id}). clingen_value: ({clingen_chromosome}) matches civic_value: ({civic_chromosome}) [{user}]")
+            self._print_match(
+                MatchLevel.MATCH, 
+                f"    {field_name} (revision: {rid}). clingen_value: ({clingen_chromosome}) "
+                f"matches civic revision: ({civic_chromosome}) [{user}]"
+            )
             return True
         else:
-            self._print_match(MatchLevel.MISMATCH, f"    {self.current_field_name} (revision: {self.current_revision_id}). clingen_value: ({clingen_chromosome}) mismatch civic_value: ({civic_chromosome}) [{user}]")
+            self._print_match(
+                 MatchLevel.MISMATCH, 
+                 f"    {field_name} (revision: {rid}). clingen_value: ({clingen_chromosome}) "
+                 f"mismatches civic revision: ({civic_chromosome}) [{user}]"
+            )
             return False
 
     def compare_start(self, revision_value):
@@ -147,32 +155,54 @@ class RevisionComparator:
         if v75_match_result or v87_match_result:
             self._print_match(
                 MatchLevel.MATCH, 
-                f"    {self.current_field_name} (revision: {self.current_revision_id}). "
-                f"{v75_match_transcript}(v75) or {v87_match_transcript}(v87) "
-                f"matches civic_value: ({civic_representative_transcript}) [{user}]"
+                f"    {field_name} (revision: {rid}). {v75_match_transcript}(v75) or {v87_match_transcript}(v87) "
+                f"matches civic revision: ({civic_representative_transcript}) [{user}]"
             )
             return True
 
         if v75_partial_match_result or v87_partial_match_result:
             self._print_match(
                 MatchLevel.QUALIFIED_MATCH, 
-                f"    {self.current_field_name} (revision: {self.current_revision_id}). "
-                f"{v75_partial_match_transcript}(v75) or {v87_partial_match_transcript}(v87) "
-                f"partially matches civic_value: ({civic_representative_transcript}) (but no exact match) [{user}]"
+                f"    {field_name} (revision: {rid}). {v75_partial_match_transcript}(v75) or {v87_partial_match_transcript}(v87) "
+                f"partially matches civic revision: ({civic_representative_transcript}) (but no exact match) [{user}]"
             )
             return True
 
         self._print_match(
             MatchLevel.MISMATCH, 
-            f"    {self.current_field_name} (revision: {self.current_revision_id}). "
-            f"No match found to civic_value: ({civic_representative_transcript}) [{user}]"
+            f"    {field_name} (revision: {rid}). No match found to civic revision: ({civic_representative_transcript}) [{user}]"
         )
         return False
 
 
-    def compare_ensembl_version(self, revision_value):
-        # field specific logic here
-        return revision_value == self.clingen_data["ensembl_version"]
+    def compare_ensembl_version(self, civic_ensembl_version):
+        """
+        Method that compares CIViC revision value for Ensembl version against 
+        a basic hard coded expectation of likely Ensembl version numbers
+        """
+
+        expected_ensembl_versions = self.clingen_data["ensembl_version"]
+        expected_ensembl_versions_string = ','.join(expected_ensembl_versions)
+        field_name = self.current_field_name
+        rid = self.current_revision_id
+        user = self.current_user_display_name
+
+        if str(civic_ensembl_version) in expected_ensembl_versions:
+            self._print_match(
+                MatchLevel.MATCH, 
+                f"    {field_name} (revision: {rid}). expected_values: ({expected_ensembl_versions_string}) "
+                f"matches civic revision: ({civic_ensembl_version}) [{user}]"
+            )
+            return True
+        
+        if str(civic_ensembl_version) not in expected_ensembl_versions:
+            self._print_match(
+                MatchLevel.MISMATCH, 
+                f"    {field_name} (revision: {rid}). expected_values: ({expected_ensembl_versions_string}) "
+                f"mismatches civic revision: ({civic_ensembl_version}) [{user}]"
+            )
+ 
+        return False
 
 
 def main():
