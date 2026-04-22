@@ -84,6 +84,7 @@ class ValueComparator:
             return False
 
     def compare_variant_types(self, civic_variant_type):
+        """Method for comparison of CIViC variant types (revision or accepted) to an expected variant type inferred from the variant name"""
         guessed_gene_variant_type = self.clingen_data["variant_type"]
         field_name = self.current_field_name
         civic_variant_type_string = ','.join(civic_variant_type)
@@ -103,9 +104,41 @@ class ValueComparator:
             )
             return False
 
-    def compare_variant_aliases(self, comparison_value):
-        # field specific logic here
-        return comparison_value == self.clingen_data["variant_aliases"]
+    def compare_variant_aliases(self, civic_variant_aliases):
+        """Method for comparison of CIViC variant aliases (revision or accepted) to a list of possible aliases obtained from ClinGen"""
+        civic_variant_aliases_string = ','.join(civic_variant_aliases)
+        clingen_variant_aliases = self.clingen_data["variant_aliases"]
+        clingen_variant_aliases_string = ','.join(clingen_variant_aliases)
+        clingen_variant_aliases_upper = {a.upper() for a in clingen_variant_aliases}
+        field_name = self.current_field_name
+
+        #find civic aliases that are in the clingen possible aliases list and those that are not
+        matched_civic_aliases = []
+        unmatched_civic_aliases = []
+
+        for alias in civic_variant_aliases:
+            if alias.upper() in clingen_variant_aliases_upper:
+                matched_civic_aliases.append(alias)
+            else:
+                unmatched_civic_aliases.append(alias)
+
+        matched_civic_aliases_string = ','.join(matched_civic_aliases)
+        unmatched_civic_aliases_string = ','.join(unmatched_civic_aliases)
+
+        if matched_civic_aliases:
+            self._print_match(
+                MatchLevel.MATCH, 
+                f"    {field_name}. expected values: {clingen_variant_aliases_string} "
+                f"matches civic values: {matched_civic_aliases_string}."
+            )
+        if unmatched_civic_aliases:
+            self._print_match(
+                MatchLevel.MISMATCH, 
+                f"    {field_name}. expected values: {clingen_variant_aliases_string} "
+                f"mismatches civic values: {unmatched_civic_aliases_string}."
+            )
+
+        return len(unmatched_civic_aliases) == 0
 
     def compare_hgvs_expressions(self, comparison_value):
         # field specific logic here
