@@ -140,9 +140,44 @@ class ValueComparator:
 
         return len(unmatched_civic_aliases) == 0
 
-    def compare_hgvs_expressions(self, comparison_value):
-        # field specific logic here
-        return comparison_value == self.clingen_data["hgvs_expressions"]
+    def compare_hgvs_expressions(self, civic_hgvs_expressions):
+        """Method for comparison of CIViC hgvs expressions (revision or accepted) to a list of possible hgvs expressions obtained from ClinGen"""
+        civic_hgvs_expressions_string = ','.join(civic_hgvs_expressions)
+        clingen_hgvs_expressions = self.clingen_data["hgvs_expressions"]
+        clingen_hgvs_expressions_string = ','.join(clingen_hgvs_expressions)
+        field_name = self.current_field_name
+
+        #find civic aliases that are in the clingen possible aliases list and those that are not
+        matched_civic_hgvs_expressions = []
+        unmatched_civic_hgvs_expressions = []
+
+        #TODO: update matching logic to ignore sequence version numbers
+        for civic_hgvs in civic_hgvs_expressions:
+            civic_match_found = False
+            for clingen_hgvs in clingen_hgvs_expressions:
+                if civic_hgvs == clingen_hgvs:
+                    civic_match_found = True
+                    matched_civic_hgvs_expressions.append(civic_hgvs)
+            if not civic_match_found:
+                unmatched_civic_hgvs_expressions.append(civic_hgvs)
+
+        matched_civic_hgvs_expressions_string = ','.join(matched_civic_hgvs_expressions)
+        unmatched_civic_hgvs_expressions_string = ','.join(unmatched_civic_hgvs_expressions)
+
+        if matched_civic_hgvs_expressions:
+            self._print_match(
+                MatchLevel.MATCH, 
+                f"    {field_name}. expected values: {clingen_hgvs_expressions_string} "
+                f"matches civic values: {matched_civic_hgvs_expressions}."
+            )
+        if unmatched_civic_hgvs_expressions:
+            self._print_match(
+                MatchLevel.MISMATCH, 
+                f"    {field_name}. expected values: {clingen_hgvs_expressions_string} "
+                f"mismatches civic values: {unmatched_civic_hgvs_expressions_string}."
+            )
+
+        return len(unmatched_civic_hgvs_expressions) == 0
 
     def compare_clinvar_ids(self, comparison_value):
         # field specific logic here
