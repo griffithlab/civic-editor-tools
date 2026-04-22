@@ -52,9 +52,27 @@ class RevisionComparator:
             raise NotImplementedError(f"No comparator defined for field: '{field_name}'")
         return handler(revision_value)
 
-    def compare_variant_types(self, revision_value):
-        # field specific logic here
-        return revision_value == self.clingen_data["variant_type"]
+    def compare_variant_types(self, civic_variant_type):
+        guessed_gene_variant_type = self.clingen_data["variant_type"]
+        field_name = self.current_field_name
+        rid = self.current_revision_id
+        user = self.current_user_display_name
+        civic_variant_type_string = ','.join(civic_variant_type)
+
+        if guessed_gene_variant_type in civic_variant_type:
+            self._print_match(
+                MatchLevel.MATCH, 
+                f"    {field_name} (revision: {rid}). expected_value: ({guessed_gene_variant_type}) "
+                f"matches civic revision: ({civic_variant_type_string}) [{user}]"
+            )
+            return True
+        else:
+            self._print_match(
+                 MatchLevel.MISMATCH, 
+                 f"    {field_name} (revision: {rid}). expected_value: ({guessed_gene_variant_type}) "
+                 f"mismatches civic revision: ({civic_variant_type_string}) [{user}]"
+            )
+            return False
 
     def compare_variant_aliases(self, revision_value):
         # field specific logic here
