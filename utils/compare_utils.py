@@ -64,9 +64,23 @@ class ValueComparator:
         return handler(comparison_value)
 
     def compare_allele_registry_id(self, civic_allele_registry_id):
-        # field specific logic here
-        return comparison_value == self.clingen_data["allele_registry_id"]
+        clingen_allele_registry_id = self.clingen_data["allele_registry_id"]
+        field_name = self.current_field_name
 
+        if clingen__allele_registry_id == civic_allele_registry_id:
+            self._print_match(
+                MatchLevel.MATCH, 
+                f"    {field_name}. expected value: {clingen_allele_registry_id} "
+                f"matches civic value: {civic_allele_registry_id}."
+            )
+            return True
+        else:
+            self._print_match(
+                 MatchLevel.MISMATCH, 
+                 f"    {field_name}. expected value: {clingen_allele_registry_id} "
+                 f"mismatches civic value: {civic_allele_registry_id}."
+            )
+            return False
 
     def compare_variant_types(self, civic_variant_type):
         guessed_gene_variant_type = self.clingen_data["variant_type"]
