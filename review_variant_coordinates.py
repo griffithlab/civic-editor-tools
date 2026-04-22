@@ -437,6 +437,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
         accepted_variant_data = civic_graphql_utils.gather_accepted_variant_data(vid)
 
         #print out a summary of accepted variant info
+        #TODO: return an object with accepted values to be compared to clingen values later
         display_accepted_variant_info(variant_id, accepted_variant_data)
 
         #get all clingen allele registry transcripts supported for the gene of this variant
