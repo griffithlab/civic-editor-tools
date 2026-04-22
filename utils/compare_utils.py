@@ -145,14 +145,28 @@ class RevisionComparator:
 
         #evaluate the match results
         if v75_match_result or v87_match_result:
-            self._print_match(MatchLevel.MATCH, f"    {self.current_field_name} (revision: {self.current_revision_id}). {v75_match_transcript}(v75) or {v87_match_transcript}(v87) matches civic_value: ({civic_representative_transcript}) [{user}]")
+            self._print_match(
+                MatchLevel.MATCH, 
+                f"    {self.current_field_name} (revision: {self.current_revision_id}). "
+                f"{v75_match_transcript}(v75) or {v87_match_transcript}(v87) "
+                f"matches civic_value: ({civic_representative_transcript}) [{user}]"
+            )
             return True
 
         if v75_partial_match_result or v87_partial_match_result:
-            self._print_match(MatchLevel.QUALIFIED_MATCH, f"    {self.current_field_name} (revision: {self.current_revision_id}). {v75_partial_match_transcript}(v75) or {v87_partial_match_transcript}(v87) partially matches civic_value: ({civic_representative_transcript}) (but no exact match) [{user}]")
+            self._print_match(
+                MatchLevel.QUALIFIED_MATCH, 
+                f"    {self.current_field_name} (revision: {self.current_revision_id}). "
+                f"{v75_partial_match_transcript}(v75) or {v87_partial_match_transcript}(v87) "
+                f"partially matches civic_value: ({civic_representative_transcript}) (but no exact match) [{user}]"
+            )
             return True
 
-        self._print_match(MatchLevel.MISMATCH, f"    {self.current_field_name} (revision: {self.current_revision_id}). No match found to civic_value: ({civic_representative_transcript}) [{user}]")
+        self._print_match(
+            MatchLevel.MISMATCH, 
+            f"    {self.current_field_name} (revision: {self.current_revision_id}). "
+            f"No match found to civic_value: ({civic_representative_transcript}) [{user}]"
+        )
         return False
 
 
