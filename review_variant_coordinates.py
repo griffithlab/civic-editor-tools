@@ -321,6 +321,7 @@ def display_accepted_variant_info(variant_id, accepted_variant_data):
         f"\nVariant details that are already accepted in CIViC for variant id: {variant_id}\n"
         f"  Allele Registry ID: {accepted_variant_data['allele_registry_id']}\n"
         f"  Name: {accepted_variant_data['name']}\n"
+        f"  Variant Types: {accepted_variant_data['variant_types']}\n"
         f"  Variant Aliases: {accepted_variant_data['variant_aliases']}\n"
         f"  HGVS Descriptions: {accepted_variant_data['hgvs_descriptions']}\n"
         f"  ClinVar IDs: {accepted_variant_data['clinvar_ids']}\n"
@@ -333,7 +334,37 @@ def display_accepted_variant_info(variant_id, accepted_variant_data):
         f"  Representative Transcript {accepted_variant_data['representative_transcript']}\n"
         f"  Ensembl Version: {accepted_variant_data['ensembl_version']}"
     )
-    return
+
+    #create a set of civic accepted values to allow comparisons to clingen, one field at a time similar to what is done for revisions
+    civic_accepted_values = []
+    if accepted_variant_data['allele_registry_id']:
+       civic_accepted_values.append({"field_name": "allele_registry_id", "accepted_value": accepted_variant_data['allele_registry_id']})
+    if accepted_variant_data['variant_types']:
+       civic_accepted_values.append({"field_name": "variant_type_ids", "accepted_value": accepted_variant_data['variant_types']})
+    if accepted_variant_data['variant_aliases']:
+       civic_accepted_values.append({"field_name": "variant_alias_ids", "accepted_value": accepted_variant_data['variant_aliases']})
+    if accepted_variant_data['hgvs_descriptions']:
+       civic_accepted_values.append({"field_name": "hgvs_description_ids", "accepted_value": accepted_variant_data['hgvs_descriptions']})
+    if accepted_variant_data['clinvar_ids']:
+       civic_accepted_values.append({"field_name": "clinvar_entry_ids", "accepted_value": accepted_variant_data['clinvar_ids']})
+    if accepted_variant_data['reference_build']:
+       civic_accepted_values.append({"field_name": "reference_build", "accepted_value": accepted_variant_data['reference_build']})
+    if accepted_variant_data['chromosome']:
+       civic_accepted_values.append({"field_name": "chromosome", "accepted_value": accepted_variant_data['chromosome']})
+    if accepted_variant_data['start']:
+       civic_accepted_values.append({"field_name": "start", "accepted_value": accepted_variant_data['start']})
+    if accepted_variant_data['stop']:
+       civic_accepted_values.append({"field_name": "stop", "accepted_value": accepted_variant_data['stop']})
+    if accepted_variant_data['reference_bases']:
+       civic_accepted_values.append({"field_name": "reference_bases", "accepted_value": accepted_variant_data['reference_bases']})
+    if accepted_variant_data['variant_bases']:
+       civic_accepted_values.append({"field_name": "variant_bases", "accepted_value": accepted_variant_data['variant_bases']})
+    if accepted_variant_data['representative_transcript']:
+       civic_accepted_values.append({"field_name": "representative_transcript", "accepted_value": accepted_variant_data['representative_transcript']})
+    if accepted_variant_data['ensembl_version']:
+       civic_accepted_values.append({"field_name": "ensembl_version", "accepted_value": accepted_variant_data['ensembl_version']})
+
+    return civic_accepted_values
 
 def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variants_without_revisions: bool):
 
@@ -436,9 +467,8 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
         #get currently *accepted* variant and variant coordinate info in CIViC for this variant
         accepted_variant_data = civic_graphql_utils.gather_accepted_variant_data(vid)
 
-        #print out a summary of accepted variant info
-        #TODO: return an object with accepted values to be compared to clingen values later
-        display_accepted_variant_info(variant_id, accepted_variant_data)
+        #print out a summary of accepted variant info and return an object with accepted values to be compared to clingen values later
+        civic_accepted_values = display_accepted_variant_info(variant_id, accepted_variant_data)
 
         #get all clingen allele registry transcripts supported for the gene of this variant
         #only query the clingen API if we don't already have transcripts for this gene
@@ -512,7 +542,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
             #compare the CIViC variant name to the MANE select variant name and warning if it doesn't match
             mane_select_names = clingen_ar_utils.extract_mane_select_names_and_compare(ca_json, civic_variant_name_p_3letter)
 
-            #assemble the payload of clingen allele data that will be compared against each revision according to type
+            #assemble the payload of clingen allele data that will be compared against each accepted or revision value according to civic field name
             clingen_data = {
                 "variant_type": guessed_gene_variant_type,
                 "variant_aliases": clingen_variant_aliases,
@@ -527,19 +557,37 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
                 "representative_transcript": variant_build37_ensembl_transcripts,
                 "ensembl_version": ["75", "87"] #expected version for build37 ensembl transcripts
             }
+            #initialize the comparator class
+            comparator = compare_utils.ValueComparator(clingen_data)
+
+            #############################################################################################
+            #Perform comparison between the ClinGen Allele Info for this CAID and CIViC Variant Accepted Fields
+            print(f"\n  Comparing existing CIViC accepted values to the values of this CAID ({caid}):")
+
+            if len(civic_accepted_values) == 0:
+                print(f"    No CIViC accepted values to be compared")
+
+            for accepted_value in civic_accepted_values:
+                field_name = accepted_value['field_name']
+                accepted_value = accepted_value['accepted_value']
+                revision_id = None
+                user_display_name = None
+
+                is_consistent = comparator.compare(field_name, accepted_value, revision_id, user_display_name)
 
             #############################################################################################
             #Perform comparison between the ClinGen Allele Info for this CAID and CIViC Variant Revisions
             print(f"\n  Comparing existing CIViC revisions to the values of this CAID ({caid}):")
-            comparator = compare_utils.RevisionComparator(clingen_data)
             all_revisions = variant_data['all_revisions']
+
+            if len(all_revisions) == 0:
+                print(f"    No CIViC revisions to be compared")
+
             for revision in all_revisions:
-                #get revision value from correct dictionary slot according to revision type
+                field_name = revision['field_name']
                 revision_value = revision[revision_value_key[revision["revision_type"]]]
                 revision_id = revision['revision_id']
                 user_display_name = revision['user_display_name']
-                user_id = revision['user_id']
-                field_name = revision['field_name']
 
                 is_consistent = comparator.compare(field_name, revision_value, revision_id, user_display_name)
 

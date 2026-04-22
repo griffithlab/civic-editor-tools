@@ -16,7 +16,7 @@ _MATCH_COLORS = {
     MatchLevel.MISMATCH: "\033[31m",        # red
 }
 
-class RevisionComparator:
+class ValueComparator:
     """A class that facilitates use of an arbitrary set of methods that compare civic values (accepted or revisions) to clingen info"""
 
     def __init__(self, clingen_data):
@@ -238,7 +238,7 @@ def main():
     civic_revision_value = "12"
     civic_user = "MalachiGriffith"
 
-    comparator = RevisionComparator(clingen_data)
+    comparator = ValueComparator(clingen_data)
 
     is_consistent = comparator.compare(civic_field_name, civic_revision_value, civic_revision_id)
 
