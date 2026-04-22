@@ -64,6 +64,7 @@ class ValueComparator:
         return handler(comparison_value)
 
     def compare_allele_registry_id(self, civic_allele_registry_id):
+        """Method for comparison of accepted civic CAID to possible clingen CAID matched by variant name"""
         clingen_allele_registry_id = self.clingen_data["allele_registry_id"]
         field_name = self.current_field_name
 
