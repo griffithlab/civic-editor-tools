@@ -42,6 +42,7 @@ class ValueComparator:
         }
     def _print_match(self, level: MatchLevel, message: str) -> None:
         """Helper method that prints out a message with color matched to the quality of the matching information"""
+        field_name = self.current_field_name
         rid = self.current_revision_id
         user = self.current_user_display_name
         color = _MATCH_COLORS[level]
@@ -224,7 +225,7 @@ class ValueComparator:
         expected_reference_build = self.clingen_data["reference_build"]
         field_name = self.current_field_name
 
-        if expected_reference_build == civic_reference_build:
+        if expected_reference_build.upper() == civic_reference_build.upper():
             self._print_match(
                 MatchLevel.MATCH,
                 f"    {field_name}. expected value: {expected_reference_build} "

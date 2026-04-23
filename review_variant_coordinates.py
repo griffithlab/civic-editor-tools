@@ -316,7 +316,8 @@ def get_build37_ensembl_transcripts_for_variant(clingen_transcript_sequence_ids_
 
         #store each result as a tuple of (clingen_id, v75_match, v87_match) where the match values are the versioned keys as they appear in the annotation dicts
         #this makes it easy to then do a follow-up lookup like: build37_ensembl_transcripts["v75"][v75_match] if you need the full annotation entry
-        variant_build37_ensembl_transcripts.append((clingen_id, v75_match, v87_match))
+        if v75_match or v87_match:
+            variant_build37_ensembl_transcripts.append((clingen_id, v75_match, v87_match))
 
     return variant_build37_ensembl_transcripts
 
