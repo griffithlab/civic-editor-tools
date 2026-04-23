@@ -224,7 +224,20 @@ class ValueComparator:
         expected_reference_build = self.clingen_data["reference_build"]
         field_name = self.current_field_name
 
-
+        if expected_reference_build == civic_reference_build:
+            self._print_match(
+                MatchLevel.MATCH,
+                f"    {field_name}. expected value: {expected_reference_build} "
+                f"matches civic value: {civic_reference_build}."
+            )
+            return True
+        else:
+            self._print_match(
+                MatchLevel.MISMATCH,
+                f"    {field_name}. expected value: {expected_reference_build} "
+                f"mismatches civic value: {civic_reference_build}."
+            )
+            return False
 
     def compare_chromosome(self, civic_chromosome: str) -> bool:
         """Method that compares the chromosome values from a CIViC submission (revision or accepted) to one from ClinGen Allele Registry"""

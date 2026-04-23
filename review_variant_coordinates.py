@@ -594,7 +594,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
                 is_consistent = comparator.compare(field_name, revision_value, revision_id, user_display_name)
 
         #Pause before moving on to the next CIViC variant
-        prompt_to_proceed("Processing complete for variant ({vid}: civic_variant_name)")
+        prompt_to_proceed(f"Processing complete for variant ({vid}: {civic_variant_name})")
 
 
 if __name__ == "__main__":
