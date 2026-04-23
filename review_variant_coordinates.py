@@ -65,6 +65,12 @@ def parse_args():
         action="store_true",
         help="Even if a variant has no outstanding revisions, process it anyway"
     )
+    parser.add_argument(
+        "--open-browser",
+        dest="open_browser",
+        action="store_true",
+        help="Allow the user to control whether a browser view will be opened for each variant"
+    )
 
     return parser.parse_args()
 
@@ -324,22 +330,40 @@ def get_build37_ensembl_transcripts_for_variant(clingen_transcript_sequence_ids_
 
 def display_accepted_variant_info(variant_id, accepted_variant_data):
     """Create a human readable summary of variant info already accepted in CIViC """
+
+    variant_types = None
+    if accepted_variant_data['variant_types']:
+        variant_types = ', '.join(accepted_variant_data['variant_types'])
+
+    variant_aliases = None
+    if accepted_variant_data['variant_aliases']:
+        variant_aliases = ', '.join(accepted_variant_data['variant_aliases'])
+
+    hgvs_descriptions = None
+    if accepted_variant_data['hgvs_descriptions']:
+        hgvs_descriptions = ', '.join(accepted_variant_data['hgvs_descriptions'])
+
+    clinvar_ids = None
+    if accepted_variant_data['clinvar_ids']:
+        clinvar_ids = [str(id) for id in accepted_variant_data['clinvar_ids']]
+        clinvar_ids = ', '.join(clinvar_ids)
+
     print(
         f"\nVariant details that are already accepted in CIViC for variant id: {variant_id}\n"
-        f"  Allele Registry ID: {accepted_variant_data['allele_registry_id']}"
-        f"\tName: {accepted_variant_data['name']}"
-        f"\tVariant Types: {accepted_variant_data['variant_types']}\n"
-        f"  Variant Aliases: {accepted_variant_data['variant_aliases']}\n"
-        f"  HGVS Descriptions: {accepted_variant_data['hgvs_descriptions']}\n"
-        f"  ClinVar IDs: {accepted_variant_data['clinvar_ids']}\n"
+        f" Allele Registry ID: {accepted_variant_data['allele_registry_id']}"
+        f" | Name: {accepted_variant_data['name']}"
+        f" | Variant Types: {variant_types}\n"
+        f"  Variant Aliases: {variant_aliases}\n"
+        f"  HGVS Descriptions: {hgvs_descriptions}\n"
+        f"  ClinVar IDs: {clinvar_ids}\n"
         f"  Reference Build: {accepted_variant_data['reference_build']}"
-        f"\tChromosome: {accepted_variant_data['chromosome']}"
-        f"\tStart: {accepted_variant_data['start']}"
-        f"\tStop: {accepted_variant_data['stop']}"
-        f"\tReference Bases: {accepted_variant_data['reference_bases']}"
-        f"\tVariant Bases: {accepted_variant_data['variant_bases']}\n"
+        f" | Chromosome: {accepted_variant_data['chromosome']}"
+        f" | Start: {accepted_variant_data['start']}"
+        f" | Stop: {accepted_variant_data['stop']}"
+        f" | Reference Bases: {accepted_variant_data['reference_bases']}"
+        f" | Variant Bases: {accepted_variant_data['variant_bases']}\n"
         f"  Representative Transcript: {accepted_variant_data['representative_transcript']}"
-        f"\tEnsembl Version: {accepted_variant_data['ensembl_version']}"
+        f" | Ensembl Version: {accepted_variant_data['ensembl_version']}"
     )
 
     #create a set of civic accepted values to allow comparisons to clingen, one field at a time similar to what is done for revisions
@@ -373,7 +397,7 @@ def display_accepted_variant_info(variant_id, accepted_variant_data):
 
     return civic_accepted_values
 
-def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variants_without_revisions: bool):
+def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variants_without_revisions: bool, open_browser: bool):
 
     #define input data files
     black_list_path = base_dir / f"data/civic_variant_blacklist.tsv"
@@ -503,7 +527,8 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
         variant_is_ambiguous_in_genome(clingen_allele_info)
         
         #Open the variant revision view for the user
-        open_variant_revision(vid)
+        if open_browser:
+            open_variant_revision(vid)
        
         #iterate through each useful/compatible CAID and display information that helps the user review outstanding edits
         for caid, ca_json in clingen_allele_info.items():
@@ -543,11 +568,11 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
 
             #extract possible variant aliases across all transcripts for this CAID
             clingen_variant_aliases = clingen_ar_utils.extract_possible_variant_aliases(ca_json)
-            print(f"  Possible variant aliases: {','.join(clingen_variant_aliases)}")
+            print(f"  Possible variant aliases: {', '.join(clingen_variant_aliases)}")
 
             #extract ClinVar IDs for this CAID
             clingen_clinvar_ids = clingen_ar_utils.extract_clinvar_ids(ca_json)
-            print(f"  ClinVar IDs: {','.join(str(id) for id in clingen_clinvar_ids)}")
+            print(f"  ClinVar IDs: {', '.join(str(id) for id in clingen_clinvar_ids)}")
 
             #compare the CIViC variant name to the MANE select variant name and warning if it doesn't match
             mane_select_names = clingen_ar_utils.extract_mane_select_names_and_compare(ca_json, civic_variant_name_p_3letter)
@@ -614,6 +639,7 @@ if __name__ == "__main__":
         contributor_id=args.contributor_id,
         variant_id=args.variant_id,
         all_variants=args.all_variants,
-        allow_variants_without_revisions=args.allow_variants_without_revisions
+        allow_variants_without_revisions=args.allow_variants_without_revisions,
+        open_browser=args.open_browser
     )
 

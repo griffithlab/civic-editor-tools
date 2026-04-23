@@ -54,6 +54,9 @@ class ValueComparator:
         if rid:
             revision_text = f"    {field_name}. [rid: {rid}, user: {user}]. "
             print(f"{revision_text}", end="")
+        else:
+            accepted_text = f"    {field_name}. " 
+            print(f"{accepted_text}", end="")
 
     def _normalize_hgvs(self, hgvs: str) -> str:
         """Helper method that strips sequence version number for loose comparison.
@@ -92,7 +95,7 @@ class ValueComparator:
     def compare_variant_types(self, civic_variant_type: list) -> bool:
         """Method for comparison of CIViC variant types (revision or accepted) to an expected variant type inferred from the variant name"""
         guessed_gene_variant_type = self.clingen_data["variant_type"]
-        civic_variant_type_string = ','.join(civic_variant_type)
+        civic_variant_type_string = ', '.join(civic_variant_type)
 
         self._print_revision_details()
         print(f"expected value: {guessed_gene_variant_type}.", end = " ")
@@ -111,9 +114,8 @@ class ValueComparator:
 
     def compare_variant_aliases(self, civic_variant_aliases: list) -> bool:
         """Method for comparison of CIViC variant aliases (revision or accepted) to a list of possible aliases obtained from ClinGen"""
-        civic_variant_aliases_string = ','.join(civic_variant_aliases)
         clingen_variant_aliases = self.clingen_data["variant_aliases"]
-        clingen_variant_aliases_string = ','.join(clingen_variant_aliases)
+        clingen_variant_aliases_string = ', '.join(clingen_variant_aliases)
         clingen_variant_aliases_upper = {a.upper() for a in clingen_variant_aliases}
 
         #find civic aliases that are in the clingen possible aliases list and those that are not
@@ -126,8 +128,8 @@ class ValueComparator:
             else:
                 unmatched_civic_aliases.append(alias)
 
-        matched_civic_aliases_string = ','.join(matched_civic_aliases)
-        unmatched_civic_aliases_string = ','.join(unmatched_civic_aliases)
+        matched_civic_aliases_string = ', '.join(matched_civic_aliases)
+        unmatched_civic_aliases_string = ', '.join(unmatched_civic_aliases)
 
         self._print_revision_details()
         print(f"clingen values: {clingen_variant_aliases_string}.", end="\n")
@@ -146,9 +148,8 @@ class ValueComparator:
 
     def compare_hgvs_expressions(self, civic_hgvs_expressions: list) -> bool:
         """Method for comparison of CIViC hgvs expressions (revision or accepted) to a list of possible hgvs expressions obtained from ClinGen"""
-        civic_hgvs_expressions_string = ','.join(civic_hgvs_expressions)
         clingen_hgvs_expressions = self.clingen_data["hgvs_expressions"]
-        clingen_hgvs_expressions_string = ','.join(clingen_hgvs_expressions)
+        clingen_hgvs_expressions_string = ', '.join(clingen_hgvs_expressions)
 
         #find civic aliases that are in the clingen possible aliases list and those that are not
         matched_civic_hgvs_expressions = []
@@ -163,8 +164,8 @@ class ValueComparator:
             if not civic_match_found:
                 unmatched_civic_hgvs_expressions.append(civic_hgvs)
 
-        matched_civic_hgvs_expressions_string = ','.join(matched_civic_hgvs_expressions)
-        unmatched_civic_hgvs_expressions_string = ','.join(unmatched_civic_hgvs_expressions)
+        matched_civic_hgvs_expressions_string = ', '.join(matched_civic_hgvs_expressions)
+        unmatched_civic_hgvs_expressions_string = ', '.join(unmatched_civic_hgvs_expressions)
 
         self._print_revision_details()
         print(f"clingen values: {clingen_hgvs_expressions_string}.", end="\n")
@@ -186,7 +187,7 @@ class ValueComparator:
         #normalize clinvar ids to a list of strings
         clingen_clinvar_ids = [str(id) for id in self.clingen_data["clinvar_ids"]]
         civic_clinvar_ids = [str(id) for id in civic_clinvar_ids]
-        clingen_clinvar_ids_string = ','.join(clingen_clinvar_ids)
+        clingen_clinvar_ids_string = ', '.join(clingen_clinvar_ids)
 
         #find civic clinvar IDs that are in the clingen clinvar list and those that are not
         matched_civic_clinvar_ids = []
@@ -198,8 +199,8 @@ class ValueComparator:
             else:
                 unmatched_civic_clinvar_ids.append(civic_clinvar_id)
 
-        matched_civic_clinvar_ids_string = ','.join(matched_civic_clinvar_ids)
-        unmatched_civic_clinvar_ids_string = ','.join(unmatched_civic_clinvar_ids)
+        matched_civic_clinvar_ids_string = ', '.join(matched_civic_clinvar_ids)
+        unmatched_civic_clinvar_ids_string = ', '.join(unmatched_civic_clinvar_ids)
 
         self._print_revision_details()
         print(f"clingen values: {clingen_clinvar_ids_string}.", end = "\n")
