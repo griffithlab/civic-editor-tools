@@ -130,16 +130,16 @@ class ValueComparator:
         unmatched_civic_aliases_string = ','.join(unmatched_civic_aliases)
 
         print(f"    {field_name}.", end=" ")
-        print(f"clingen values: {clingen_variant_aliases_string}", end=" ")
+        print(f"clingen values: {clingen_variant_aliases_string}", end="\n")
         if matched_civic_aliases:
             self._print_match(
                 MatchLevel.MATCH, 
-                f"\n      matches civic values: {matched_civic_aliases_string}."
+                f"      matches civic values: {matched_civic_aliases_string}.\n"
             )
         if unmatched_civic_aliases:
             self._print_match(
                 MatchLevel.MISMATCH, 
-                f"\n      mismatches civic values: {unmatched_civic_aliases_string}."
+                f"      mismatches civic values: {unmatched_civic_aliases_string}.\n"
             )
 
         return len(unmatched_civic_aliases) == 0
@@ -168,16 +168,16 @@ class ValueComparator:
         unmatched_civic_hgvs_expressions_string = ','.join(unmatched_civic_hgvs_expressions)
 
         print(f"    {field_name}.", end=" ")
-        print(f"clingen values: {clingen_hgvs_expressions_string}", end=" ")
+        print(f"clingen values: {clingen_hgvs_expressions_string}", end="\n")
         if matched_civic_hgvs_expressions:
             self._print_match(
                 MatchLevel.MATCH, 
-                f"matches civic values: {matched_civic_hgvs_expressions_string}."
+                f"      matches civic values: {matched_civic_hgvs_expressions_string}.\n"
             )
         if unmatched_civic_hgvs_expressions:
             self._print_match(
                 MatchLevel.MISMATCH, 
-                f"mismatches civic values: {unmatched_civic_hgvs_expressions_string}."
+                f"      mismatches civic values: {unmatched_civic_hgvs_expressions_string}.\n"
             )
 
         return len(unmatched_civic_hgvs_expressions) == 0
@@ -204,16 +204,16 @@ class ValueComparator:
         unmatched_civic_clinvar_ids_string = ','.join(unmatched_civic_clinvar_ids)
 
         print(f"    {field_name}.", end=" ")
-        print(f"clingen values: {clingen_clinvar_ids_string}", end = " ")
+        print(f"clingen values: {clingen_clinvar_ids_string}", end = "\n")
         if matched_civic_clinvar_ids:
             self._print_match(
                 MatchLevel.MATCH, 
-                f"matches civic values: {matched_civic_clinvar_ids_string}."
+                f"      matches civic values: {matched_civic_clinvar_ids_string}.\n"
             )
         if unmatched_civic_clinvar_ids:
             self._print_match(
                 MatchLevel.MISMATCH, 
-                f"mismatches civic values: {unmatched_civic_clinvar_ids_string}."
+                f"      mismatches civic values: {unmatched_civic_clinvar_ids_string}.\n"
             )
 
         return len(unmatched_civic_clinvar_ids) == 0
@@ -228,13 +228,13 @@ class ValueComparator:
         if expected_reference_build.upper() == civic_reference_build.upper():
             self._print_match(
                 MatchLevel.MATCH,
-                f"matches civic value: {civic_reference_build}."
+                f"matches civic value: {civic_reference_build}.\n"
             )
             return True
         else:
             self._print_match(
                 MatchLevel.MISMATCH,
-                f"mismatches civic value: {civic_reference_build}."
+                f"mismatches civic value: {civic_reference_build}.\n"
             )
             return False
 
@@ -249,13 +249,13 @@ class ValueComparator:
         if clingen_chromosome_normalized == civic_chromosome:
             self._print_match(
                 MatchLevel.MATCH, 
-                f"matches civic value: {civic_chromosome}."
+                f"matches civic value: {civic_chromosome}.\n"
             )
             return True
         else:
             self._print_match(
                  MatchLevel.MISMATCH, 
-                 f"mismatches civic value: {civic_chromosome}."
+                 f"mismatches civic value: {civic_chromosome}.\n"
             )
             return False
 
@@ -272,13 +272,13 @@ class ValueComparator:
         if clingen_start == civic_start:
             self._print_match(
                 MatchLevel.MATCH,
-                f"matches civic value: {civic_start}."
+                f"matches civic value: {civic_start}.\n"
             )
             return True
         else:
             self._print_match(
                 MatchLevel.MISMATCH,
-                f"mismatches civic value: {civic_start}."
+                f"mismatches civic value: {civic_start}.\n"
             )
             return False
 
@@ -292,13 +292,13 @@ class ValueComparator:
         if clingen_end == civic_stop:
             self._print_match(
                 MatchLevel.MATCH,
-                f"matches civic value: {civic_stop}."
+                f"matches civic value: {civic_stop}.\n"
             )
             return True
         else:
             self._print_match(
                 MatchLevel.MISMATCH,
-                f"mismatches civic value: {civic_stop}."
+                f"mismatches civic value: {civic_stop}.\n"
             )
             return False
 
@@ -312,13 +312,13 @@ class ValueComparator:
         if clingen_reference_bases == civic_reference_bases:
             self._print_match(
                 MatchLevel.MATCH,
-                f"matches civic value: {civic_reference_bases}."
+                f"matches civic value: {civic_reference_bases}.\n"
             )
             return True
         else:
             self._print_match(
                 MatchLevel.MISMATCH,
-                f"mismatches civic value: {civic_reference_bases}."
+                f"mismatches civic value: {civic_reference_bases}.\n"
             )
             return False
 
@@ -332,13 +332,13 @@ class ValueComparator:
         if clingen_variant_bases == civic_variant_bases:
             self._print_match(
                 MatchLevel.MATCH,
-                f"matches civic value: {civic_variant_bases}."
+                f"matches civic value: {civic_variant_bases}.\n"
             )
             return True
         else:
             self._print_match(
                 MatchLevel.MISMATCH,
-                f"mismatches civic value: {civic_variant_bases}."
+                f"mismatches civic value: {civic_variant_bases}.\n"
             )
             return False
 
@@ -386,20 +386,20 @@ class ValueComparator:
         if v75_match_result or v87_match_result:
             self._print_match(
                 MatchLevel.MATCH, 
-                f"matches civic value: {civic_representative_transcript}."
+                f"matches civic value: {civic_representative_transcript}.\n"
             )
             return True
 
         if v75_partial_match_result or v87_partial_match_result:
             self._print_match(
                 MatchLevel.QUALIFIED_MATCH, 
-                f"partially matches civic value: {civic_representative_transcript} (but no exact match)."
+                f"partially matches civic value: {civic_representative_transcript} (but no exact match).\n"
             )
             return True
 
         self._print_match(
             MatchLevel.MISMATCH, 
-            f"No clingen match found for civic value: {civic_representative_transcript}."
+            f"No clingen match found for civic value: {civic_representative_transcript}.\n"
         )
         return False
 
@@ -418,14 +418,14 @@ class ValueComparator:
         if str(civic_ensembl_version) in expected_ensembl_versions:
             self._print_match(
                 MatchLevel.MATCH, 
-                f"matches civic value: {civic_ensembl_version}."
+                f"matches civic value: {civic_ensembl_version}.\n"
             )
             return True
         
         if str(civic_ensembl_version) not in expected_ensembl_versions:
             self._print_match(
                 MatchLevel.MISMATCH, 
-                f"mismatches civic value: {civic_ensembl_version}."
+                f"mismatches civic value: {civic_ensembl_version}.\n"
             )
  
         return False
