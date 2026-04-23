@@ -556,7 +556,8 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
                 "ref_bases": clingen_ref_bases,
                 "alt_bases": clingen_alt_bases,
                 "representative_transcript": variant_build37_ensembl_transcripts,
-                "ensembl_version": ["75", "87"] #expected version for build37 ensembl transcripts
+                "ensembl_version": ["75", "87"], #expected version for build37 ensembl transcripts
+                "reference_build": "GRCh37"
             }
             #initialize the comparator class
             comparator = compare_utils.ValueComparator(clingen_data)

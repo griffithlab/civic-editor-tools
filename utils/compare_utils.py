@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
-from enum import Enum
-
+import re
 from enum import Enum
 
 class MatchLevel(Enum):
@@ -41,7 +40,7 @@ class ValueComparator:
             "ensembl_version":           self.compare_ensembl_version
             # add more field_names here as needed
         }
-    def _print_match(self, level: MatchLevel, message: str):
+    def _print_match(self, level: MatchLevel, message: str) -> None:
         """Helper method that prints out a message with color matched to the quality of the matching information"""
         rid = self.current_revision_id
         user = self.current_user_display_name
@@ -53,7 +52,13 @@ class ValueComparator:
 
         print(f"{color}{message}\033[0m")
 
-    def compare(self, field_name, comparison_value, revision_id, user_display_name):
+    def _normalize_hgvs(self, hgvs: str) -> str:
+        """Helper method that strips sequence version number for loose comparison.
+        e.g. 'ENST00000320574.10:c.1376C>T' -> 'ENST00000320574:c.1376C>T'
+        """
+        return re.sub(r'\.\d+(?=:)', '', hgvs)
+
+    def compare(self, field_name: str, comparison_value: str | list, revision_id: int, user_display_name: str) -> bool:
         """Method that matches a civic field to an appropriate comparison logic method below"""
         self.current_field_name = field_name
         self.current_revision_id = revision_id
@@ -63,7 +68,7 @@ class ValueComparator:
             raise NotImplementedError(f"No comparator defined for field: '{field_name}'")
         return handler(comparison_value)
 
-    def compare_allele_registry_id(self, civic_allele_registry_id):
+    def compare_allele_registry_id(self, civic_allele_registry_id: str) -> bool:
         """Method for comparison of accepted civic CAID to possible clingen CAID matched by variant name"""
         clingen_allele_registry_id = self.clingen_data["allele_registry_id"]
         field_name = self.current_field_name
@@ -83,7 +88,7 @@ class ValueComparator:
             )
             return False
 
-    def compare_variant_types(self, civic_variant_type):
+    def compare_variant_types(self, civic_variant_type: list) -> bool:
         """Method for comparison of CIViC variant types (revision or accepted) to an expected variant type inferred from the variant name"""
         guessed_gene_variant_type = self.clingen_data["variant_type"]
         field_name = self.current_field_name
@@ -104,7 +109,7 @@ class ValueComparator:
             )
             return False
 
-    def compare_variant_aliases(self, civic_variant_aliases):
+    def compare_variant_aliases(self, civic_variant_aliases: list) -> bool:
         """Method for comparison of CIViC variant aliases (revision or accepted) to a list of possible aliases obtained from ClinGen"""
         civic_variant_aliases_string = ','.join(civic_variant_aliases)
         clingen_variant_aliases = self.clingen_data["variant_aliases"]
@@ -140,7 +145,7 @@ class ValueComparator:
 
         return len(unmatched_civic_aliases) == 0
 
-    def compare_hgvs_expressions(self, civic_hgvs_expressions):
+    def compare_hgvs_expressions(self, civic_hgvs_expressions: list) -> bool:
         """Method for comparison of CIViC hgvs expressions (revision or accepted) to a list of possible hgvs expressions obtained from ClinGen"""
         civic_hgvs_expressions_string = ','.join(civic_hgvs_expressions)
         clingen_hgvs_expressions = self.clingen_data["hgvs_expressions"]
@@ -151,11 +156,10 @@ class ValueComparator:
         matched_civic_hgvs_expressions = []
         unmatched_civic_hgvs_expressions = []
 
-        #TODO: update matching logic to ignore sequence version numbers
         for civic_hgvs in civic_hgvs_expressions:
             civic_match_found = False
             for clingen_hgvs in clingen_hgvs_expressions:
-                if civic_hgvs == clingen_hgvs:
+                if self._normalize_hgvs(civic_hgvs) == self._normalize_hgvs(clingen_hgvs):
                     civic_match_found = True
                     matched_civic_hgvs_expressions.append(civic_hgvs)
             if not civic_match_found:
@@ -168,7 +172,7 @@ class ValueComparator:
             self._print_match(
                 MatchLevel.MATCH, 
                 f"    {field_name}. expected values: {clingen_hgvs_expressions_string} "
-                f"matches civic values: {matched_civic_hgvs_expressions}."
+                f"matches civic values: {matched_civic_hgvs_expressions_string}."
             )
         if unmatched_civic_hgvs_expressions:
             self._print_match(
@@ -179,16 +183,51 @@ class ValueComparator:
 
         return len(unmatched_civic_hgvs_expressions) == 0
 
-    def compare_clinvar_ids(self, comparison_value):
-        # field specific logic here
-        return comparison_value == self.clingen_data["clinvar_ids"]
+    def compare_clinvar_ids(self, civic_clinvar_ids: list) -> bool:
+        """Method that compares clinvar IDs from a CIViC submission (revision or accepted) to those from ClinGen Allele Registry"""
+        #normalize clinvar ids to a list of strings
+        clingen_clinvar_ids = [str(id) for id in self.clingen_data["clinvar_ids"]]
+        civic_clinvar_ids = [str(id) for id in civic_clinvar_ids]
+        clingen_clinvar_ids_string = ','.join(clingen_clinvar_ids)
+        field_name = self.current_field_name
 
-    def compare_reference_build(self, comparison_value):
-        # field specific logic here
-        return comparison_value == self.clingen_data["assembly"]
+        #find civic clinvar IDs that are in the clingen clinvar list and those that are not
+        matched_civic_clinvar_ids = []
+        unmatched_civic_clinvar_ids = []
 
-    def compare_chromosome(self, civic_chromosome):
-        """Method that compares the chromosome values from a CIViC submission (revision or accepted) to one from ClinGen Allele Registry """
+        for civic_clinvar_id in civic_clinvar_ids:
+            if civic_clinvar_id in clingen_clinvar_ids:
+                matched_civic_clinvar_ids.append(civic_clinvar_id)
+            else:
+                unmatched_civic_clinvar_ids.append(civic_clinvar_id)
+
+        matched_civic_clinvar_ids_string = ','.join(matched_civic_clinvar_ids)
+        unmatched_civic_clinvar_ids_string = ','.join(unmatched_civic_clinvar_ids)
+
+        if matched_civic_clinvar_ids:
+            self._print_match(
+                MatchLevel.MATCH, 
+                f"    {field_name}. expected values: {clingen_clinvar_ids_string} "
+                f"matches civic values: {matched_civic_clinvar_ids_string}."
+            )
+        if unmatched_civic_clinvar_ids:
+            self._print_match(
+                MatchLevel.MISMATCH, 
+                f"    {field_name}. expected values: {clingen_clinvar_ids_string} "
+                f"mismatches civic values: {unmatched_civic_clinvar_ids_string}."
+            )
+
+        return len(unmatched_civic_clinvar_ids) == 0
+
+    def compare_reference_build(self, civic_reference_build: str) -> bool:
+        """Method that compares the reference build in a CIViC submission (revision or accepted) to the expected value"""
+        expected_reference_build = self.clingen_data["reference_build"]
+        field_name = self.current_field_name
+
+
+
+    def compare_chromosome(self, civic_chromosome: str) -> bool:
+        """Method that compares the chromosome values from a CIViC submission (revision or accepted) to one from ClinGen Allele Registry"""
         clingen_chromosome = self.clingen_data["chromosome"]
         clingen_chromosome_normalized = clingen_chromosome.removeprefix("chr")
         field_name = self.current_field_name
@@ -208,23 +247,39 @@ class ValueComparator:
             )
             return False
 
-    def compare_start(self, comparison_value):
-        # field specific logic here
-        return comparison_value == self.clingen_data["start"]
+    def compare_start(self, civic_start: int) -> bool:
+        """Method that compares the genomic start position value from a CIViC submission (revision or accepted) to one from ClinGen Allele Registry"""
+        clingen_start = self.clingen_data["start"]
+        field_name = self.current_field_name
 
-    def compare_stop(self, comparison_value):
-        # field specific logic here
-        return comparison_value == self.clingen_data["end"]
 
-    def compare_reference_bases(self, comparison_value):
-        # field specific logic here
-        return comparison_value == self.clingen_data["ref_bases"]
 
-    def compare_variant_bases(self, comparison_value):
-        # field specific logic here
-        return comparison_value == self.clingen_data["alt_bases"]
 
-    def compare_representative_transcript(self, civic_representative_transcript):
+    def compare_stop(self, civic_stop: int) -> bool:
+        """Method that compares the genomic stop position value from a CIViC submission (revision or accepted) to one from ClinGen Allele Registry"""
+        clingen_end = self.clingen_data["end"]
+        field_name = self.current_field_name
+
+
+
+
+    def compare_reference_bases(self, civic_reference_bases: str) -> bool:
+        """Method that compares the reference bases value from a CIViC submission (revision or accepted) to one from ClinGen Allele Registry"""
+        clingen_reference_bases = self.clingen_data["ref_bases"]
+        field_name = self.current_field_name
+
+
+
+
+    def compare_variant_bases(self, civic_variant_bases: str) -> bool:
+        """Method that compares the variant bases value from a CIViC submission (revision or accepted) to one from ClinGen Allele Registry"""
+        clingen_variant_bases = self.clingen_data["alt_bases"]
+        field_name = self.current_field_name
+
+
+
+
+    def compare_representative_transcript(self, civic_representative_transcript: str) -> bool:
         """
         Method that compares the representative transcript entry from CIViC (accepted or revision) to values from ClinGen Allele Registry.
         The ClinGen values come from "valid" transcripts that would make sense for the CIViC variant
@@ -285,8 +340,7 @@ class ValueComparator:
         )
         return False
 
-
-    def compare_ensembl_version(self, civic_ensembl_version):
+    def compare_ensembl_version(self, civic_ensembl_version: int) -> bool:
         """
         Method that compares CIViC revision value for Ensembl version against 
         a basic hard coded expectation of likely Ensembl version numbers
