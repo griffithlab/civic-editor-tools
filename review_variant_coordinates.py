@@ -13,6 +13,7 @@ review workflows tied to a specific CIViC contributor.
 import os
 import argparse
 import sys
+import webbrowser
 from civicpy import civic
 from pathlib import Path
 
@@ -45,20 +46,20 @@ def parse_args():
         help="CIViC contributor ID performing the review (integer, e.g. 15)"
     )
 
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument(
+    variant_choice_group = parser.add_mutually_exclusive_group(required=True)
+    variant_choice_group.add_argument(
         "--variant-id",
         dest="variant_id",
         type=int,
         help="CIViC variant ID to review (integer, e.g. 1832)"
     )
-    group.add_argument(
+    variant_choice_group.add_argument(
         "--all-variants",
         dest="all_variants",
         action="store_true",
         help="Review all CIViC variants"
     )
-    group.add_argument(
+    parser.add_argument(
         "--allow-variants-without-revisions",
         dest="allow_variants_without_revisions",
         action="store_true",
@@ -78,6 +79,11 @@ def verify_connectivity():
         sys.exit(1)
 
     print("Internet and API connectivity verified.")
+
+
+def open_variant_revision(vid: int) -> None:
+    url = f"https://civicdb.org/variants/{vid}/revisions"
+    webbrowser.open(url)
 
 
 def prompt_to_proceed(message: str = None) -> None:
@@ -319,20 +325,20 @@ def display_accepted_variant_info(variant_id, accepted_variant_data):
     """Create a human readable summary of variant info already accepted in CIViC """
     print(
         f"\nVariant details that are already accepted in CIViC for variant id: {variant_id}\n"
-        f"  Allele Registry ID: {accepted_variant_data['allele_registry_id']}\n"
-        f"  Name: {accepted_variant_data['name']}\n"
-        f"  Variant Types: {accepted_variant_data['variant_types']}\n"
+        f"  Allele Registry ID: {accepted_variant_data['allele_registry_id']}"
+        f"\tName: {accepted_variant_data['name']}"
+        f"\tVariant Types: {accepted_variant_data['variant_types']}\n"
         f"  Variant Aliases: {accepted_variant_data['variant_aliases']}\n"
         f"  HGVS Descriptions: {accepted_variant_data['hgvs_descriptions']}\n"
         f"  ClinVar IDs: {accepted_variant_data['clinvar_ids']}\n"
-        f"  Reference Build: {accepted_variant_data['reference_build']}\n"
-        f"  Chromosome: {accepted_variant_data['chromosome']}\n"
-        f"  Start: {accepted_variant_data['start']}\n"
-        f"  Stop: {accepted_variant_data['stop']}\n"
-        f"  Reference Bases {accepted_variant_data['reference_bases']}\n"
-        f"  Variant Bases: {accepted_variant_data['variant_bases']}\n"
-        f"  Representative Transcript {accepted_variant_data['representative_transcript']}\n"
-        f"  Ensembl Version: {accepted_variant_data['ensembl_version']}"
+        f"  Reference Build: {accepted_variant_data['reference_build']}"
+        f"\tChromosome: {accepted_variant_data['chromosome']}"
+        f"\tStart: {accepted_variant_data['start']}"
+        f"\tStop: {accepted_variant_data['stop']}"
+        f"\tReference Bases: {accepted_variant_data['reference_bases']}"
+        f"\tVariant Bases: {accepted_variant_data['variant_bases']}\n"
+        f"  Representative Transcript: {accepted_variant_data['representative_transcript']}"
+        f"\tEnsembl Version: {accepted_variant_data['ensembl_version']}"
     )
 
     #create a set of civic accepted values to allow comparisons to clingen, one field at a time similar to what is done for revisions
@@ -494,6 +500,9 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
 
         #look across the clingen alleles for ambiguous genomic variants - warn the user if found
         variant_is_ambiguous_in_genome(clingen_allele_info)
+        
+        #Open the variant revision view for the user
+        open_variant_revision(vid)
        
         #iterate through each useful/compatible CAID and display information that helps the user review outstanding edits
         for caid, ca_json in clingen_allele_info.items():
