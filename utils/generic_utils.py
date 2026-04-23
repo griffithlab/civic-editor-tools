@@ -121,9 +121,9 @@ def guess_variant_type(variant):
 
 def snv_coding_to_p_3letter(variant):
     """Convert a coding SNV like 'S459F' to 'p.Ser459Phe'"""
-    
+
     if guess_variant_type(variant) != "Missense Variant":
-        raise ValueError(f"Expected 'Missense Variant', got '{variant_type}' for variant '{variant}'")
+        raise ValueError(f"Expected 'Missense Variant', got {variant_type} for variant {variant}")
 
     match = re.match(r"^([A-Za-z])(\d+)([A-Za-z])", variant)
     if not match:
@@ -263,8 +263,11 @@ def main():
 
     for v in variants:
         vtype = guess_variant_type(v)
-        vname_long = snv_coding_to_p_3letter(v)
-        print(f"{v!r} -> {vtype}. Long form name: {vname_long}")
+        if vtype == "Missense Variant":
+            vname_long = snv_coding_to_p_3letter(v)
+            print(f"{v!r} -> {vtype}. Long form name: {vname_long}")
+        else:
+            print(f"Skipping snv_coding_to_p_3letter() for variant with type: {vtype}")
 
     test_snv_coding_variant_name = "S459F"
     ref_aa_1, pos, var_aa_1 = parse_snv_coding_name_components(test_snv_coding_variant_name)

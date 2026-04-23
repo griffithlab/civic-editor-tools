@@ -332,7 +332,7 @@ def main():
 
     comparator = ValueComparator(clingen_data)
 
-    is_consistent = comparator.compare(civic_field_name, civic_revision_value, civic_revision_id)
+    is_consistent = comparator.compare(civic_field_name, civic_revision_value, civic_revision_id, civic_user)
 
     return
 
