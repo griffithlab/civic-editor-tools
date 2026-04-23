@@ -261,12 +261,27 @@ class ValueComparator:
             return False
 
     def compare_start(self, civic_start: int) -> bool:
-        """Method that compares the genomic start position value from a CIViC submission (revision or accepted) to one from ClinGen Allele Registry"""
-        clingen_start = self.clingen_data["start"]
+        """
+        Method that compares the genomic start position value from a CIViC submission (revision or accepted) to one from ClinGen Allele Registry
+        Since clingen start positions are 0-based and civic start positions are 1 based, it adjusts for this
+        """
+        clingen_start = self.clingen_data["start"] + 1 
         field_name = self.current_field_name
 
-
-
+        if clingen_start == civic_start:
+            self._print_match(
+                MatchLevel.MATCH,
+                f"    {field_name}. clingen value (+1): {clingen_start} "
+                f"matches civic value: {civic_start}."
+            )
+            return True
+        else:
+            self._print_match(
+                MatchLevel.MISMATCH,
+                f"    {field_name}. clingen value (+1): {clingen_start} "
+                f"mismatches civic value: {civic_start}."
+            )
+            return False
 
     def compare_stop(self, civic_stop: int) -> bool:
         """Method that compares the genomic stop position value from a CIViC submission (revision or accepted) to one from ClinGen Allele Registry"""
