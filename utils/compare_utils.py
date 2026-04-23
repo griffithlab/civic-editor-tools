@@ -42,7 +42,6 @@ class ValueComparator:
         }
     def _print_match(self, level: MatchLevel, message: str) -> None:
         """Helper method that prints out a message with color matched to the quality of the matching information"""
-        field_name = self.current_field_name
         rid = self.current_revision_id
         user = self.current_user_display_name
         color = _MATCH_COLORS[level]
@@ -73,18 +72,18 @@ class ValueComparator:
         """Method for comparison of accepted civic CAID to possible clingen CAID matched by variant name"""
         clingen_allele_registry_id = self.clingen_data["allele_registry_id"]
         field_name = self.current_field_name
-
+        print(f"    {field_name}.")
         if clingen_allele_registry_id == civic_allele_registry_id:
             self._print_match(
                 MatchLevel.MATCH, 
-                f"    {field_name}. expected value: {clingen_allele_registry_id} "
+                f"      expected value: {clingen_allele_registry_id} "
                 f"matches civic value: {civic_allele_registry_id}."
             )
             return True
         else:
             self._print_match(
                  MatchLevel.MISMATCH, 
-                 f"    {field_name}. expected value: {clingen_allele_registry_id} "
+                 f"      expected value: {clingen_allele_registry_id} "
                  f"mismatches civic value: {civic_allele_registry_id}."
             )
             return False
