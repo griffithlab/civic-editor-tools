@@ -48,9 +48,9 @@ class ValueComparator:
 
         if rid:
             revision_text = f" [revision: {rid}, user: {user}]"
-            message = message + revision_text
-
-        print(f"{color}{message}\033[0m")
+            print(f"{color}{message}\033[0m{revision_text}")
+        else:
+            print(f"{color}{message}\033[0m")
 
     def _normalize_hgvs(self, hgvs: str) -> str:
         """Helper method that strips sequence version number for loose comparison.
@@ -73,17 +73,16 @@ class ValueComparator:
         clingen_allele_registry_id = self.clingen_data["allele_registry_id"]
         field_name = self.current_field_name
         print(f"    {field_name}.",  end=" ")
+        print(f"clingen value: {clingen_allele_registry_id}", end = " ")
         if clingen_allele_registry_id == civic_allele_registry_id:
             self._print_match(
                 MatchLevel.MATCH, 
-                f"expected value: {clingen_allele_registry_id} "
                 f"matches civic value: {civic_allele_registry_id}."
             )
             return True
         else:
             self._print_match(
                  MatchLevel.MISMATCH, 
-                 f"expected value: {clingen_allele_registry_id} "
                  f"mismatches civic value: {civic_allele_registry_id}."
             )
             return False
@@ -95,17 +94,16 @@ class ValueComparator:
         civic_variant_type_string = ','.join(civic_variant_type)
 
         print(f"    {field_name}.", end=" ")
+        print(f"expected value: {guessed_gene_variant_type}", end = " ")
         if guessed_gene_variant_type in civic_variant_type:
             self._print_match(
                 MatchLevel.MATCH, 
-                f"expected value: {guessed_gene_variant_type} "
                 f"matches civic value: {civic_variant_type_string}."
             )
             return True
         else:
             self._print_match(
                  MatchLevel.MISMATCH, 
-                 f"expected value: {guessed_gene_variant_type} "
                  f"mismatches civic value: {civic_variant_type_string}."
             )
             return False
@@ -132,16 +130,15 @@ class ValueComparator:
         unmatched_civic_aliases_string = ','.join(unmatched_civic_aliases)
 
         print(f"    {field_name}.", end=" ")
+        print(f"clingen values: {clingen_variant_aliases_string}", end=" ")
         if matched_civic_aliases:
             self._print_match(
                 MatchLevel.MATCH, 
-                f"expected values: {clingen_variant_aliases_string} "
                 f"matches civic values: {matched_civic_aliases_string}."
             )
         if unmatched_civic_aliases:
             self._print_match(
                 MatchLevel.MISMATCH, 
-                f"expected values: {clingen_variant_aliases_string} "
                 f"mismatches civic values: {unmatched_civic_aliases_string}."
             )
 
@@ -171,16 +168,15 @@ class ValueComparator:
         unmatched_civic_hgvs_expressions_string = ','.join(unmatched_civic_hgvs_expressions)
 
         print(f"    {field_name}.", end=" ")
+        print(f"clingen values: {clingen_hgvs_expressions_string}", end=" ")
         if matched_civic_hgvs_expressions:
             self._print_match(
                 MatchLevel.MATCH, 
-                f"expected values: {clingen_hgvs_expressions_string} "
                 f"matches civic values: {matched_civic_hgvs_expressions_string}."
             )
         if unmatched_civic_hgvs_expressions:
             self._print_match(
                 MatchLevel.MISMATCH, 
-                f"expected values: {clingen_hgvs_expressions_string} "
                 f"mismatches civic values: {unmatched_civic_hgvs_expressions_string}."
             )
 
@@ -208,16 +204,15 @@ class ValueComparator:
         unmatched_civic_clinvar_ids_string = ','.join(unmatched_civic_clinvar_ids)
 
         print(f"    {field_name}.", end=" ")
+        print(f"clingen values: {clingen_clinvar_ids_string}", end = " ")
         if matched_civic_clinvar_ids:
             self._print_match(
                 MatchLevel.MATCH, 
-                f"expected values: {clingen_clinvar_ids_string} "
                 f"matches civic values: {matched_civic_clinvar_ids_string}."
             )
         if unmatched_civic_clinvar_ids:
             self._print_match(
                 MatchLevel.MISMATCH, 
-                f"expected values: {clingen_clinvar_ids_string} "
                 f"mismatches civic values: {unmatched_civic_clinvar_ids_string}."
             )
 
@@ -229,17 +224,16 @@ class ValueComparator:
         field_name = self.current_field_name
 
         print(f"    {field_name}.", end=" ")
+        print(f"expected value: {expected_reference_build}", end=" ")
         if expected_reference_build.upper() == civic_reference_build.upper():
             self._print_match(
                 MatchLevel.MATCH,
-                f"expected value: {expected_reference_build} "
                 f"matches civic value: {civic_reference_build}."
             )
             return True
         else:
             self._print_match(
                 MatchLevel.MISMATCH,
-                f"expected value: {expected_reference_build} "
                 f"mismatches civic value: {civic_reference_build}."
             )
             return False
@@ -251,17 +245,16 @@ class ValueComparator:
         field_name = self.current_field_name
  
         print(f"    {field_name}.", end=" ")
+        print(f"clingen value: {clingen_chromosome}", end=" ")
         if clingen_chromosome_normalized == civic_chromosome:
             self._print_match(
                 MatchLevel.MATCH, 
-                f"clingen value: {clingen_chromosome} "
                 f"matches civic value: {civic_chromosome}."
             )
             return True
         else:
             self._print_match(
                  MatchLevel.MISMATCH, 
-                 f"clingen value: {clingen_chromosome} "
                  f"mismatches civic value: {civic_chromosome}."
             )
             return False
@@ -275,17 +268,16 @@ class ValueComparator:
         field_name = self.current_field_name
 
         print(f"    {field_name}.", end=" ")
+        print(f"clingen value (+1): {clingen_start}", end=" ")
         if clingen_start == civic_start:
             self._print_match(
                 MatchLevel.MATCH,
-                f"clingen value (+1): {clingen_start} "
                 f"matches civic value: {civic_start}."
             )
             return True
         else:
             self._print_match(
                 MatchLevel.MISMATCH,
-                f"clingen value (+1): {clingen_start} "
                 f"mismatches civic value: {civic_start}."
             )
             return False
@@ -296,17 +288,16 @@ class ValueComparator:
         field_name = self.current_field_name
 
         print(f"    {field_name}.", end=" ")
+        print(f"clingen value: {clingen_end}", end=" ")
         if clingen_end == civic_stop:
             self._print_match(
                 MatchLevel.MATCH,
-                f"clingen value: {clingen_end} "
                 f"matches civic value: {civic_stop}."
             )
             return True
         else:
             self._print_match(
                 MatchLevel.MISMATCH,
-                f"clingen value: {clingen_end} "
                 f"mismatches civic value: {civic_stop}."
             )
             return False
@@ -317,17 +308,16 @@ class ValueComparator:
         field_name = self.current_field_name
 
         print(f"    {field_name}.", end=" ")
+        print(f"clingen value: {clingen_reference_bases}", end=" ")
         if clingen_reference_bases == civic_reference_bases:
             self._print_match(
                 MatchLevel.MATCH,
-                f"clingen value: {clingen_reference_bases} "
                 f"matches civic value: {civic_reference_bases}."
             )
             return True
         else:
             self._print_match(
                 MatchLevel.MISMATCH,
-                f"clingen value: {clingen_reference_bases} "
                 f"mismatches civic value: {civic_reference_bases}."
             )
             return False
@@ -338,17 +328,16 @@ class ValueComparator:
         field_name = self.current_field_name
 
         print(f"    {field_name}.", end=" ")
+        print(f"clingen value: {clingen_variant_bases}", end=" ")
         if clingen_variant_bases == civic_variant_bases:
             self._print_match(
                 MatchLevel.MATCH,
-                f"clingen value: {clingen_variant_bases} "
                 f"matches civic value: {civic_variant_bases}."
             )
             return True
         else:
             self._print_match(
                 MatchLevel.MISMATCH,
-                f"clingen value: {clingen_variant_bases} "
                 f"mismatches civic value: {civic_variant_bases}."
             )
             return False
@@ -393,10 +382,10 @@ class ValueComparator:
 
         #evaluate the match results
         print(f"    {field_name}.", end=" ")
+        print(f"clingen value: {v75_match_transcript}(v75) or {v87_match_transcript}(v87)", end=" ")
         if v75_match_result or v87_match_result:
             self._print_match(
                 MatchLevel.MATCH, 
-                f"clingen value: {v75_match_transcript}(v75) or {v87_match_transcript}(v87) "
                 f"matches civic value: {civic_representative_transcript}."
             )
             return True
@@ -404,7 +393,6 @@ class ValueComparator:
         if v75_partial_match_result or v87_partial_match_result:
             self._print_match(
                 MatchLevel.QUALIFIED_MATCH, 
-                f"clingen value: {v75_partial_match_transcript}(v75) or {v87_partial_match_transcript}(v87) "
                 f"partially matches civic value: {civic_representative_transcript} (but no exact match)."
             )
             return True
@@ -426,10 +414,10 @@ class ValueComparator:
         field_name = self.current_field_name
 
         print(f"    {field_name}.", end=" ")
+        print(f"expected values: {expected_ensembl_versions_string}", end=" ")
         if str(civic_ensembl_version) in expected_ensembl_versions:
             self._print_match(
                 MatchLevel.MATCH, 
-                f"expected values: {expected_ensembl_versions_string} "
                 f"matches civic value: {civic_ensembl_version}."
             )
             return True
@@ -437,7 +425,6 @@ class ValueComparator:
         if str(civic_ensembl_version) not in expected_ensembl_versions:
             self._print_match(
                 MatchLevel.MISMATCH, 
-                f"expected values: {expected_ensembl_versions_string} "
                 f"mismatches civic value: {civic_ensembl_version}."
             )
  
