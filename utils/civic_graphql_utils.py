@@ -106,7 +106,7 @@ def gather_accepted_variant_data(variant_id):
     accepted_variant_data = {
         "allele_registry_id": json['data']['variant']['alleleRegistryId'],
         "name": json['data']['variant']['name'],
-        "variant_types": json['data']['variant']['variantTypes'],
+        "variant_types": json['data']['variant']['variantTypes'], #FIX ME - this is a list of dictionaries still??
         "variant_aliases": json['data']['variant']['variantAliases'],
         "hgvs_descriptions": json['data']['variant']['hgvsDescriptions'],
         "clinvar_ids": json['data']['variant']['clinvarIds'],
@@ -334,6 +334,7 @@ def main (variant_id, contributor_id):
     print(
         f"\nAccepted variant details for variant id: {variant_id}\n"
         f"  Allele Registry ID: {accepted_variant_data['allele_registry_id']}\n"
+        f"  Variant types: {accepted_variant_data['variant_types']}\n"
         f"  Name: {accepted_variant_data['name']}\n"
         f"  Variant Aliases: {accepted_variant_data['variant_aliases']}\n"
         f"  HGVS Descriptions: {accepted_variant_data['hgvs_descriptions']}\n"
@@ -405,8 +406,9 @@ def main (variant_id, contributor_id):
 
 #only run the main function if this script is being run directly
 if __name__ == "__main__":
-    test_variant = 1832 #Example variant POLE S459F (civic.vid: 1832)
+    #test_variant = 1832 #Example variant POLE S459F (civic.vid: 1832)
     #test_variant = 785 #Example variant giving error
+    test_variant = 1686 
     contributor_id = 15 #Example user (Malachi Griffith, user id 15)
     main(test_variant, contributor_id)
 

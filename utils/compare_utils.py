@@ -73,7 +73,7 @@ class ValueComparator:
         clingen_allele_registry_id = self.clingen_data["allele_registry_id"]
         field_name = self.current_field_name
 
-        if clingen__allele_registry_id == civic_allele_registry_id:
+        if clingen_allele_registry_id == civic_allele_registry_id:
             self._print_match(
                 MatchLevel.MATCH, 
                 f"    {field_name}. expected value: {clingen_allele_registry_id} "
