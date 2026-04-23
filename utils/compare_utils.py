@@ -288,8 +288,20 @@ class ValueComparator:
         clingen_end = self.clingen_data["end"]
         field_name = self.current_field_name
 
-
-
+        if clingen_end == civic_stop:
+            self._print_match(
+                MatchLevel.MATCH,
+                f"    {field_name}. clingen value: {clingen_end} "
+                f"matches civic value: {civic_stop}."
+            )
+            return True
+        else:
+            self._print_match(
+                MatchLevel.MISMATCH,
+                f"    {field_name}. clingen value: {clingen_end} "
+                f"mismatches civic value: {civic_stop}."
+            )
+            return False
 
     def compare_reference_bases(self, civic_reference_bases: str) -> bool:
         """Method that compares the reference bases value from a CIViC submission (revision or accepted) to one from ClinGen Allele Registry"""
