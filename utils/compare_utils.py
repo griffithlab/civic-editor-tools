@@ -48,9 +48,9 @@ class ValueComparator:
 
         if rid:
             revision_text = f" [revision: {rid}, user: {user}]"
-            print(f"{color}{message}\033[0m{revision_text}")
+            print(f"{color}{message}\033[0m{revision_text}", end="")
         else:
-            print(f"{color}{message}\033[0m")
+            print(f"{color}{message}\033[0m", end="")
 
     def _normalize_hgvs(self, hgvs: str) -> str:
         """Helper method that strips sequence version number for loose comparison.
@@ -77,13 +77,13 @@ class ValueComparator:
         if clingen_allele_registry_id == civic_allele_registry_id:
             self._print_match(
                 MatchLevel.MATCH, 
-                f"matches civic value: {civic_allele_registry_id}."
+                f"matches civic value: {civic_allele_registry_id}.\n"
             )
             return True
         else:
             self._print_match(
                  MatchLevel.MISMATCH, 
-                 f"mismatches civic value: {civic_allele_registry_id}."
+                 f"mismatches civic value: {civic_allele_registry_id}.\n"
             )
             return False
 
@@ -98,13 +98,13 @@ class ValueComparator:
         if guessed_gene_variant_type in civic_variant_type:
             self._print_match(
                 MatchLevel.MATCH, 
-                f"matches civic value: {civic_variant_type_string}."
+                f"matches civic value: {civic_variant_type_string}.\n"
             )
             return True
         else:
             self._print_match(
                  MatchLevel.MISMATCH, 
-                 f"mismatches civic value: {civic_variant_type_string}."
+                 f"mismatches civic value: {civic_variant_type_string}.\n"
             )
             return False
 
@@ -134,12 +134,12 @@ class ValueComparator:
         if matched_civic_aliases:
             self._print_match(
                 MatchLevel.MATCH, 
-                f"matches civic values: {matched_civic_aliases_string}."
+                f"\n      matches civic values: {matched_civic_aliases_string}."
             )
         if unmatched_civic_aliases:
             self._print_match(
                 MatchLevel.MISMATCH, 
-                f"mismatches civic values: {unmatched_civic_aliases_string}."
+                f"\n      mismatches civic values: {unmatched_civic_aliases_string}."
             )
 
         return len(unmatched_civic_aliases) == 0
