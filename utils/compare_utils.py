@@ -328,8 +328,20 @@ class ValueComparator:
         clingen_variant_bases = self.clingen_data["alt_bases"]
         field_name = self.current_field_name
 
-
-
+        if clingen_variant_bases == civic_variant_bases:
+            self._print_match(
+                MatchLevel.MATCH,
+                f"    {field_name}. clingen value: {clingen_variant_bases} "
+                f"matches civic value: {civic_variant_bases}."
+            )
+            return True
+        else:
+            self._print_match(
+                MatchLevel.MISMATCH,
+                f"    {field_name}. clingen value: {clingen_variant_bases} "
+                f"mismatches civic value: {civic_variant_bases}."
+            )
+            return False
 
     def compare_representative_transcript(self, civic_representative_transcript: str) -> bool:
         """
