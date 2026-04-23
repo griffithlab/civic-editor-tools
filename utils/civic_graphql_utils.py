@@ -102,11 +102,15 @@ def gather_accepted_variant_data(variant_id):
     resp = run_graphql_operation(api_url, "variant_VariantSummary", variant_id)
     json = resp.json()
 
+    variant_types = []
+    for vts in json['data']['variant']['variantTypes']:
+        variant_types.append(vts['name'])
+
     #pdb.set_trace()
     accepted_variant_data = {
         "allele_registry_id": json['data']['variant']['alleleRegistryId'],
         "name": json['data']['variant']['name'],
-        "variant_types": json['data']['variant']['variantTypes'], #FIX ME - this is a list of dictionaries still??
+        "variant_types": variant_types,
         "variant_aliases": json['data']['variant']['variantAliases'],
         "hgvs_descriptions": json['data']['variant']['hgvsDescriptions'],
         "clinvar_ids": json['data']['variant']['clinvarIds'],
