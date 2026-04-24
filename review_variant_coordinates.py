@@ -138,13 +138,13 @@ def variant_is_deprecated(vid, variant_data_basic):
     return False
 
 
-def variant_type_is_unsupported(civic_variant_name, guessed_gene_variant_type, target_variant_type):
+def variant_type_is_unsupported(gene_name, civic_variant_name, guessed_gene_variant_type, target_variant_type):
     """Test if variant has the expected variant type guessed from the name"""
     if (guessed_gene_variant_type != target_variant_type):
-        print(f"Guessed variant type for variant name {civic_variant_name}: {guessed_gene_variant_type} (not supported - skipping)")
+        print(f"Guessed variant type for variant name {gene_name} {civic_variant_name}: {guessed_gene_variant_type} (not supported - skipping)")
         return True
     else:
-        print(f"Guessed variant type for variant name {civic_variant_name}: {guessed_gene_variant_type} (is supported)")
+        print(f"Guessed variant type for variant name {gene_name} {civic_variant_name}: {guessed_gene_variant_type} (is supported)")
 
     return False
 
@@ -152,8 +152,8 @@ def variant_type_is_unsupported(civic_variant_name, guessed_gene_variant_type, t
 def variant_name_has_revision(variant_data):
     """Test is variant has a pending revision on the variant name itself"""
     if variant_data['name_change']:
-        print(f"WARNING. The variant name itself has an outstanding revision!")
-        print(f"  Since this entire exercise derives from that name, this should be resolved first. Skipping this variant\n")
+        print(f"\033[33mThe variant name itself has an outstanding revision!")
+        print(f"  Since this entire exercise derives from that name, this should be resolved first. Skipping this variant\n\033[0m")
         return True
 
     return False
@@ -202,6 +202,10 @@ def get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_tra
             #if the transcript ID is an ensembl ID and its biotype is NOT protein_coding, skip it
             if ensembl_transcript_to_biotype_map[clingen_reference_sequence_id] != "protein_coding":
                 continue
+        
+        #skip invalid refseq transcripts
+        if clingen_reference_sequence_id.startswith(("NR_", "XM_", "XR_")):
+            continue
 
         #get the protein ID for the current transcript id
         protein_id = None
@@ -288,7 +292,7 @@ def variant_is_ambiguous_in_genome(clingen_allele_info):
     unique_positions = list(set(build_37_positions))
 
     if len(unique_positions) > 1:
-        print(f"\nWARNING! Ambiguous genomic positions found: {unique_positions}")
+        print(f"\n\033[33mAmbiguous genomic positions found: {unique_positions}\033[0m")
         return True
 
     if len(clingen_allele_info) > 1:
@@ -400,6 +404,7 @@ def display_accepted_variant_info(variant_id, accepted_variant_data):
 def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variants_without_revisions: bool, open_browser: bool):
 
     #define input data files
+    version_file = base_dir / f"RELEASE"
     black_list_path = base_dir / f"data/civic_variant_blacklist.tsv"
     refseq_fasta_index_path = base_dir / f"data/refseq/indexed/GCF_000001405.40_GRCh38.p14_protein.faa.idx"
     ensembl_versions_file = base_dir / f"data/ensembl/ensembl_versions.txt"
@@ -409,6 +414,11 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
         "variant": "revision_values_list",
         "coordinate": "suggested_value",
     }
+
+    #load the current release number for this software
+    editor_tools_version = None
+    with open(version_file) as f:
+        editor_tools_version = f.read().strip()
 
     #make sure internet and API access is working before attempting anything
     verify_connectivity()
@@ -459,8 +469,11 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
 
         #guess the variant type based on the CIViC variant name - skip unless it is a coding snv
         guessed_gene_variant_type = generic_utils.guess_variant_type(civic_variant_name)
+        
+        #get the gene name for the current variant
+        gene_name = variant_data_basic['feature_name']
 
-        if variant_type_is_unsupported(civic_variant_name, guessed_gene_variant_type, "Missense Variant"): continue
+        if variant_type_is_unsupported(gene_name, civic_variant_name, guessed_gene_variant_type, "Missense Variant"): continue
 
         #get the three components of a simple "Missense Variant" variant: ref_aa_1, pos, var_aa_1
         ref_aa_1, pos, var_aa_1 = generic_utils.parse_snv_coding_name_components(civic_variant_name)
@@ -478,13 +491,10 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
         #create the p. notation for the variant name (e.g. 'S459F' -> 'p.Ser459Phe')
         civic_variant_name_p_3letter = generic_utils.snv_coding_to_p_3letter(civic_variant_name)
 
-        #get the gene name for the current variant
-        gene_name = variant_data['feature_name']
-
         #provide a basic summary of variant info from civic
         print(
             f"\nVariant revision info:\n"
-            f"  Feature name: {variant_data['feature_name']}\tVariant name in p. notation: {civic_variant_name_p_3letter}\n"
+            f"  Feature name: {gene_name}\tVariant name in p. notation: {civic_variant_name_p_3letter}\n"
             f"  Open gene-variant revisions: {variant_data['open_revision_count_variant']} (total);"
             f"  {variant_data['contributor_revisions']} by you; {variant_data['open_revisions_non_contributor']} by others"
         )
@@ -531,8 +541,9 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
             open_variant_revision(vid)
 
         #iterate through each useful/compatible CAID and display information that helps the user review outstanding edits
-        for caid, ca_json in clingen_allele_info.items():
-            print(f"\nCAID: {caid}")
+        for i, (caid, ca_json) in enumerate(clingen_allele_info.items(), start=1):
+            print(f"\n({i}) CAID: {caid}", end="")
+            print(f"\thttps://reg.genome.network/redmine/projects/registry/genboree_registry/by_caid?caid={caid}")
             
             #query the clingen API with a CAID and get a json of relevant info
             ca_json = clingen_ar_utils.get_allele_by_id(caid)
@@ -604,6 +615,8 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
             if len(civic_accepted_values) == 0:
                 print(f"    No CIViC accepted values to be compared")
 
+            ac_score = 0
+            ac_total = len(civic_accepted_values)
             for accepted_value in civic_accepted_values:
                 field_name = accepted_value['field_name']
                 accepted_value = accepted_value['accepted_value']
@@ -611,6 +624,8 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
                 user_display_name = None
 
                 is_consistent = comparator.compare(field_name, accepted_value, revision_id, user_display_name)
+                if is_consistent:
+                    ac_score = ac_score + 1
 
             #############################################################################################
             #Perform comparison between the ClinGen Allele Info for this CAID and CIViC Variant Revisions
@@ -620,6 +635,8 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
             if len(all_revisions) == 0:
                 print(f"    No CIViC revisions to be compared")
 
+            rc_score = 0
+            rc_total = len(all_revisions)
             for revision in all_revisions:
                 field_name = revision['field_name']
                 revision_value = revision[revision_value_key[revision["revision_type"]]]
@@ -627,13 +644,21 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
                 user_display_name = revision['user_display_name']
 
                 is_consistent = comparator.compare(field_name, revision_value, revision_id, user_display_name)
-        
+                if is_consistent:
+                    rc_score = rc_score + 1
+
+            tc_score = ac_score + rc_score
+            print(f"\n  Total comparison score: {tc_score} (Accepted score: {ac_score}/{ac_total} , Revision score: {rc_score}/{rc_total})")        
+
         #If no clingen allele could be found, warn the user
         if len(clingen_allele_info) == 0:
             print(f"\033[31mNo ClinGen Alleles Found\033[0m - further investigation needed\n")
  
+        #Display an example comment message in case the user is going to accept/submit something in CIViC
+        print(f"\nTemplate comment for CIViC submission:\nVariant information was reviewed with civic-editor-tools (v{editor_tools_version})")
+
         #Pause before moving on to the next CIViC variant
-        prompt_to_proceed(f"Processing complete for variant ({vid}: {civic_variant_name})")
+        prompt_to_proceed(f"Processing complete for variant ({gene_name} {vid}: {civic_variant_name})")
 
 
 if __name__ == "__main__":

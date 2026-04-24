@@ -136,11 +136,15 @@ def snv_coding_to_p_3letter(variant):
 
 def parse_snv_coding_name_components(snv_coding_name):
     """
-    Parse a CIViC-style protein variant like 'S459F'
+    Parse a CIViC-style protein variant like 'S459F' or 'E70K (c.208G>A)'
     into (ref_aa_1, pos, var_aa_1).
 
     Raises ValueError if the format is invalid.
     """
+
+    # Strip optional trailing annotation (e.g. " (c.208G>A)")
+    snv_coding_name = snv_coding_name.split()[0]
+
     pattern = re.compile(r"^([A-Z])(\d+)([A-Z])$")
 
     match = pattern.match(snv_coding_name)
