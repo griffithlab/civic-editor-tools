@@ -185,12 +185,20 @@ def extract_mane_select_names_and_compare(ca_json, p_dot_var_name):
 
 def extract_clinvar_ids(ca_json):
     """"extract clinvar ids from a transcript CAID json object"""
-    clinvar_ids = []
-    external_records = ca_json.get("externalRecords")
-    for clinvar_allele in external_records.get("ClinVarAlleles", []):
-        clinvar_ids.append(clinvar_allele.get("alleleId"))
+    clinvar_allele_ids = []
+    clinvar_variation_ids = []
 
-    return list(set(clinvar_ids))
+    external_records = ca_json.get("externalRecords")
+    
+    #clinvar allele IDs (not used in CIViC curation)
+    for clinvar_allele in external_records.get("ClinVarAlleles", []):
+        clinvar_allele_ids.append(clinvar_allele.get("alleleId"))
+
+    #clinvar variation IDs (used in CIViC curation)
+    for clinvar_variation in external_records.get("ClinVarVariations", []):
+        clinvar_variation_ids.append(clinvar_variation.get("variationId"))
+
+    return list(set(clinvar_variation_ids))
 
 
 def extract_reference_sequences(ref_seqs_json):
