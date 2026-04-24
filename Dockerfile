@@ -17,8 +17,4 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt /tmp/requirements.txt
 RUN pip3 install --break-system-packages -r /tmp/requirements.txt
 
-# Copy project into image
-WORKDIR /opt/civic-editor-tools
-COPY . .
-
 CMD ["/bin/bash"]

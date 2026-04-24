@@ -75,6 +75,25 @@ Go to [CIViC](civicdb.org) and find your user ID from the [Contributors View](ht
 
 If all this has worked smoothly you should be ready to start using the editor tool suite. 
 
+
+## Running in Docker
+
+Example command using the latest version of the image
+```bash
+docker run -it -v /Users/mgriffit/git/civic-editor-tools:/civic-editor-tools griffithlab/civic-editor-tools:latest 
+cd /civic-editor-tools
+./review_variant_coordinates.py --contributor-id 15 --variant-id 1832
+
+```
+
+Example command using a specific version of the image
+```bash
+docker run -it -v /Users/mgriffit/git/civic-editor-tools:/civic-editor-tools griffithlab/civic-editor-tools:1.0
+cd /civic-editor-tools
+./review_variant_coordinates.py --contributor-id 15 --variant-id 1832
+
+```
+
 ## Troubleshooting
 
 ...
