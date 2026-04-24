@@ -87,11 +87,22 @@ Before running for the first time the following python dependencies will need to
 - certifi
 - pymysql
 
-Install dependencies with:
+Install Python dependencies with:
 ```bash
 cd ~/git/civic-editor-tools
 pip3 install -r requirements.txt
+
 ```
+
+Install efetch
+```bash
+#install script
+sh -c "$(curl -fsSL https://ftp.ncbi.nlm.nih.gov/entrez/entrezdirect/install-edirect.sh)"
+
+#test command
+efetch -db nucleotide -id NM_020630.6 -format fasta
+```
+
 
 ## Staging of reference data files
 

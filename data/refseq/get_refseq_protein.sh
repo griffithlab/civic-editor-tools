@@ -21,4 +21,3 @@ else
 	echo "  ${fasta_file_name_uncompressed} already exists"
 fi
 
-
