@@ -221,15 +221,14 @@ def get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_tra
         else:
             raise ValueError(
                 f"Transcript ID {clingen_reference_sequence_id} not found in "
-                "RefSeq or Ensembl transcript-to-protein maps"
+                "RefSeq or Ensembl transcript-to-protein maps.\n"
+                "  For missing RefSeqs, try: ./data/entrez/get_missing_refseq_mappings.py {clingen_reference_sequence_id}"
             )
 
         #unless the protein sequence has the expected reference amino acid at the expected position, skip it
         #also check for methionine counting ambiguity (is there a matching ref AA one position to the right of the named position?)
         if not generic_utils.reference_aa_positions_matches(ref_aa_1, pos, protein_seq, protein_id):
             continue
-
-        #print(f"  Transcript ID: {clingen_reference_sequence_id} -> Protein ID: {protein_id} -> HGVS: {protein_id}:{civic_variant_name_p_3letter}")
 
         clingen_transcript_sequence_ids_final.append(clingen_reference_sequence_id)
         clingen_protein_sequence_ids_final.append(protein_id)
@@ -409,6 +408,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
     refseq_fasta_index_path = base_dir / f"data/refseq/indexed/GCF_000001405.40_GRCh38.p14_protein.faa.idx"
     ensembl_versions_file = base_dir / f"data/ensembl/ensembl_versions.txt"
     refseq_to_protein_file = base_dir / f"data/entrez/gene2refseq_human.tsv.gz"
+    refseq_to_protein_missing_file = base_dir / f"data/entrez/gene2refseq_human_missing.tsv"
 
     revision_value_key = {
         "variant": "revision_values_list",
@@ -427,7 +427,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
     black_listed_variant_ids = civic_graphql_utils.load_blacklisted_variant_ids(black_list_path)
  
     #get mappings of transcript to protein identifiers for refseq transcripts
-    refseq_transcript_to_protein_map = entrez_utils.load_refseq_transcript_to_protein_map(refseq_to_protein_file)
+    refseq_transcript_to_protein_map = entrez_utils.load_refseq_transcript_to_protein_map(refseq_to_protein_file, refseq_to_protein_missing_file)
 
     #get mappings of transcript to protein identifier for ensembl transcripts
     ensembl_transcript_to_protein_map = ensembl_utils.load_ensembl_transcript_to_protein_map(ensembl_versions_file)

@@ -48,13 +48,13 @@ def load_mane_summary(path):
     return mane
 
 
-def load_refseq_transcript_to_protein_map(filepath):
+def load_refseq_transcript_to_protein_map(gene2refseq_path: Path, gene2refseq_missing_path: Path) -> dict:
     """load refseq transcript to protein id mappings from a file"""
     tx_to_protein = {}
 
-    open_func = gzip.open if filepath.suffix == ".gz" else open
-
-    with open_func(filepath, "rt") as f:
+    #first parse the main source of refseq transcript to protein ids
+    open_func = gzip.open if gene2refseq_path.suffix == ".gz" else open
+    with open_func(gene2refseq_path, "rt") as f:
         for line in f:
             line = line.strip()
 
@@ -76,6 +76,30 @@ def load_refseq_transcript_to_protein_map(filepath):
 
             tx_to_protein[transcript_id] = protein_id
 
+    #next add any missing values that have been gathered manually
+    open_func = gzip.open if gene2refseq_missing_path.suffix == ".gz" else open
+    with open_func(gene2refseq_missing_path, "rt") as f:
+        for line in f:
+            line = line.strip()
+
+            # Skip header or empty lines
+            if not line or line.startswith("#"):
+                continue
+
+            fields = line.split()
+
+            # Defensive check (make sure enough columns exist)
+            if len(fields) < 2:
+                continue
+
+            transcript_id = fields[0]
+            protein_id = fields[1]
+
+            if not transcript_id.startswith("NM_"):
+                continue
+
+            tx_to_protein[transcript_id] = protein_id
+
     return tx_to_protein
 
 
@@ -91,9 +115,13 @@ def main(gene_symbol):
     print(f"MANE Select transcript: {mane_nm}")
     print(f"Corresponding protein: {mane_np}")
 
-    refseq_transcript_to_protein_map = load_refseq_transcript_to_protein_map(base_dir / f"../data/entrez/gene2refseq_human.tsv.gz")
+    gene2refseq_path = base_dir / f"../data/entrez/gene2refseq_human.tsv.gz"
+    gene2refseq_missing_path = base_dir / f"../data/entrez/gene2refseq_human_missing.tsv"
+    refseq_transcript_to_protein_map = load_refseq_transcript_to_protein_map(gene2refseq_path, gene2refseq_missing_path)
     mapped_np = refseq_transcript_to_protein_map.get(mane_nm)
     print(f"Mapped protein id: {mapped_np}")
+
+
 
 if __name__ == "__main__":
     main("POLE")
