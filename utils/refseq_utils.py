@@ -11,7 +11,9 @@ base_dir = Path(__file__).resolve().parent
 def build_refseq_fasta_index(refseq_fasta_path, index_path):
     """Creates a persistent index file (.idx)"""
 
-    SeqIO.index_db(str(index_path), str(refseq_fasta_path), "fasta")
+    if not os.path.exists(index_path):
+        print(f"Building index for refseq fasta...")
+        SeqIO.index_db(str(index_path), str(refseq_fasta_path), "fasta")
 
 
 def get_refseq_protein_indexed(refseq_protein_id, index_path):

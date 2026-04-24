@@ -162,7 +162,9 @@ def build_ensembl_fasta_index(ensembl_versions_file):
         ensembl_fasta_path = base_dir / f"../data/ensembl/version_data/indexed/Homo_sapiens.GRCh38.pep.all.v{version}.fa"
         ensembl_fasta_index_path = f"{ensembl_fasta_path}.idx"
 
-        SeqIO.index_db(str(ensembl_fasta_index_path), str(ensembl_fasta_path), "fasta")
+        if not os.path.exists(ensembl_fasta_index_path):
+            print(f"Building index for version {version}...")
+            SeqIO.index_db(str(ensembl_fasta_index_path), str(ensembl_fasta_path), "fasta")
 
 
 def get_ensembl_protein_indexed(ensembl_protein_id, ensembl_versions_file):
