@@ -1,3 +1,1 @@
-id description
-785  revision['node']['linkoutData']['diffValue']['addedObjects'] KeyError: 'addedObjects'
-2482 revision['node']['linkoutData']['diffValue']['addedObjects'] KeyError: 'addedObjects'
+#civic_variant_id description

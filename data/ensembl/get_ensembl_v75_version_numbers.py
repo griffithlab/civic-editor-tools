@@ -2,6 +2,16 @@
 
 import pymysql
 import csv
+import os
+import sys
+
+#set data path location
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+output_path = os.path.join(SCRIPT_DIR, "build37", "ensembl75_transcripts.tsv")
+
+if os.path.exists(output_path):
+    print(f"{output_path} already exists")
+    sys.exit(0)
 
 # Ensembl public MySQL — no password needed
 conn = pymysql.connect(
@@ -32,7 +42,9 @@ with conn.cursor() as cur:
 
 conn.close()
 
-with open("build37/ensembl75_transcripts.tsv", "w", newline="") as f:
+os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+with open(output_path, "w", newline="") as f:
     writer = csv.writer(f, delimiter="\t")
     writer.writerow(columns)
     writer.writerows(rows)
