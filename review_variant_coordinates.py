@@ -529,7 +529,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
         #Open the variant revision view for the user
         if open_browser:
             open_variant_revision(vid)
-       
+
         #iterate through each useful/compatible CAID and display information that helps the user review outstanding edits
         for caid, ca_json in clingen_allele_info.items():
             print(f"\nCAID: {caid}")
@@ -627,7 +627,11 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
                 user_display_name = revision['user_display_name']
 
                 is_consistent = comparator.compare(field_name, revision_value, revision_id, user_display_name)
-
+        
+        #If no clingen allele could be found, warn the user
+        if len(clingen_allele_info) == 0:
+            print(f"\033[31mNo ClinGen Alleles Found\033[0m - further investigation needed\n")
+ 
         #Pause before moving on to the next CIViC variant
         prompt_to_proceed(f"Processing complete for variant ({vid}: {civic_variant_name})")
 
