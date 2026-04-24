@@ -353,7 +353,7 @@ def display_accepted_variant_info(variant_id, accepted_variant_data):
 
     print(
         f"\nVariant details that are already accepted in CIViC for variant id: {variant_id}\n"
-        f" Allele Registry ID: {accepted_variant_data['allele_registry_id']}"
+        f"  Allele Registry ID: {accepted_variant_data['allele_registry_id']}"
         f" | Name: {accepted_variant_data['name']}"
         f" | Variant Types: {variant_types}\n"
         f"  Variant Aliases: {variant_aliases}\n"
@@ -548,9 +548,8 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
             #query the clingen API with a CAID and get a json of relevant info
             ca_json = clingen_ar_utils.get_allele_by_id(caid)
 
-            #for each clingen CAID get info that we would expect to be submited to CIViC:
+            #for each clingen CAID get info that we would expect to be submited to CIViC: 
             #variant aliases, clinvar ids, hgvs expressions, genomic coordinates (chr, start, stop, ref var)
-
             #get and disply genomic coordinate information for this CAID (all builds)
             #save coord info for build37 specifically
             clingen_assembly = clingen_chromosome = clingen_start = clingen_end = clingen_ref_bases = clingen_alt_bases = None
@@ -558,7 +557,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
             clingen_genomic_hgvs_expressions = []
             for clingen_coord in clingen_coords:
                 clingen_genomic_hgvs_expressions.append(clingen_coord['genomic_hgvs'])
-                print(f"  {clingen_coord['assembly']} chr{clingen_coord['chr']}:{clingen_coord['start']}-{clingen_coord['end']} {clingen_coord['ref']}>{clingen_coord['alt']}")
+                print(f"    {clingen_coord['assembly']} chr{clingen_coord['chr']}:{clingen_coord['start']}-{clingen_coord['end']} {clingen_coord['ref']}>{clingen_coord['alt']}")
                 if clingen_coord['assembly'] == "GRCh37":
                     clingen_assembly = clingen_coord['assembly']
                     clingen_chromosome = clingen_coord['chr']
@@ -567,23 +566,41 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
                     clingen_ref_bases = clingen_coord['ref']
                     clingen_alt_bases = clingen_coord['alt']
 
+            #display a summary of what expected values in CIViC would look like if this CAID is correct:
+            #this is particularly useful for cases where nothing has been accepted or revised yet
+            print(f"\n  Based on this CAID, expected values for {guessed_gene_variant_type}: {gene_name} {civic_variant_name} would be:")
+
+            #extract possible variant aliases across all transcripts for this CAID
+            clingen_variant_aliases = clingen_ar_utils.extract_possible_variant_aliases(ca_json)
+            print(f"    Possible variant aliases: {', '.join(clingen_variant_aliases)}")
+
             #show the genomic HGVS expression for this CAID
-            print(f"  Genomic HGVS expressions: {', '.join(clingen_genomic_hgvs_expressions)}")
+            print(f"    Genomic HGVS expressions: {', '.join(clingen_genomic_hgvs_expressions)}")
 
             #get the list of MANE Select HGVS expressions for this CAID
             clingen_mane_select_hgvs_expressions = clingen_ar_utils.extract_mane_select_hgvs_expressions(ca_json)
-            print(f"  MANE Select HGVS expressions: {', '.join(clingen_mane_select_hgvs_expressions)}")
+            print(f"    MANE Select HGVS expressions: {', '.join(clingen_mane_select_hgvs_expressions)}")
  
             #combine genomic and MANE select HGVS expressions into a single list of valid options
             clingen_combined_hgvs_expressions = clingen_genomic_hgvs_expressions + clingen_mane_select_hgvs_expressions
 
-            #extract possible variant aliases across all transcripts for this CAID
-            clingen_variant_aliases = clingen_ar_utils.extract_possible_variant_aliases(ca_json)
-            print(f"  Possible variant aliases: {', '.join(clingen_variant_aliases)}")
-
             #extract ClinVar IDs for this CAID
             clingen_clinvar_ids = clingen_ar_utils.extract_clinvar_ids(ca_json)
-            print(f"  ClinVar IDs: {', '.join(str(id) for id in clingen_clinvar_ids)}")
+            print(f"    ClinVar IDs: {', '.join(str(id) for id in clingen_clinvar_ids)}")
+
+            #TODO: get a possible ensembl build37 representative transcript to propose below
+            #Use the current MANE select and attempt to map it to v75 or v87 ensembl transcripts
+
+            #display potential civic coord info based on this CAID
+            print(f"    Reference Build: {clingen_assembly}"
+                  f" | Chromosome: {clingen_chromosome}"
+                  f" | Start: {clingen_start+1}"
+                  f" | Stop: {clingen_end}"
+                  f" | Reference Bases: {clingen_ref_bases}"
+                  f" | Variant Bases: {clingen_alt_bases}\n"
+                  f"    Representative Transcript: {None}"
+                  f" | Ensembl Version: 75 or 87"
+            )
 
             #compare the CIViC variant name to the MANE select variant name and warning if it doesn't match
             mane_select_names = clingen_ar_utils.extract_mane_select_names_and_compare(ca_json, civic_variant_name_p_3letter)
