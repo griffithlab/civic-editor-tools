@@ -331,6 +331,36 @@ def get_build37_ensembl_transcripts_for_variant(clingen_transcript_sequence_ids_
     return variant_build37_ensembl_transcripts
 
 
+def suggest_build37_ensembl_transcripts(clingen_mane_select_hgvs_expressions, build37_ensembl_transcripts):
+    """
+    Using ensembl MANE select HGVS expressions from ClinGen (usually one, occassionally more) ...
+    determine the corresponding Ensembl transcript ID(s) and version(s) that is valid for build37.
+    This can be used when a CIViC user is suggesting a representative transcript for build37 variant coord info
+    """
+    suggested_build37_ensembl_transcripts = []
+
+    for mane_select_hgvs in clingen_mane_select_hgvs_expressions:
+        if not mane_select_hgvs.startswith("ENST"):
+            continue
+        clingen_enst_id = mane_select_hgvs.split(":")[0]
+        
+        #search for matches, ignoring version numbers, and stop seaching once one is found
+        base_id = clingen_enst_id.split(".")[0]  # strip version for comparison
+        v75_match = next(
+            (k for k in build37_ensembl_transcripts["v75"] if k.split(".")[0] == base_id), None
+        )
+        v87_match = next(
+            (k for k in build37_ensembl_transcripts["v87"] if k.split(".")[0] == base_id), None
+        )
+
+        if v87_match:
+            suggested_build37_ensembl_transcripts.append(v87_match)
+        elif v75_match:
+            suggested_build37_ensembl_transcripts.append(v75_match)
+
+    return list(set(suggested_build37_ensembl_transcripts)) or None
+
+
 def display_accepted_variant_info(variant_id, accepted_variant_data):
     """Create a human readable summary of variant info already accepted in CIViC """
 
@@ -588,9 +618,11 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
             clingen_clinvar_ids = clingen_ar_utils.extract_clinvar_ids(ca_json)
             print(f"    ClinVar IDs: {', '.join(str(id) for id in clingen_clinvar_ids)}")
 
-            #TODO: get a possible ensembl build37 representative transcript to propose below
-            #Use the current MANE select and attempt to map it to v75 or v87 ensembl transcripts
-
+            #get a possible ensembl build37 representative transcript to propose below
+            #use the current MANE select and attempt to map it to v75 or v87 ensembl transcripts
+            suggested_build37_ensembl_transcript = suggest_build37_ensembl_transcripts(clingen_mane_select_hgvs_expressions, build37_ensembl_transcripts)
+            suggested_build37_ensembl_transcript_string = ', '. join(suggested_build37_ensembl_transcript)
+           
             #display potential civic coord info based on this CAID
             print(f"    Reference Build: {clingen_assembly}"
                   f" | Chromosome: {clingen_chromosome}"
@@ -598,7 +630,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
                   f" | Stop: {clingen_end}"
                   f" | Reference Bases: {clingen_ref_bases}"
                   f" | Variant Bases: {clingen_alt_bases}\n"
-                  f"    Representative Transcript: {None}"
+                  f"    Representative Transcript: {suggested_build37_ensembl_transcript_string}"
                   f" | Ensembl Version: 75 or 87"
             )
 
