@@ -229,6 +229,17 @@ def check_apis(timeout: int = 5) -> bool:
     return True
 
 
+
+def hgvs_sort_key(hgvs_expression):
+    """Sort HGVS expressions into an intuitive order, unknown prefixes sort last"""
+    PREFIX_ORDER = ["NC_", "NM_", "NP_", "ENST", "ENSP"]
+    for i, prefix in enumerate(PREFIX_ORDER):
+        if hgvs_expression.startswith(prefix):
+            return (i, hgvs_expression)
+    
+    return (len(PREFIX_ORDER), hgvs_expression)
+
+
 def main():
     
     if not check_connection():

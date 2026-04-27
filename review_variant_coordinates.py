@@ -29,6 +29,16 @@ from utils import compare_utils
 
 base_dir = Path(__file__).resolve().parent
 
+GREEN = "\033[32m"
+YELLOW = "\033[33m"
+RED = "\033[31m"
+BLUE = "\033[34m"
+LIGHT_BLUE = "\033[94m"
+STEEL_BLUE = "\033[38;5;68m"
+PALE_BLUE = "\033[38;5;153m"
+SKY_BLUE = "\033[38;5;117m"
+RESET = "\033[0m"
+
 def parse_args():
     """Obtain command line arguments from the user"""
     parser = argparse.ArgumentParser(
@@ -152,8 +162,8 @@ def variant_type_is_unsupported(gene_name, civic_variant_name, guessed_gene_vari
 def variant_name_has_revision(variant_data):
     """Test is variant has a pending revision on the variant name itself"""
     if variant_data['name_change']:
-        print(f"\033[33mThe variant name itself has an outstanding revision!")
-        print(f"  Since this entire exercise derives from that name, this should be resolved first. Skipping this variant\n\033[0m")
+        print(f"{YELLOW}The variant name itself has an outstanding revision!")
+        print(f"  Since this entire exercise derives from that name, this should be resolved first. Skipping this variant\n{RESET}")
         return True
 
     return False
@@ -189,11 +199,13 @@ def get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_tra
     #from the json of transcript info, get a list of the transcript IDs supported by clingen allele regsitry
     clingen_reference_sequence_ids = clingen_ar_utils.extract_reference_sequences(clingen_gene_transcripts_json)
 
-    #when there are multiple versions of the same transcript, keep only the latest one
-    clingen_reference_sequence_ids_latest = clingen_ar_utils.keep_latest_transcript_versions(clingen_reference_sequence_ids)
-
+    #when there are multiple versions of the same transcript, we could keep only the latest one
+    #on the other hand, things can really change from one transcript version to the next: e.g. ENST00000288602 in https://reg.genome.network/allele/CA123643
+    #clingen_reference_sequence_ids_selected = clingen_ar_utils.keep_latest_transcript_versions(clingen_reference_sequence_ids) #only keep most recent valid transcript versions
+    clingen_reference_sequence_ids_selected = clingen_reference_sequence_ids #keep all valid transcripts (even multiple versions of the same ID
+    
     #go through each transcript ID from CAR and see if it is worth checking for the current CIViC variant name
-    for clingen_reference_sequence_id in clingen_reference_sequence_ids_latest:
+    for clingen_reference_sequence_id in clingen_reference_sequence_ids_selected:
         #skip invalid ensembl transcripts
         if clingen_reference_sequence_id.startswith("ENST"):
             #if the transcript ID is NOT in the biotype map, assume it is old, skip it
@@ -219,11 +231,12 @@ def get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_tra
             protein_seq = ensembl_utils.get_ensembl_protein_indexed(protein_id, ensembl_versions_file)
 
         else:
-            raise ValueError(
-                f"Transcript ID {clingen_reference_sequence_id} not found in "
-                "RefSeq or Ensembl transcript-to-protein maps.\n"
-                "  For missing RefSeqs, try: ./data/entrez/get_missing_refseq_mappings.py {clingen_reference_sequence_id}"
+            error_message = (
+                f"{RED}Transcript ID {clingen_reference_sequence_id} not found in "
+                f"RefSeq or Ensembl transcript-to-protein maps.\n"
+                f"  For missing RefSeqs, try: ./data/entrez/get_missing_refseq_mappings.py {clingen_reference_sequence_id}{RESET}"
             )
+            sys.exit(error_message)
 
         #unless the protein sequence has the expected reference amino acid at the expected position, skip it
         #also check for methionine counting ambiguity (is there a matching ref AA one position to the right of the named position?)
@@ -291,7 +304,7 @@ def variant_is_ambiguous_in_genome(clingen_allele_info):
     unique_positions = list(set(build_37_positions))
 
     if len(unique_positions) > 1:
-        print(f"\n\033[33mAmbiguous genomic positions found: {unique_positions}\033[0m")
+        print(f"\n{YELLOW}Ambiguous genomic positions found: {unique_positions}{RESET}")
         return True
 
     if len(clingen_allele_info) > 1:
@@ -378,7 +391,7 @@ def display_accepted_variant_info(variant_id, accepted_variant_data):
 
     clinvar_ids = None
     if accepted_variant_data['clinvar_ids']:
-        clinvar_ids = [str(id) for id in accepted_variant_data['clinvar_ids']]
+        clinvar_ids = [str(id) for id in sorted(accepted_variant_data['clinvar_ids'])]
         clinvar_ids = ', '.join(clinvar_ids)
 
     print(
@@ -483,7 +496,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
     #iterate over each variant and examine revisions associated with it
     for vid in variant_ids_to_process:
 
-        print(f"\nReviewing CIViC variant ID {vid} for revisions that could be reviewed by contributor ID: {contributor_id}")
+        print(f"\n{BLUE}Reviewing CIViC variant ID {vid} for revisions that could be reviewed by contributor ID: {contributor_id}{RESET}")
 
         #skip if this variant is black listed
         if variant_is_black_listed(vid, black_listed_variant_ids, black_list_path, contributor_id): continue
@@ -575,8 +588,8 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
 
         #iterate through each useful/compatible CAID and display information that helps the user review outstanding edits
         for i, (caid, ca_json) in enumerate(clingen_allele_info.items(), start=1):
-            print(f"\n({i}) CAID: {caid}", end="")
-            print(f"\thttps://reg.genome.network/redmine/projects/registry/genboree_registry/by_caid?caid={caid}")
+            print(f"{SKY_BLUE}\n({i}) CAID: {caid}", end="")
+            print(f"\thttps://reg.genome.network/redmine/projects/registry/genboree_registry/by_caid?caid={caid}{RESET}")
             
             #query the clingen API with a CAID and get a json of relevant info
             ca_json = clingen_ar_utils.get_allele_by_id(caid)
@@ -587,7 +600,11 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
             #save coord info for build37 specifically
             clingen_assembly = clingen_chromosome = clingen_start = clingen_end = clingen_ref_bases = clingen_alt_bases = None
             clingen_coords = clingen_ar_utils.extract_genomic_coords(ca_json)
-            clingen_genomic_hgvs_expressions = []
+            clingen_genomic_hgvs_expressions = [] #the g. hgvs expressions for each genome build
+            clingen_mane_select_hgvs_expressions = [] #the c. and p. hgvs expressions for MANE Select transcripts
+            clingen_standard_hgvs_expressions = [] #the combination of the previous two sets, those we recommend using in CIViC
+            clingen_full_hgvs_expressions = [] #all valid transcript hgvs expression + genomic hgvs expresssions (for comparison to legacy revisions)
+
             for clingen_coord in clingen_coords:
                 clingen_genomic_hgvs_expressions.append(clingen_coord['genomic_hgvs'])
                 print(f"    {clingen_coord['assembly']} chr{clingen_coord['chr']}:{clingen_coord['start']}-{clingen_coord['end']} {clingen_coord['ref']}>{clingen_coord['alt']}")
@@ -603,26 +620,32 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
             #this is particularly useful for cases where nothing has been accepted or revised yet
             print(f"\n  Based on this CAID, expected values for {guessed_gene_variant_type}: {gene_name} {civic_variant_name} would be:")
 
-            #extract possible variant aliases across all transcripts for this CAID
-            clingen_variant_aliases = clingen_ar_utils.extract_possible_variant_aliases(ca_json)
-            print(f"    Possible variant aliases: {', '.join(clingen_variant_aliases)}")
+            #extract possible and recommended variant aliases across all transcripts for this CAID
+            clingen_possible_variant_aliases = clingen_ar_utils.extract_possible_variant_aliases(ca_json)
+            clingen_recommended_variant_aliases = clingen_ar_utils.extract_recommended_variant_aliases(ca_json) 
+            print(f"    Recommended variant aliases: {', '.join(sorted(clingen_recommended_variant_aliases))}")
 
             #show the genomic HGVS expression for this CAID
-            print(f"    Genomic HGVS expressions: {', '.join(clingen_genomic_hgvs_expressions)}")
+            print(f"    Genomic HGVS expressions: {', '.join(sorted(clingen_genomic_hgvs_expressions))}")
 
             #get the list of MANE Select HGVS expressions for this CAID
             clingen_mane_select_hgvs_expressions = clingen_ar_utils.extract_mane_select_hgvs_expressions(ca_json)
-            print(f"    MANE Select HGVS expressions: {', '.join(clingen_mane_select_hgvs_expressions)}")
+            print(f"    MANE Select HGVS expressions: {', '.join(sorted(clingen_mane_select_hgvs_expressions, key=generic_utils.hgvs_sort_key))}")
  
             #combine genomic and MANE select HGVS expressions into a single list of valid options
-            clingen_combined_hgvs_expressions = clingen_genomic_hgvs_expressions + clingen_mane_select_hgvs_expressions
+            clingen_standard_hgvs_expressions = clingen_genomic_hgvs_expressions + clingen_mane_select_hgvs_expressions
+
+            #get a more comprehensive list of HGVS expressions for every valid transcript/protein sequence id
+            clingen_full_hgvs_expressions = clingen_ar_utils.extract_full_hgvs_expressions(ca_json, clingen_transcript_sequence_ids_final, clingen_protein_sequence_ids_final)           
+            clingen_full_hgvs_expressions = clingen_full_hgvs_expressions + clingen_genomic_hgvs_expressions
+            clingen_full_hgvs_expressions = sorted(clingen_full_hgvs_expressions, key=generic_utils.hgvs_sort_key)
 
             #extract ClinVar IDs for this CAID
             clingen_clinvar_ids_allele = clingen_ar_utils.extract_clinvar_ids_allele(ca_json) #clinvar ids for this specific allele
-            clingen_clinvar_ids_allele_string = ', '.join(str(id) for id in clingen_clinvar_ids_allele)
+            clingen_clinvar_ids_allele_string = ', '.join(str(id) for id in sorted(clingen_clinvar_ids_allele))
             clingen_clinvar_ids_allele_all_string = ', '.join(str(id) for id in clingen_clinvar_ids_all) #clinvar ids for all alleles that give the same protein change
 
-            print(f"    ClinVar IDs: {clingen_clinvar_ids_allele_all_string}. For specific variant: (clingen_clinvar_ids_allele_string)")
+            print(f"    ClinVar IDs: {clingen_clinvar_ids_allele_all_string}. All compatible with CIViC variant name")
 
             #get a possible ensembl build37 representative transcript to propose below
             #use the current MANE select and attempt to map it to v75 or v87 ensembl transcripts
@@ -647,8 +670,8 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
             clingen_data = {
                 "allele_registry_id": caid,
                 "variant_type": guessed_gene_variant_type,
-                "variant_aliases": clingen_variant_aliases,
-                "hgvs_expressions": clingen_combined_hgvs_expressions,
+                "variant_aliases": clingen_possible_variant_aliases,
+                "hgvs_expressions": clingen_full_hgvs_expressions,
                 "clinvar_ids": clingen_clinvar_ids_all,
                 "assembly": clingen_assembly,
                 "chromosome": clingen_chromosome, 
@@ -670,7 +693,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
             if len(civic_accepted_values) == 0:
                 print(f"    No CIViC accepted values to be compared")
 
-            ac_score = 0
+            ac_match = 0
             ac_total = len(civic_accepted_values)
             for accepted_value in civic_accepted_values:
                 field_name = accepted_value['field_name']
@@ -680,7 +703,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
 
                 is_consistent = comparator.compare(field_name, accepted_value, revision_id, user_display_name)
                 if is_consistent:
-                    ac_score = ac_score + 1
+                    ac_match = ac_match + 1
 
             #############################################################################################
             #Perform comparison between the ClinGen Allele Info for this CAID and CIViC Variant Revisions
@@ -690,7 +713,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
             if len(all_revisions) == 0:
                 print(f"    No CIViC revisions to be compared")
 
-            rc_score = 0
+            rc_match = 0
             rc_total = len(all_revisions)
             for revision in all_revisions:
                 field_name = revision['field_name']
@@ -700,14 +723,14 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
 
                 is_consistent = comparator.compare(field_name, revision_value, revision_id, user_display_name)
                 if is_consistent:
-                    rc_score = rc_score + 1
+                    rc_match = rc_match + 1
 
-            tc_score = ac_score + rc_score
-            print(f"\n  Total comparison score: {tc_score} (Accepted score: {ac_score}/{ac_total} , Revision score: {rc_score}/{rc_total})")        
+            tc_match = ac_match + rc_match
+            print(f"\n  Total comparison matches: {tc_match} (Accepted matches: {ac_match}/{ac_total} , Revision matches: {rc_match}/{rc_total})")        
 
         #If no clingen allele could be found, warn the user
         if len(clingen_allele_info) == 0:
-            print(f"\033[31mNo ClinGen Alleles Found\033[0m - further investigation needed\n")
+            print(f"{RED}No ClinGen Alleles Found{RESET} - further investigation needed\n")
  
         #Display an example comment message in case the user is going to accept/submit something in CIViC
         print(f"\nTemplate comment for CIViC submission:\nVariant information was reviewed with civic-editor-tools (v{editor_tools_version})")

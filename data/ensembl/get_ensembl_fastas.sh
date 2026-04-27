@@ -29,11 +29,13 @@ for v in "${versions[@]}"; do
     fi
 
     outfile_pep="Homo_sapiens.GRCh38.pep.all.v${v}.fa.gz"
+    outfile_pep2="Homo_sapiens.GRCh38.pep.all.v${v}.fa"
     if [[ ! -f "version_data/${outfile_pep}" ]]; then
         wget https://ftp.ensembl.org/pub/release-${v}/fasta/homo_sapiens/pep/Homo_sapiens.GRCh38.pep.all.fa.gz -O version_data/$outfile_pep
+        cp version_data/$outfile_pep version_data/indexed/
+        gunzip version_data/indexed/$outfile_pep
     else
         echo "  version_data/$outfile_pep already exists"
-        outfile_pep2="Homo_sapiens.GRCh38.pep.all.v${v}.fa"
         if [[ ! -f "version_data/indexed/${outfile_pep2}" ]]; then
             cp version_data/$outfile_pep version_data/indexed/
 	        gunzip version_data/indexed/$outfile_pep

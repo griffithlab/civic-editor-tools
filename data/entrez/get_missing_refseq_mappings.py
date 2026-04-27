@@ -4,13 +4,16 @@ Fetch RefSeq protein IDs from RefSeq transcript IDs using NCBI's efetch utility.
 Mappings are cached in gene2refseq_human_missing.tsv to avoid redundant lookups.
 """
 
+import os
 import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-CACHE_FILE = Path("gene2refseq_human_missing.tsv")
+#set data path location
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+CACHE_FILE = Path(os.path.join(SCRIPT_DIR, "gene2refseq_human_missing.tsv"))
 CACHE_HEADER = "#transcript_id\tprotein_id\n"
 
 def check_efetch_installed():
@@ -19,7 +22,7 @@ def check_efetch_installed():
         sys.exit(
             "Error: 'efetch' is not installed or not on your PATH.\n"
             "Install the NCBI E-utilities: "
-            "sh -c '$(curl -fsSL https://ftp.ncbi.nlm.nih.gov/entrez/entrezdirect/install-edirect.sh)'"
+            "sh -c \"$(curl -fsSL https://ftp.ncbi.nlm.nih.gov/entrez/entrezdirect/install-edirect.sh)\""
         )
 
 

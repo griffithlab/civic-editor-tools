@@ -130,6 +130,16 @@ def compile_transcript_to_protein_map(ensembl_versions_file):
             strip_version=False
         )
         print(f"  Loaded ensembl version: {version}. Total mappings so far: {len(ensembl_transcript_to_protein_map)}")
+
+    #In addition to the pickle already created, save the ensembl_transcript_to_biotype_map to a TSV to allow inspection
+    #note this method only runs if the pickle is being generated, delete it to regenerate both files
+    ensembl_transcript_to_protein_map_tsv = base_dir / f"../data/ensembl/ensembl_transcript_to_protein_map.tsv"
+    with open(ensembl_transcript_to_protein_map_tsv, "w") as f:
+        f.write("transcript_id\tprotein_id\n")
+        for transcript_id, protein_id in ensembl_transcript_to_protein_map.items():
+            f.write(f"{transcript_id}\t{protein_id}\n")
+    print(f"  Saved transcript to protein map to: {ensembl_transcript_to_protein_map_tsv}")
+
     return ensembl_transcript_to_protein_map
 
 
@@ -150,6 +160,16 @@ def compile_transcript_to_biotype_map(ensembl_versions_file):
             transcript_to_biotype=ensembl_transcript_to_biotype_map
         )
         print(f"  Loaded ensembl version: {version}. Total mappings so far: {len(transcript_to_biotype)}")
+
+    #In addition to the pickle already created, save the ensembl_transcript_to_biotype_map to a TSV to allow inspection
+    #note this method only runs if the pickle is being generated, delete it to regenerate both files
+    ensembl_transcript_to_biotype_map_tsv = base_dir / f"../data/ensembl/ensembl_transcript_to_biotype_map.tsv"
+    with open(ensembl_transcript_to_biotype_map_tsv, "w") as f:
+        f.write("transcript_id\tbiotype\n")
+        for transcript_id, biotype in ensembl_transcript_to_biotype_map.items():
+            f.write(f"{transcript_id}\t{biotype}\n")
+    print(f"  Saved transcript to biotype map to: {ensembl_transcript_to_biotype_map_tsv}")
+
     return ensembl_transcript_to_biotype_map
 
 

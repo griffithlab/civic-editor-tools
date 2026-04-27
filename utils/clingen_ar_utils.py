@@ -92,19 +92,19 @@ def extract_possible_variant_aliases(ca_json):
     """extract possible variant aliases from a transcript CAID json object
        return a list of aliases to check CIViC proposed aliases against
     """
-    possible_variant_aliases = []
+    possible_variant_hgvs_expressions = []
     possible_variant_aliases_filtered = []
 
-    #get protein hgvs expressions from cligen
+    #get protein hgvs expressions from clingen
     for transcript in ca_json.get("transcriptAlleles", []):
         protein_effect = transcript.get("proteinEffect")
         if protein_effect:
             hgvs = protein_effect.get("hgvs")
-            possible_variant_aliases.append(hgvs)
+            possible_variant_hgvs_expressions.append(hgvs)
 
     #go through the hgvs expressions, filter invalid types, and get alias names from them
-    for alias in possible_variant_aliases:
-        seq_id, rest = alias.split(':', 1)
+    for hgvs in possible_variant_hgvs_expressions:
+        seq_id, rest = hgvs.split(':', 1)
     
         # Skip unwanted sequence IDs
         if seq_id.startswith(('XP_', 'XR_')):
@@ -130,14 +130,62 @@ def extract_possible_variant_aliases(ca_json):
 
     #get dbsnp ids from clingen and include in possible aliases as many of these have been submitted as aliases historically
     external_records = ca_json.get("externalRecords")
-    
-    #clinvar allele IDs (not used in CIViC curation)
     for dbsnp in external_records.get("dbSNP", []):
         if dbsnp:
             rsid = dbsnp.get("rs")
             possible_variant_aliases_filtered.append(f"rs{rsid}")
 
     return list(dict.fromkeys(possible_variant_aliases_filtered))
+
+
+def extract_recommended_variant_aliases(ca_json):
+    """extract recommended variant aliases from a transcript CAID json object
+       return a list of aliases to submit in CIViC for a new variant
+    """
+    recommended_variant_hgvs_expressions = []
+    recommended_variant_aliases_filtered = []
+
+    #get mane select hgvs expressions 
+    clingen_mane_select_hgvs_expressions = extract_mane_select_hgvs_expressions(ca_json)
+
+    #get protein hgvs expressions from clingen
+    for transcript in ca_json.get("transcriptAlleles", []):
+        protein_effect = transcript.get("proteinEffect")
+        if protein_effect:
+            hgvs = protein_effect.get("hgvs")
+            recommended_variant_hgvs_expressions.append(hgvs)
+
+    #go through the hgvs expressions, filter invalid types, and get alias names from them
+    for hgvs in recommended_variant_hgvs_expressions:
+        seq_id, rest = hgvs.split(':', 1)
+
+        # Skip unless this is a MANE select HGVS expression
+        if not hgvs in clingen_mane_select_hgvs_expressions:
+            continue
+    
+        # Skip unwanted sequence IDs
+        if seq_id.startswith(('XP_', 'XR_')):
+            continue
+    
+        # Skip nucleotide variants
+        if rest.startswith('n.'):
+            continue
+    
+        # Extract variant name
+        variant_name = rest.split('.', 1)[1]
+        recommended_variant_aliases_filtered.append(variant_name)
+
+        # Convert 3-letter AA codes to 1-letter and append as additional alias
+        # Matches patterns like Ser432Phe, Ala123Val, etc.
+        variant_name_1_aa = re.sub(
+            r'([A-Z][a-z]{2})(\d+)([A-Z][a-z]{2})',
+            lambda m: f"{generic_utils.aa_3_to_1(m.group(1))}{m.group(2)}{generic_utils.aa_3_to_1(m.group(3))}",
+            variant_name
+        )
+        if variant_name_1_aa != variant_name:
+            recommended_variant_aliases_filtered.append(variant_name_1_aa)
+
+    return list(dict.fromkeys(recommended_variant_aliases_filtered))
 
 
 def extract_mane_select_hgvs_expressions(ca_json):
@@ -157,6 +205,27 @@ def extract_mane_select_hgvs_expressions(ca_json):
             mane_select_hgvs_expressions.append(protein.get("RefSeq", {}).get("hgvs"))
             
     return list(set(mane_select_hgvs_expressions))
+
+
+def extract_full_hgvs_expressions(ca_json, clingen_transcript_sequence_ids, clingen_protein_sequence_ids):
+    """extract a more comprehensive list of HGVS expressions for every transcript/protein sequence id found to be compatible with a civic variant name"""
+    clingen_full_hgvs_expressions = []
+    clingen_sequence_ids = clingen_transcript_sequence_ids + clingen_protein_sequence_ids
+
+    #get transcript+protein HGVS expressions, check each to make sure it matches one of the valid/compatible transcript/protein ids
+    for transcript in ca_json.get("transcriptAlleles", []):
+        hgvs_values = transcript.get("hgvs", [])
+        for hgvs in hgvs_values:
+            if hgvs and hgvs.split(":")[0] in clingen_sequence_ids:
+                clingen_full_hgvs_expressions.append(hgvs)
+
+        protein_effect = transcript.get("proteinEffect")
+        if protein_effect:
+            hgvs = protein_effect.get("hgvs")
+            if hgvs and hgvs.split(":")[0] in clingen_sequence_ids:
+                clingen_full_hgvs_expressions.append(hgvs)
+
+    return list(set(clingen_full_hgvs_expressions))
 
 
 def extract_mane_select_names_and_compare(ca_json, p_dot_var_name):
@@ -312,7 +381,7 @@ if __name__ == "__main__":
         print(f"\nPossible variant aliases:\n {','.join(variant_aliases)}")
 
         # extract ClinVar IDs for each transcript caid found
-        clinvar_ids = extract_clinvar_ids(ca_json)
+        clinvar_ids = extract_clinvar_ids_allele(ca_json)
         print(f"\nClinVar IDs:\n  {','.join(str(id) for id in clinvar_ids)}")
 
     # for a single gene, get all the CAR supported transcript identifiers
