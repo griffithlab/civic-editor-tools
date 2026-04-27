@@ -193,8 +193,8 @@ def extract_mane_select_names_and_compare(ca_json, p_dot_var_name):
     return unique_mane_select_names
 
 
-def extract_clinvar_ids(ca_json):
-    """"extract clinvar ids from a transcript CAID json object"""
+def extract_clinvar_ids_allele(ca_json):
+    """"extract clinvar ids from a specific transcript CAID json object"""
     clinvar_allele_ids = []
     clinvar_variation_ids = []
 
@@ -209,6 +209,19 @@ def extract_clinvar_ids(ca_json):
         clinvar_variation_ids.append(clinvar_variation.get("variationId"))
 
     return list(set(clinvar_variation_ids))
+
+def extract_all_clinvar_ids(clingen_allele_info):
+    """
+    extract clinvar ids from a list of multiple clingen alelles.
+    used for cases where we want to consider all clinvar ids resolving to the same protein change.
+    """
+    clingen_clinvar_ids_all = []
+    for (caid, ca_json) in clingen_allele_info.items():
+        clingen_clinvar_ids_allele = extract_clinvar_ids_allele(ca_json)
+        if clingen_clinvar_ids_allele:
+            clingen_clinvar_ids_all.extend(clingen_clinvar_ids_allele)
+
+    return clingen_clinvar_ids_all or None
 
 
 def extract_reference_sequences(ref_seqs_json):

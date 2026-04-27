@@ -563,6 +563,9 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
         #using the list of CAIDs, get the json allele info object for each from the clingen API
         clingen_allele_info = get_clingen_allele_jsons(clingen_allele_ids)
 
+        #Get the list of clinvar IDs across all CAIDs - multiple CAIDs and ClinVar IDs may all be relevant for the same amino acid variant
+        clingen_clinvar_ids_all = clingen_ar_utils.extract_all_clinvar_ids(clingen_allele_info)
+
         #look across the clingen alleles for ambiguous genomic variants - warn the user if found
         variant_is_ambiguous_in_genome(clingen_allele_info)
         
@@ -615,8 +618,11 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
             clingen_combined_hgvs_expressions = clingen_genomic_hgvs_expressions + clingen_mane_select_hgvs_expressions
 
             #extract ClinVar IDs for this CAID
-            clingen_clinvar_ids = clingen_ar_utils.extract_clinvar_ids(ca_json)
-            print(f"    ClinVar IDs: {', '.join(str(id) for id in clingen_clinvar_ids)}")
+            clingen_clinvar_ids_allele = clingen_ar_utils.extract_clinvar_ids_allele(ca_json) #clinvar ids for this specific allele
+            clingen_clinvar_ids_allele_string = ', '.join(str(id) for id in clingen_clinvar_ids_allele)
+            clingen_clinvar_ids_allele_all_string = ', '.join(str(id) for id in clingen_clinvar_ids_all) #clinvar ids for all alleles that give the same protein change
+
+            print(f"    ClinVar IDs: {clingen_clinvar_ids_allele_all_string}. For specific variant: (clingen_clinvar_ids_allele_string)")
 
             #get a possible ensembl build37 representative transcript to propose below
             #use the current MANE select and attempt to map it to v75 or v87 ensembl transcripts
@@ -643,7 +649,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
                 "variant_type": guessed_gene_variant_type,
                 "variant_aliases": clingen_variant_aliases,
                 "hgvs_expressions": clingen_combined_hgvs_expressions,
-                "clinvar_ids": clingen_clinvar_ids,
+                "clinvar_ids": clingen_clinvar_ids_all,
                 "assembly": clingen_assembly,
                 "chromosome": clingen_chromosome, 
                 "start": clingen_start,
