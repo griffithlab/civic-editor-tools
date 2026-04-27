@@ -234,7 +234,7 @@ def get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_tra
             error_message = (
                 f"{RED}Transcript ID {clingen_reference_sequence_id} not found in "
                 f"RefSeq or Ensembl transcript-to-protein maps.\n"
-                f"  For missing RefSeqs, try: ./data/entrez/get_missing_refseq_mappings.py {clingen_reference_sequence_id}{RESET}"
+                f"  For missing RefSeqs, try: ./data/entrez/get_missing_refseq_mappings.py {clingen_reference_sequence_id} or (backfill_refseq_transcript_info.py for batch version){RESET}"
             )
             sys.exit(error_message)
 
