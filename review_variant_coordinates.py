@@ -621,8 +621,8 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
             #get a possible ensembl build37 representative transcript to propose below
             #use the current MANE select and attempt to map it to v75 or v87 ensembl transcripts
             suggested_build37_ensembl_transcript = suggest_build37_ensembl_transcripts(clingen_mane_select_hgvs_expressions, build37_ensembl_transcripts)
-            suggested_build37_ensembl_transcript_string = ', '. join(suggested_build37_ensembl_transcript)
-           
+            suggested_build37_ensembl_transcript_string = ', '.join(suggested_build37_ensembl_transcript) if suggested_build37_ensembl_transcript else None
+          
             #display potential civic coord info based on this CAID
             print(f"    Reference Build: {clingen_assembly}"
                   f" | Chromosome: {clingen_chromosome}"

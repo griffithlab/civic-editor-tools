@@ -93,15 +93,16 @@ def extract_possible_variant_aliases(ca_json):
        return a list of aliases to check CIViC proposed aliases against
     """
     possible_variant_aliases = []
+    possible_variant_aliases_filtered = []
+
+    #get protein hgvs expressions from cligen
     for transcript in ca_json.get("transcriptAlleles", []):
         protein_effect = transcript.get("proteinEffect")
         if protein_effect:
             hgvs = protein_effect.get("hgvs")
             possible_variant_aliases.append(hgvs)
 
-
-    possible_variant_aliases_filtered = []
-
+    #go through the hgvs expressions, filter invalid types, and get alias names from them
     for alias in possible_variant_aliases:
         seq_id, rest = alias.split(':', 1)
     
@@ -126,6 +127,15 @@ def extract_possible_variant_aliases(ca_json):
         )
         if variant_name_1_aa != variant_name:
             possible_variant_aliases_filtered.append(variant_name_1_aa)
+
+    #get dbsnp ids from clingen and include in possible aliases as many of these have been submitted as aliases historically
+    external_records = ca_json.get("externalRecords")
+    
+    #clinvar allele IDs (not used in CIViC curation)
+    for dbsnp in external_records.get("dbSNP", []):
+        if dbsnp:
+            rsid = dbsnp.get("rs")
+            possible_variant_aliases_filtered.append(f"rs{rsid}")
 
     return list(dict.fromkeys(possible_variant_aliases_filtered))
 
