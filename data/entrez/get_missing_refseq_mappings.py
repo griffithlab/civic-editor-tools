@@ -114,7 +114,8 @@ def main():
 
     for transcript_id in sys.argv[1:]:
         try:
-            get_protein_id(transcript_id)
+            protein_id = get_protein_id(transcript_id)
+
         except RuntimeError as exc:
             print(f"Error: {exc}", file=sys.stderr)
 

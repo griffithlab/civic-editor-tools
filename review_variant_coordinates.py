@@ -448,7 +448,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
     #define input data files
     version_file = base_dir / f"RELEASE"
     black_list_path = base_dir / f"data/civic_variant_blacklist.tsv"
-    refseq_fasta_index_path = base_dir / f"data/refseq/indexed/GCF_000001405.40_GRCh38.p14_protein.faa.idx"
+    refseq_fasta_index_path = base_dir / f"data/refseq/indexed/merged.faa.idx"
     ensembl_versions_file = base_dir / f"data/ensembl/ensembl_versions.txt"
     refseq_to_protein_file = base_dir / f"data/entrez/gene2refseq_human.tsv.gz"
     refseq_to_protein_missing_file = base_dir / f"data/entrez/gene2refseq_human_missing.tsv"

@@ -39,7 +39,7 @@ def main():
     #get mappings of transcript to protein identifiers for refseq transcripts
     refseq_to_protein_file = base_dir / f"data/entrez/gene2refseq_human.tsv.gz"
     refseq_to_protein_missing_file = base_dir / f"data/entrez/gene2refseq_human_missing.tsv"
-    refseq_fasta_index_path = base_dir / f"data/refseq/indexed/GCF_000001405.40_GRCh38.p14_protein.faa.idx"
+    refseq_fasta_index_path = base_dir / f"data/refseq/indexed/merged.faa.idx"
 
     refseq_transcript_to_protein_map = entrez_utils.load_refseq_transcript_to_protein_map(refseq_to_protein_file, refseq_to_protein_missing_file)
 
@@ -94,9 +94,9 @@ def main():
                     # Retry the lookup now that the map has been refreshed
                     if clingen_reference_sequence_id in refseq_transcript_to_protein_map:
                         protein_id = refseq_transcript_to_protein_map[clingen_reference_sequence_id]
-                        protein_seq = refseq_utils.get_refseq_protein_indexed(
-                            protein_id, refseq_fasta_index_path
-                        )
+
+                        #again make sure the protein sequence can be found in the fasta index
+                        protein_seq = refseq_utils.get_refseq_protein_indexed(protein_id, refseq_fasta_index_path)
                     else:
                         print(
                             f"Warning: {clingen_reference_sequence_id} still missing after fetch — skipping.",
