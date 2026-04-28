@@ -27,7 +27,7 @@ def populate_variables_id(variables_template: str, graphql_id: int) -> str:
     return populated
 
 
-def run_graphql_operation(api_url, operation_name, query_id, timeout=(10, 200)):
+def run_graphql_operation(api_url: str, operation_name: str, query_id: int, timeout=(10, 200)) -> str:
     """load graphql query and variable json objects from file, update with a query id, and submit the query to the API"""
     query_path = base_dir / f"../graphql/{operation_name}_query.json"
     variables_path = base_dir / f"../graphql/{operation_name}_variables.json"
@@ -59,7 +59,7 @@ def run_graphql_operation(api_url, operation_name, query_id, timeout=(10, 200)):
     return resp
 
 
-def gather_user_details(user_id):
+def gather_user_details(user_id: int) -> dict:
     """execute graphql queries, parse json, build a simplied data structure with the user info needed"""
     #graphql template name: "user_Data"
     resp = run_graphql_operation(api_url, "user_Data", user_id)
@@ -78,7 +78,7 @@ def gather_user_details(user_id):
     return user_data
 
 
-def gather_variant_details(variant_id):
+def gather_variant_details(variant_id: int) -> dict:
     """execute graphql queries, parse json, return basic variant info"""
     #graphql template name: "variant_VariantDetail"
     resp = run_graphql_operation(api_url, "variant_VariantDetail", variant_id)
@@ -96,7 +96,7 @@ def gather_variant_details(variant_id):
     return variant_data    
 
 
-def gather_accepted_variant_data(variant_id):
+def gather_accepted_variant_data(variant_id: int) -> dict:
     """execute graphql queries, parse json, return detailed info on already accepted variant fields"""
     #graphql template name: "variant_VariantSummary"
     resp = run_graphql_operation(api_url, "variant_VariantSummary", variant_id)
@@ -128,7 +128,7 @@ def gather_accepted_variant_data(variant_id):
     return accepted_variant_data
 
 
-def gather_variant_revisions(variant_id, contributor_id):
+def gather_variant_revisions(variant_id: int, contributor_id: int) -> dict:
     """execute graphql queries, parse json, build a simplied data structure with the variant revision info needed"""
 
     #Get coordinate ids for variant (takes a variant id)
@@ -243,7 +243,7 @@ def gather_variant_revisions(variant_id, contributor_id):
     return variant_data
 
 
-def merge_revision_data(variant_data):
+def merge_revision_data(variant_data: dict) -> dict:
     
     #Define the priority order for field names
     FIELD_NAME_PRIORITY = {
@@ -288,7 +288,7 @@ def merge_revision_data(variant_data):
     return variant_data
 
 
-def load_blacklisted_variant_ids(filepath):
+def load_blacklisted_variant_ids(filepath: str) -> list:
 	"""Load blacklisted variant IDs from a file. One per line. Each line must start with the ID, anything else on the line will be ignored"""
 	variant_ids = set()
 
@@ -311,7 +311,7 @@ def load_blacklisted_variant_ids(filepath):
 	return variant_ids
 
 
-def main (variant_id, contributor_id):
+def main (variant_id: int, contributor_id: int) -> None:
     """demonstrate functionality of the methods above and variant data retrieved"""
     
     #get user/contributor information from the contributor id
