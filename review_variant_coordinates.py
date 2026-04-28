@@ -207,7 +207,7 @@ def get_clingen_gene_transcripts_json (gene_name, clingen_transcript_ids):
     return clingen_gene_transcripts_json
 
 
-def get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_transcript_to_protein_map, ensembl_transcript_to_protein_map, ensembl_transcript_to_biotype_map, refseq_fasta_index_path, ensembl_versions_file, ref_aa_1, pos, var_aa_1, civic_variant_name_p_3letter):
+def get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_transcript_to_protein_map, ensembl_transcript_to_protein_map, ensembl_transcript_to_biotype_map, refseq_fasta_index_path, ensembl_versions_file, ref_aa_1, pos, var_aa_1, civic_variant_name_p_3letter, test_name_match):
     """"Filter clingen allele registry transcripts to those that are useful/compatible with this variant"""
     
     #print(f"\nIdentifying compatible ClinGen Allele Registry transcript IDs:")
@@ -256,10 +256,12 @@ def get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_tra
             )
             sys.exit(error_message)
 
+        #If test name match is True, perform the following checks
         #unless the protein sequence has the expected reference amino acid at the expected position, skip it
         #also check for methionine counting ambiguity (is there a matching ref AA one position to the right of the named position?)
-        if not generic_utils.reference_aa_positions_matches(ref_aa_1, pos, protein_seq, protein_id):
-            continue
+        if test_name_match:
+            if not generic_utils.reference_aa_positions_matches(ref_aa_1, pos, protein_seq, protein_id):
+                continue
 
         clingen_transcript_sequence_ids_final.append(clingen_reference_sequence_id)
         clingen_protein_sequence_ids_final.append(protein_id)
@@ -588,12 +590,15 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_
         #only query the clingen API if we don't already have transcripts for this gene
         clingen_gene_transcripts_json = get_clingen_gene_transcripts_json(gene_name, clingen_transcript_ids)
 
-        #filter the transcripts to those that are useful/compatible with this variant, return protein IDs
-        clingen_transcript_sequence_ids_final, clingen_protein_sequence_ids_final = get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_transcript_to_protein_map, ensembl_transcript_to_protein_map, ensembl_transcript_to_biotype_map, refseq_fasta_index_path, ensembl_versions_file, ref_aa_1, pos, var_aa_1, civic_variant_name_p_3letter)
+        #filter the transcripts to those that are useful/compatible with this variant (including name/position matching), return protein IDs
+        clingen_transcript_sequence_ids_compatible1, clingen_protein_sequence_ids_compatible1 = get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_transcript_to_protein_map, ensembl_transcript_to_protein_map, ensembl_transcript_to_biotype_map, refseq_fasta_index_path, ensembl_versions_file, ref_aa_1, pos, var_aa_1, civic_variant_name_p_3letter, True)
+
+        #produce a second filtered set of transcripts that applies the same basic rules, but does NOT perform the checks against the variant name
+        clingen_transcript_sequence_ids_compatible2, clingen_protein_sequence_ids_compatible2 = get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_transcript_to_protein_map, ensembl_transcript_to_protein_map, ensembl_transcript_to_biotype_map, refseq_fasta_index_path, ensembl_versions_file, ref_aa_1, pos, var_aa_1, civic_variant_name_p_3letter, False)
 
         #for the list of valid transcript IDs from ClinGen, obtain old build37 compatible versions (from v75, and v87 import)
         #returns a list of tuples: clingen_transcript_id, ensembl_v75_match, ensembl_v87_match
-        variant_build37_ensembl_transcripts = get_build37_ensembl_transcripts_for_variant(clingen_transcript_sequence_ids_final, build37_ensembl_transcripts)
+        variant_build37_ensembl_transcripts = get_build37_ensembl_transcripts_for_variant(clingen_transcript_sequence_ids_compatible2, build37_ensembl_transcripts)
 
         #summarize possible build37 ensembl representative transcripts for this variant
         print(f"\nPossible build37 ensembl representative transcripts for this variant:")
@@ -601,7 +606,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_
             print(f"  ClinGen Id: {clingen_id} (b38). Ensembl_v75: {v75_match} (b37). Ensembl_v87: {v87_match} (b37)")
 
         #get a unique list of useful/compatible CAIDs for the list of protein HGVS expressions
-        clingen_allele_ids = get_clingen_alleles_from_p_hgvs(clingen_protein_sequence_ids_final, civic_variant_name_p_3letter)
+        clingen_allele_ids = get_clingen_alleles_from_p_hgvs(clingen_protein_sequence_ids_compatible1, civic_variant_name_p_3letter)
 
         #using the list of CAIDs, get the json allele info object for each from the clingen API
         clingen_allele_info = get_clingen_allele_jsons(clingen_allele_ids)
@@ -666,7 +671,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_
             clingen_standard_hgvs_expressions = clingen_genomic_hgvs_expressions + clingen_mane_select_hgvs_expressions
 
             #get a more comprehensive list of HGVS expressions for every valid transcript/protein sequence id
-            clingen_full_hgvs_expressions = clingen_ar_utils.extract_full_hgvs_expressions(ca_json, clingen_transcript_sequence_ids_final, clingen_protein_sequence_ids_final)           
+            clingen_full_hgvs_expressions = clingen_ar_utils.extract_full_hgvs_expressions(ca_json, clingen_transcript_sequence_ids_compatible2, clingen_protein_sequence_ids_compatible2)           
             clingen_full_hgvs_expressions = clingen_full_hgvs_expressions + clingen_genomic_hgvs_expressions
             clingen_full_hgvs_expressions = sorted(clingen_full_hgvs_expressions, key=generic_utils.hgvs_sort_key)
 
