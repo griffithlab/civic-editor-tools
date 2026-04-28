@@ -168,6 +168,7 @@ class ValueComparator:
                 if self._normalize_hgvs(civic_hgvs) == self._normalize_hgvs(clingen_hgvs):
                     civic_match_found = True
                     matched_civic_hgvs_expressions.append(civic_hgvs)
+                    break  # stop after first match to avoid duplicates which happen due to the normalized version agnostic matching
             if not civic_match_found:
                 unmatched_civic_hgvs_expressions.append(civic_hgvs)
 
@@ -193,7 +194,8 @@ class ValueComparator:
     def compare_clinvar_ids(self, civic_clinvar_ids: list) -> bool:
         """Method that compares clinvar IDs from a CIViC submission (revision or accepted) to those from ClinGen Allele Registry"""
         #normalize clinvar ids to a list of strings
-        clingen_clinvar_ids = [str(id) for id in self.clingen_data["clinvar_ids"]]
+        clingen_clinvar_ids = [str(id) for id in self.clingen_data["clinvar_ids"]] if self.clingen_data.get("clinvar_ids") else []
+
         civic_clinvar_ids = [str(id) for id in civic_clinvar_ids]
         clingen_clinvar_ids_string = ', '.join(clingen_clinvar_ids)
 

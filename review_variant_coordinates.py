@@ -673,7 +673,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_
             #extract ClinVar IDs for this CAID
             clingen_clinvar_ids_allele = clingen_ar_utils.extract_clinvar_ids_allele(ca_json) #clinvar ids for this specific allele
             clingen_clinvar_ids_allele_string = ', '.join(str(id) for id in sorted(clingen_clinvar_ids_allele))
-            clingen_clinvar_ids_allele_all_string = ', '.join(str(id) for id in clingen_clinvar_ids_all) #clinvar ids for all alleles that give the same protein change
+            clingen_clinvar_ids_allele_all_string = ', '.join(str(id) for id in clingen_clinvar_ids_all) if clingen_clinvar_ids_all else None #clinvar ids for all valid alleles
 
             print(f"    ClinVar IDs: {clingen_clinvar_ids_allele_all_string}. All compatible with CIViC variant name")
 

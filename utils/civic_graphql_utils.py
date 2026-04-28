@@ -412,7 +412,9 @@ def main (variant_id, contributor_id):
 if __name__ == "__main__":
     #test_variant = 1832 #Example variant POLE S459F (civic.vid: 1832)
     #test_variant = 785 #Example variant giving error
+    #test_variant = 4050 #Example with duplicate hgvs expressions
     test_variant = 1686 
+
     contributor_id = 15 #Example user (Malachi Griffith, user id 15)
     main(test_variant, contributor_id)
 
