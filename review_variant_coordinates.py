@@ -69,6 +69,12 @@ def parse_args():
         action="store_true",
         help="Review all CIViC variants"
     )
+    variant_choice_group.add_argument(
+        "--variant-list-file",
+        dest="variant_list_file",
+        type=str,
+        help="Path to file with list of CIViC variants IDs, one per line (first column), rows with # will be ignored"
+    )
     parser.add_argument(
         "--allow-variants-without-revisions",
         dest="allow_variants_without_revisions",
@@ -115,17 +121,29 @@ def prompt_to_proceed(message: str = None) -> None:
         sys.exit(0)
 
 
-def get_variant_ids_to_process(variant_id, all_variants):
+def get_variant_ids_to_process(variant_id, all_variants, variant_list_file):
     """Determine which variant IDs to work with based on user supplied choices """
     variant_ids_to_process = []
+    #single id
     if variant_id:
         variant_ids_to_process.append(variant_id)
-    
+
+    #all variants in civic
     if all_variants:
         include_list = ['accepted', 'submitted']
         variants = civic.get_all_gene_variants(include_status=include_list, allow_cached=True)
         variant_ids_to_process = civicpy_utils.extract_variant_id_list(variants)
         print(f"Total variant ids obtained from CIViCpy: {len(variant_ids_to_process)}\n")
+
+    #a list of specific variants ids
+    if variant_list_file:
+        with open(variant_list_file, "r") as f:
+            for line in f:
+                if line.startswith("#"):
+                    continue
+                parts = line.strip().split("\t")
+                if parts:
+                    variant_ids_to_process.append(parts[0])
 
     return variant_ids_to_process
 
@@ -443,7 +461,7 @@ def display_accepted_variant_info(variant_id, accepted_variant_data):
 
     return civic_accepted_values
 
-def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variants_without_revisions: bool, open_browser: bool):
+def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_file: str, allow_variants_without_revisions: bool, open_browser: bool):
 
     #define input data files
     version_file = base_dir / f"RELEASE"
@@ -491,12 +509,13 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, allow_variant
     clingen_transcript_ids = {}
 
     #get civic variant IDs to evaluate, either from the user, or by querying CIViCpy
-    variant_ids_to_process = get_variant_ids_to_process(variant_id, all_variants)
+    variant_ids_to_process = get_variant_ids_to_process(variant_id, all_variants, variant_list_file)
 
     #iterate over each variant and examine revisions associated with it
     for vid in variant_ids_to_process:
 
-        print(f"\n{BLUE}Reviewing CIViC variant ID {vid} for revisions that could be reviewed by contributor ID: {contributor_id}{RESET}")
+        print(f"\n{BLUE}" + "=" * 80)
+        print(f"Reviewing CIViC variant ID {vid} for revisions that could be reviewed by contributor ID: {contributor_id}{RESET}")
 
         #skip if this variant is black listed
         if variant_is_black_listed(vid, black_listed_variant_ids, black_list_path, contributor_id): continue
@@ -746,6 +765,7 @@ if __name__ == "__main__":
         contributor_id=args.contributor_id,
         variant_id=args.variant_id,
         all_variants=args.all_variants,
+        variant_list_file=args.variant_list_file,
         allow_variants_without_revisions=args.allow_variants_without_revisions,
         open_browser=args.open_browser
     )

@@ -11,6 +11,7 @@ Other tools may need this transcript info (refseq transcript to protein ids mapp
         
 import os
 import sys
+import argparse
 from civicpy import civic
 from pathlib import Path
 import subprocess
@@ -27,56 +28,90 @@ NCBI_REQUEST_DELAY = 0.5  # seconds between efetch calls
 
 base_dir = Path(__file__).resolve().parent
 
-def main():
 
-    #include_list=None #to use every single variant regardless of status
+def load_processed_genes(checkpoint_file: Path) -> set:
+    """Load the set of already-processed gene names from the checkpoint file."""
+    if not checkpoint_file.exists():
+        return set()
+    with checkpoint_file.open() as f:
+        return {line.strip() for line in f if line.strip()}
+
+
+def mark_gene_processed(checkpoint_file: Path, gene_name: str) -> None:
+    """Append a gene name to the checkpoint file."""
+    with checkpoint_file.open("a") as f:
+        f.write(gene_name + "\n")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Backfill RefSeq transcript info for CIViC genes via ClinGen."
+    )
+    parser.add_argument(
+        "--checkpoint",
+        type=Path,
+        default=None,
+        metavar="FILE",
+        help=(
+            "Optional path to a checkpoint file. Genes listed in this file will be "
+            "skipped. Each newly completed gene is appended to the file so the run "
+            "can be resumed if interrupted."
+        ),
+    )
+    args = parser.parse_args()
+
     include_list = ['accepted', 'submitted']
 
-    #use civicpy to get all genes in civic
     genes = civic.get_all_genes(include_status=include_list, allow_cached=True)
     print(f"Total genes in CIViC: {len(genes)}\n")
 
-    #get mappings of transcript to protein identifiers for refseq transcripts
-    refseq_to_protein_file = base_dir / f"data/entrez/gene2refseq_human.tsv.gz"
-    refseq_to_protein_missing_file = base_dir / f"data/entrez/gene2refseq_human_missing.tsv"
-    refseq_fasta_index_path = base_dir / f"data/refseq/indexed/merged.faa.idx"
+    # Load checkpoint if provided
+    processed_genes = set()
+    if args.checkpoint:
+        processed_genes = load_processed_genes(args.checkpoint)
+        if processed_genes:
+            print(f"Checkpoint loaded from '{args.checkpoint}': "
+                  f"skipping {len(processed_genes)} already-processed gene(s).\n")
 
-    refseq_transcript_to_protein_map = entrez_utils.load_refseq_transcript_to_protein_map(refseq_to_protein_file, refseq_to_protein_missing_file)
+    refseq_to_protein_file = base_dir / "data/entrez/gene2refseq_human.tsv.gz"
+    refseq_to_protein_missing_file = base_dir / "data/entrez/gene2refseq_human_missing.tsv"
+    refseq_fasta_index_path = base_dir / "data/refseq/indexed/merged.faa.idx"
+
+    refseq_transcript_to_protein_map = entrez_utils.load_refseq_transcript_to_protein_map(
+        refseq_to_protein_file, refseq_to_protein_missing_file
+    )
 
     for g in genes:
         gene_name = g.name
+
+        if gene_name in processed_genes:
+            print(f"Skipping already-processed gene: {gene_name}")
+            continue
+
         print(f"Working on gene: {gene_name}")
         
-        #create a data structure that will store all clingen supported transcripts ids per gene
         clingen_transcript_ids = {}
         
-        #for each gene, get transcripts from clingen allele registry
         clingen_gene_transcripts_json = clingen_ar_utils.get_reference_sequences_by_gene(gene_name)
 
-        #skipped failed gene queries.
         if not clingen_gene_transcripts_json:
             continue
 
-        #get the reference sequence ids associated with this gene
         clingen_reference_sequence_ids = clingen_ar_utils.extract_reference_sequences(clingen_gene_transcripts_json)
 
         for clingen_reference_sequence_id in clingen_reference_sequence_ids:
-            #skip ensembl transcripts
             if clingen_reference_sequence_id.startswith("ENST"):
                 continue
     
-            #skip invalid refseq transcripts
             if clingen_reference_sequence_id.startswith(("NR_", "XM_", "XR_")):
                 continue
 
             print(f"  ClinGen Reference Sequence ID: {clingen_reference_sequence_id}")
 
-            #get the protein ID for the current transcript id
             protein_id = None
             protein_seq = None
             if clingen_reference_sequence_id in refseq_transcript_to_protein_map:
                 protein_id = refseq_transcript_to_protein_map[clingen_reference_sequence_id]
-                #make sure the protein sequence is available
                 print(f"    Protein ID: {protein_id}")
                 protein_seq = refseq_utils.get_refseq_protein_indexed(protein_id, refseq_fasta_index_path)
             else:
@@ -92,16 +127,12 @@ def main():
                     )
                     print(result.stdout)
 
-                    # Reload the map so the freshly fetched entry is available
                     refseq_transcript_to_protein_map = entrez_utils.load_refseq_transcript_to_protein_map(
                         refseq_to_protein_file, refseq_to_protein_missing_file
                     )
 
-                    # Retry the lookup now that the map has been refreshed
                     if clingen_reference_sequence_id in refseq_transcript_to_protein_map:
                         protein_id = refseq_transcript_to_protein_map[clingen_reference_sequence_id]
-
-                        #again make sure the protein sequence can be found in the fasta index
                         protein_seq = refseq_utils.get_refseq_protein_indexed(protein_id, refseq_fasta_index_path)
                     else:
                         print(
@@ -115,14 +146,14 @@ def main():
                         file=sys.stderr,
                     )
                 finally:
-                    # Always pause after any efetch call, success or failure
                     time.sleep(NCBI_REQUEST_DELAY)
+
+        # Gene fully processed — record it in the checkpoint file if one was specified
+        if args.checkpoint:
+            mark_gene_processed(args.checkpoint, gene_name)
+            processed_genes.add(gene_name)
 
 
 if __name__ == "__main__":
     main()
-
-
-
-
 

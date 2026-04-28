@@ -216,4 +216,6 @@ data/refseq/indexed/
 data/refseq/*.faa.gz
 
 *.pkl
+assertion_variant_list.txt
+backfilled_genes.txt
 

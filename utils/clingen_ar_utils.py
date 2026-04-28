@@ -136,7 +136,7 @@ def extract_possible_variant_aliases(ca_json):
             possible_variant_aliases_filtered.append(variant_name_1_aa)
 
     #get dbsnp ids from clingen and include in possible aliases as many of these have been submitted as aliases historically
-    external_records = ca_json.get("externalRecords")
+    external_records = ca_json.get("externalRecords") or {}
     for dbsnp in external_records.get("dbSNP", []):
         if dbsnp:
             rsid = dbsnp.get("rs")
@@ -274,8 +274,8 @@ def extract_clinvar_ids_allele(ca_json):
     clinvar_allele_ids = []
     clinvar_variation_ids = []
 
-    external_records = ca_json.get("externalRecords")
-    
+    external_records = ca_json.get("externalRecords") or {}
+
     #clinvar allele IDs (not used in CIViC curation)
     for clinvar_allele in external_records.get("ClinVarAlleles", []):
         clinvar_allele_ids.append(clinvar_allele.get("alleleId"))
