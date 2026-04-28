@@ -277,11 +277,12 @@ def get_clingen_alleles_from_p_hgvs(clingen_protein_sequence_ids_final, civic_va
         #query clingen API with protein_hgvs and get a json object of protein allele info
         pa_json = clingen_ar_utils.get_allele_by_hgvs(protein_hgvs)
 
-        #extract transcript CAID and transcript HGVS values associated with the protein allele
-        transcript_cas = clingen_ar_utils.extract_transcript_cas(pa_json)
+        if pa_json:
+            #extract transcript CAID and transcript HGVS values associated with the protein allele
+            transcript_cas = clingen_ar_utils.extract_transcript_cas(pa_json)
 
-        for tx in transcript_cas:
-            clingen_alleles.append(tx['caid'])
+            for tx in transcript_cas:
+                clingen_alleles.append(tx['caid'])
 
     return list(set(clingen_alleles))
 
@@ -647,7 +648,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_
 
             #display a summary of what expected values in CIViC would look like if this CAID is correct:
             #this is particularly useful for cases where nothing has been accepted or revised yet
-            print(f"\n  Based on this CAID, expected values for {guessed_gene_variant_type}: {gene_name} {civic_variant_name} would be:")
+            print(f"\n  A. Expected. Based on this CAID, expected values for {guessed_gene_variant_type}: {gene_name} {civic_variant_name} would be:")
 
             #extract possible and recommended variant aliases across all transcripts for this CAID
             clingen_possible_variant_aliases = clingen_ar_utils.extract_possible_variant_aliases(ca_json)
@@ -717,7 +718,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_
 
             #############################################################################################
             #Perform comparison between the ClinGen Allele Info for this CAID and CIViC Variant Accepted Fields
-            print(f"\n  Comparing existing CIViC accepted values to the values of this CAID ({caid}):")
+            print(f"\n  B. Accepted. Comparing existing CIViC accepted values to the values of this CAID ({caid}):")
 
             if len(civic_accepted_values) == 0:
                 print(f"    No CIViC accepted values to be compared")
@@ -736,7 +737,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_
 
             #############################################################################################
             #Perform comparison between the ClinGen Allele Info for this CAID and CIViC Variant Revisions
-            print(f"\n  Comparing existing CIViC revisions to the values of this CAID ({caid}):")
+            print(f"\n  C. Revision. Comparing existing CIViC revisions to the values of this CAID ({caid}):")
             all_revisions = variant_data['all_revisions']
 
             if len(all_revisions) == 0:
@@ -755,7 +756,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_
                     rc_match = rc_match + 1
 
             tc_match = ac_match + rc_match
-            print(f"\n  Total comparison matches: {tc_match} (Accepted matches: {ac_match}/{ac_total} , Revision matches: {rc_match}/{rc_total})")        
+            print(f"\n  D. Summary. Total comparison matches: {tc_match} (Accepted matches: {ac_match}/{ac_total} , Revision matches: {rc_match}/{rc_total})")        
 
         #If no clingen allele could be found, warn the user
         if len(clingen_allele_info) == 0:

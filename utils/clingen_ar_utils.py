@@ -20,6 +20,12 @@ def get_allele_by_hgvs(hgvs):
     """query clingen API using a protein HGVS (e.g. NP_004324.2:p.Val600Glu)"""
     url = f"{BASE_URL}/allele?hgvs={urllib.parse.quote(hgvs, safe='')}"
     r = requests.get(url, headers={"Accept": "application/json"})
+
+    if r.status_code == 500:
+        body = r.json()
+        if "Unknown reference" in body.get("message", ""):
+            return None
+
     r.raise_for_status()
     return r.json()
 
