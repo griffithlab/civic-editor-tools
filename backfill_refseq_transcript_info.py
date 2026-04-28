@@ -53,9 +53,12 @@ def main():
         #for each gene, get transcripts from clingen allele registry
         clingen_gene_transcripts_json = clingen_ar_utils.get_reference_sequences_by_gene(gene_name)
 
+        #skipped failed gene queries.
+        if not clingen_gene_transcripts_json:
+            continue
+
         #get the reference sequence ids associated with this gene
         clingen_reference_sequence_ids = clingen_ar_utils.extract_reference_sequences(clingen_gene_transcripts_json)
-
 
         for clingen_reference_sequence_id in clingen_reference_sequence_ids:
             #skip ensembl transcripts
@@ -65,13 +68,16 @@ def main():
             #skip invalid refseq transcripts
             if clingen_reference_sequence_id.startswith(("NR_", "XM_", "XR_")):
                 continue
-        
+
+            print(f"  ClinGen Reference Sequence ID: {clingen_reference_sequence_id}")
+
             #get the protein ID for the current transcript id
             protein_id = None
             protein_seq = None
             if clingen_reference_sequence_id in refseq_transcript_to_protein_map:
                 protein_id = refseq_transcript_to_protein_map[clingen_reference_sequence_id]
                 #make sure the protein sequence is available
+                print(f"    Protein ID: {protein_id}")
                 protein_seq = refseq_utils.get_refseq_protein_indexed(protein_id, refseq_fasta_index_path)
             else:
                 missing_refseq_mappings_script = base_dir / "data/entrez/get_missing_refseq_mappings.py"

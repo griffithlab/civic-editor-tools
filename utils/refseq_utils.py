@@ -29,9 +29,9 @@ def get_refseq_protein_indexed(refseq_protein_id, index_path):
     
     if refseq_protein_id not in index:
         error_message = (
-            f"{refseq_protein_id} not found in index. Do the following two commands to get the missing fasta sequence and rebuild fasta the index:\n"
-            f" ./data/refseq/get_missing_refseq_protein_fasta.py {refseq_protein_id}\n"
-            f"./utils/refseq_utils.py"
+            f"{refseq_protein_id} not found in protein sequence index. Do the following two commands to get the missing fasta sequence and rebuild fasta the index:\n"
+            f"  ./data/refseq/get_missing_refseq_protein_fasta.py {refseq_protein_id}\n"
+            f"  ./utils/refseq_utils.py"
         )
         sys.exit(error_message)
 

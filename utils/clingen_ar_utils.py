@@ -5,6 +5,9 @@ import urllib.parse
 import sys
 import re
 
+RED = "\033[31m"
+RESET = "\033[0m"
+
 # handle both package and standalone execution
 try:
     from . import generic_utils
@@ -36,7 +39,11 @@ def get_reference_sequences_by_gene(gene_name):
     """
     url = f"{BASE_URL}/refseqs?gene={gene_name}"
     r = requests.get(url, headers={"Accept": "application/json"})
-    r.raise_for_status()
+
+    #TODO: for genes that fail, is there another way/endpoint to query (e.g. by gene id)?
+    if not r.ok or "errorType" in r.json():
+        print(f"{RED}Warning: could not fetch reference sequences for {gene_name}: {r.json().get('message', r.status_code)}{RESET}")
+        return None
     return r.json()
 
 def extract_transcript_cas(pa_json):
