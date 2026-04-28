@@ -307,6 +307,8 @@ def variant_is_ambiguous_in_genome(clingen_allele_info):
     """
 
     build_37_positions = []
+    all_starts = []
+    all_ends = []
         
     for caid, ca_json in clingen_allele_info.items():
         ca_json = clingen_ar_utils.get_allele_by_id(caid)
@@ -318,11 +320,19 @@ def variant_is_ambiguous_in_genome(clingen_allele_info):
                 continue
             genomic_variant = f"chr{coord['chr']}:{coord['start']}-{coord['end']}{coord['ref']}>{coord['alt']}"
             build_37_positions.append(genomic_variant)
+            all_starts.append(int(coord['start']))
+            all_ends.append(int(coord['end']))
+
 
     unique_positions = list(set(build_37_positions))
+    min_pos = min(all_starts) if all_starts else None
+    max_pos = max(all_ends) if all_ends else None
+    position_range = (max_pos - min_pos) if (min_pos is not None and max_pos is not None) else None
 
     if len(unique_positions) > 1:
-        print(f"\n{YELLOW}Ambiguous genomic positions found: {unique_positions}{RESET}")
+        unique_positions_str = ", ".join(unique_positions)
+        print(f"\n{YELLOW}Ambiguous genomic positions found: {unique_positions_str}")
+        print(f"  Coordinate range across all CAIDs: {min_pos} - {max_pos} ({position_range} nucleotides){RESET}")
         return True
 
     if len(clingen_allele_info) > 1:

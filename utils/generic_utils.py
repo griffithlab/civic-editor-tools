@@ -8,6 +8,11 @@ import sys
 import ssl
 import requests
 
+YELLOW = "\033[33m"
+RED = "\033[31m"
+RESET = "\033[0m"
+
+
 def aa_1_to_3(aa):
     """Convert single letter AA abbreviations into three letter AA abbreviations"""
     aa_map = {
@@ -184,8 +189,8 @@ def reference_aa_positions_matches(ref_aa_1, pos, protein_seq, protein_id):
     if secondary_pos <= len(protein_seq):
         secondary_match = protein_seq[secondary_pos - 1] == ref_aa_1
         if secondary_match:
-            print(f"\nWARNING! Possible methionine counting ambiguity detected for AA:{ref_aa_1} in {protein_id}:")
-            print(f"\nPrimary position {pos} match: {primary_match}\tSecondary position {secondary_pos} match: {secondary_match}")
+            print(f"{YELLOW}\nWARNING! Possible methionine counting ambiguity detected for Amino Acid:{ref_aa_1} in {protein_id}:")
+            print(f"  Primary position {pos} match: {primary_match}\tSecondary position {secondary_pos} match: {secondary_match}{RESET}")
 
     return primary_match
 
