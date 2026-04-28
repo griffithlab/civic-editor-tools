@@ -110,10 +110,17 @@ def extract_possible_variant_aliases(ca_json):
 
     #get protein hgvs expressions from clingen
     for transcript in ca_json.get("transcriptAlleles", []):
+
+        transcript_hgvs_values = transcript.get("hgvs", [])
+        for hgvs in transcript_hgvs_values:
+            possible_variant_hgvs_expressions.append(hgvs)
+
         protein_effect = transcript.get("proteinEffect")
         if protein_effect:
             hgvs = protein_effect.get("hgvs")
             possible_variant_hgvs_expressions.append(hgvs)
+
+
 
     #go through the hgvs expressions, filter invalid types, and get alias names from them
     for hgvs in possible_variant_hgvs_expressions:
@@ -126,8 +133,11 @@ def extract_possible_variant_aliases(ca_json):
         # Skip nucleotide variants
         if rest.startswith('n.'):
             continue
-    
-        # Extract variant name
+
+        # Add the full p. or c. name to the list
+        possible_variant_aliases_filtered.append(rest)
+
+        # Extract simpler variant name
         variant_name = rest.split('.', 1)[1]
         possible_variant_aliases_filtered.append(variant_name)
 
