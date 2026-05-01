@@ -422,10 +422,10 @@ def suggest_build37_ensembl_transcripts(clingen_mane_select_hgvs_expressions, bu
             (k for k in build37_ensembl_transcripts["v87"] if k.split(".")[0] == base_id), None
         )
 
-        if v87_match:
-            suggested_build37_ensembl_transcripts.append(v87_match)
-        elif v75_match:
-            suggested_build37_ensembl_transcripts.append(v75_match)
+        if v75_match:
+            suggested_build37_ensembl_transcripts.append((v75_match, "75"))
+        elif v87_match:
+            suggested_build37_ensembl_transcripts.append((v87_match, "87"))
 
     return list(set(suggested_build37_ensembl_transcripts)) or None
 
@@ -718,9 +718,10 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_
 
             #get a possible ensembl build37 representative transcript to propose below
             #use the current MANE select and attempt to map it to v75 or v87 ensembl transcripts
-            suggested_build37_ensembl_transcript = suggest_build37_ensembl_transcripts(clingen_mane_select_hgvs_expressions, build37_ensembl_transcripts)
-            suggested_build37_ensembl_transcript_string = ', '.join(suggested_build37_ensembl_transcript) if suggested_build37_ensembl_transcript else None
-          
+            suggested_build37_ensembl_transcripts = suggest_build37_ensembl_transcripts(clingen_mane_select_hgvs_expressions, build37_ensembl_transcripts)
+            suggested_build37_ensembl_transcripts_string = ', '.join(f"{t} ({v})" for t, v in suggested_build37_ensembl_transcripts) if suggested_build37_ensembl_transcripts else None
+            suggested_build37_ensembl_versions_string = ', '.join(sorted(set(v for _, v in suggested_build37_ensembl_transcripts))) if suggested_build37_ensembl_transcripts else None
+
             #display potential civic coord info based on this CAID
             print(f"    Reference Build: {clingen_assembly}"
                   f" | Chromosome: {clingen_chromosome}"
@@ -728,8 +729,8 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_
                   f" | Stop: {clingen_end}"
                   f" | Reference Bases: {clingen_ref_bases}"
                   f" | Variant Bases: {clingen_alt_bases}\n"
-                  f"    Representative Transcript: {suggested_build37_ensembl_transcript_string}"
-                  f" | Ensembl Version: 75 or 87"
+                  f"    Representative Transcript: {suggested_build37_ensembl_transcripts_string}"
+                  f" | Ensembl Version: {suggested_build37_ensembl_versions_string}"
             )
 
             #compare the CIViC variant name to the MANE select variant name and warning if it doesn't match
@@ -812,7 +813,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_
                 already_processed_variants.add(vid)
 
         #Pause before moving on to the next CIViC variant
-        prompt_to_proceed(f"Processing complete for variant ({gene_name} {vid}: {civic_variant_name})")
+        prompt_to_proceed(f"Processing complete for variant: {vid} ({gene_name} {civic_variant_name})")
 
 
 if __name__ == "__main__":
