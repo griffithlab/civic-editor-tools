@@ -356,7 +356,6 @@ class ValueComparator:
         The ClinGen values come from "valid" transcripts that would make sense for the CIViC variant
         From these, matching build37 versioned ensembl transcripts are obtained from Ensembl v75 and build37 imported Ensembl v87
         """
-        # field specific logic here
 
         variant_build37_ensembl_transcripts = self.clingen_data["representative_transcript"]
         civic_base = civic_representative_transcript.split(".")[0]
@@ -380,12 +379,14 @@ class ValueComparator:
                 v87_match_transcript = v87_match
 
             #check for partial matches (base ID only) against either v75 or v87
-            if v75_match is not None and v75_match.split(".")[0] == civic_base:
-                v75_partial_match_result = True
-                v75_partial_match_transcript = v75_match
-            if v87_match is not None and v87_match.split(".")[0] == civic_base:
-                v87_partial_match_result = True
-                v87_partial_match_transcript = v87_match
+            #the full civic string still must have the expected format
+            if re.fullmatch(r'ENST\d+\.\d+', civic_representative_transcript):
+                if v75_match is not None and v75_match.split(".")[0] == civic_base:
+                    v75_partial_match_result = True
+                    v75_partial_match_transcript = v75_match
+                if v87_match is not None and v87_match.split(".")[0] == civic_base:
+                    v87_partial_match_result = True
+                    v87_partial_match_transcript = v87_match
 
         #evaluate the match results
         self._print_revision_details()
