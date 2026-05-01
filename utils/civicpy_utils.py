@@ -56,6 +56,7 @@ def get_sources_for_variant(variant_id: int) -> dict[str, dict[str, str]]:
 
             if source_url not in sources:
                 sources[source_url] = {
+                    "id": source.id,
                     "citation": source.citation,
                     "source_type": source.source_type,
                     "source_url": source_url,
