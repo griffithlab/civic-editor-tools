@@ -2,7 +2,7 @@
 
 from civicpy import civic
 
-def extract_variant_info(v):
+def extract_variant_info(v: list) -> dict:
     """Extract useful variant info from a civicpy variant object"""
     return {
         "variant_id": v.id,
@@ -25,7 +25,7 @@ def extract_variant_info(v):
         "representative_transcript": v.coordinates.representative_transcript,
     }
 
-def extract_variant_id_list(variants):
+def extract_variant_id_list(variants: list) -> list[int]:
     """Produce a list of all variant IDs in a civicpy variants object, order by feature ID and return it"""
     variant_info = []
 
@@ -42,7 +42,7 @@ def extract_variant_id_list(variants):
     return [variant_id for _, variant_id in variant_info]
 
 
-def get_sources_for_variant(variant_id):
+def get_sources_for_variant(variant_id: int) -> dict[str, dict[str, str]]:
     """Starting with a variant id, get associated molecular profiles, and their associated evidence, and their associated sources """
     sources = {}
     

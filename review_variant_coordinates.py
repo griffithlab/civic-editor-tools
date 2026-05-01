@@ -73,13 +73,19 @@ def parse_args():
         "--variant-list-file",
         dest="variant_list_file",
         type=str,
-        help="Path to file with list of CIViC variants IDs, one per line (first column), rows with # will be ignored"
+        help="Path to file with list of CIViC variants IDs to process, one per line (first column), rows with # will be ignored"
     )
     parser.add_argument(
         "--allow-variants-without-revisions",
         dest="allow_variants_without_revisions",
         action="store_true",
         help="Even if a variant has no outstanding revisions, process it anyway"
+    )
+    parser.add_argument(
+        "--processed-variants-file",
+        dest="processed_variants_file",
+        type=str,
+        help="Path to file with list of already processed variants, one per line (first column), rows with # will be ignored, file will be updated as new variants are processed"
     )
     parser.add_argument(
         "--open-browser",
@@ -121,6 +127,21 @@ def prompt_to_proceed(message: str = None) -> None:
         sys.exit(0)
 
 
+def load_processed_variants(processed_variants_file:str, already_processed_variants: set) -> list:
+    """Load a list of already processed variants"""
+
+    if os.path.exists(processed_variants_file):
+        with open(processed_variants_file, "r") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    already_processed_variants.add(int(line))
+
+    print(f"Loaded {len(already_processed_variants)} already-processed variants. These will be silently skipped")
+
+    return already_processed_variants
+
+
 def get_variant_ids_to_process(variant_id, all_variants, variant_list_file):
     """Determine which variant IDs to work with based on user supplied choices """
     variant_ids_to_process = []
@@ -148,7 +169,7 @@ def get_variant_ids_to_process(variant_id, all_variants, variant_list_file):
     return variant_ids_to_process
 
 
-def variant_is_black_listed(vid, black_listed_variant_ids, black_list_path, contributor_id):
+def variant_is_black_listed(vid, black_listed_variant_ids, black_list_path):
     """Test if variant is in a manually maintainted black list file"""
     if vid in black_listed_variant_ids:
         print(f"\nSkipping CIViC variant {vid} because it was found in the blacklist: {black_list_path}")
@@ -478,7 +499,7 @@ def display_accepted_variant_info(variant_id, accepted_variant_data):
 
     return civic_accepted_values
 
-def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_file: str, allow_variants_without_revisions: bool, open_browser: bool):
+def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_file: str, processed_variants_file: str, allow_variants_without_revisions: bool, open_browser: bool):
 
     #define input data files
     version_file = base_dir / f"RELEASE"
@@ -504,6 +525,11 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_
     #load black listed variants file
     black_listed_variant_ids = civic_graphql_utils.load_blacklisted_variant_ids(black_list_path)
  
+    #load a list of already processed variants supplied by the user
+    already_processed_variants = set()
+    if processed_variants_file:
+        already_processed_variants = load_processed_variants(processed_variants_file, already_processed_variants)
+
     #get mappings of transcript to protein identifiers for refseq transcripts
     refseq_transcript_to_protein_map = entrez_utils.load_refseq_transcript_to_protein_map(refseq_to_protein_file, refseq_to_protein_missing_file)
 
@@ -531,11 +557,15 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_
     #iterate over each variant and examine revisions associated with it
     for vid in variant_ids_to_process:
 
+        #skip if this variant is stored as already processed
+        if vid in already_processed_variants:
+            continue
+
         print(f"\n{BLUE}" + "=" * 80)
         print(f"Reviewing CIViC variant ID {vid} for revisions that could be reviewed by contributor ID: {contributor_id}{RESET}")
 
         #skip if this variant is black listed
-        if variant_is_black_listed(vid, black_listed_variant_ids, black_list_path, contributor_id): continue
+        if variant_is_black_listed(vid, black_listed_variant_ids, black_list_path): continue
 
         #query the graphql api for basic variant info
         variant_data_basic = civic_graphql_utils.gather_variant_details(vid)
@@ -774,6 +804,13 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_
         #Display an example comment message in case the user is going to accept/submit something in CIViC
         print(f"\nTemplate comment for CIViC submission:\nVariant information was reviewed with civic-editor-tools (v{editor_tools_version})")
 
+        #If the user asked to keep track of already processed variants, add this one to the list
+        if processed_variants_file:
+            with open(processed_variants_file, "a") as out_f:
+                out_f.write(f"{vid}\n")
+                out_f.flush()
+                already_processed_variants.add(vid)
+
         #Pause before moving on to the next CIViC variant
         prompt_to_proceed(f"Processing complete for variant ({gene_name} {vid}: {civic_variant_name})")
 
@@ -786,6 +823,7 @@ if __name__ == "__main__":
         variant_id=args.variant_id,
         all_variants=args.all_variants,
         variant_list_file=args.variant_list_file,
+        processed_variants_file=args.processed_variants_file,
         allow_variants_without_revisions=args.allow_variants_without_revisions,
         open_browser=args.open_browser
     )
