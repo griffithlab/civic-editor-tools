@@ -193,8 +193,12 @@ class ValueComparator:
 
     def compare_clinvar_ids(self, civic_clinvar_ids: list) -> bool:
         """Method that compares clinvar IDs from a CIViC submission (revision or accepted) to those from ClinGen Allele Registry"""
+        #If no clinvar ids were found in clingen, set the value to "NONE FOUND" which would be the correct value in CIViC for this scenario
+        clingen_clinvar_ids = ['NONE FOUND']
+
         #normalize clinvar ids to a list of strings
-        clingen_clinvar_ids = [str(id) for id in self.clingen_data["clinvar_ids"]] if self.clingen_data.get("clinvar_ids") else []
+        if self.clingen_data["clinvar_ids"]:
+            clingen_clinvar_ids = [str(id) for id in self.clingen_data["clinvar_ids"]] if self.clingen_data.get("clinvar_ids") else []
 
         civic_clinvar_ids = [str(id) for id in civic_clinvar_ids]
         clingen_clinvar_ids_string = ', '.join(clingen_clinvar_ids)
