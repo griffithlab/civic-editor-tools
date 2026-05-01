@@ -142,6 +142,18 @@ def load_processed_variants(processed_variants_file:str, already_processed_varia
     return already_processed_variants
 
 
+def mark_variant_processed(processed_variants_file, vid, out_f, already_processed_variants):
+    """Add a variant to the processed file"""
+
+    if not processed_variants_file:
+        return
+
+    if out_f:
+        out_f.write(f"{vid}\n")
+        out_f.flush()
+    already_processed_variants.add(vid)
+
+
 def get_variant_ids_to_process(variant_id, all_variants, variant_list_file):
     """Determine which variant IDs to work with based on user supplied choices """
     variant_ids_to_process = []
@@ -430,7 +442,7 @@ def suggest_build37_ensembl_transcripts(clingen_mane_select_hgvs_expressions, bu
     return list(set(suggested_build37_ensembl_transcripts)) or None
 
 
-def display_accepted_variant_info(variant_id, accepted_variant_data):
+def display_accepted_variant_info(vid, accepted_variant_data):
     """Create a human readable summary of variant info already accepted in CIViC """
 
     variant_types = None
@@ -451,7 +463,7 @@ def display_accepted_variant_info(variant_id, accepted_variant_data):
         clinvar_ids = ', '.join(clinvar_ids)
 
     print(
-        f"\nVariant details that are already accepted in CIViC for variant id: {variant_id}\n"
+        f"\nVariant details that are already accepted in CIViC for variant id: {vid}\n"
         f"  Allele Registry ID: {accepted_variant_data['allele_registry_id']}"
         f" | Name: {accepted_variant_data['name']}"
         f" | Variant Types: {variant_types}\n"
@@ -527,8 +539,10 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_
  
     #load a list of already processed variants supplied by the user
     already_processed_variants = set()
+    processed_variants_out_f = None
     if processed_variants_file:
         already_processed_variants = load_processed_variants(processed_variants_file, already_processed_variants)
+        processed_variants_out_f = open(processed_variants_file, "a")
 
     #get mappings of transcript to protein identifiers for refseq transcripts
     refseq_transcript_to_protein_map = entrez_utils.load_refseq_transcript_to_protein_map(refseq_to_protein_file, refseq_to_protein_missing_file)
@@ -565,7 +579,9 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_
         print(f"Reviewing CIViC variant ID {vid} for revisions that could be reviewed by contributor ID: {contributor_id}{RESET}")
 
         #skip if this variant is black listed
-        if variant_is_black_listed(vid, black_listed_variant_ids, black_list_path): continue
+        if variant_is_black_listed(vid, black_listed_variant_ids, black_list_path): 
+            mark_variant_processed(processed_variants_file, vid, processed_variants_out_f, already_processed_variants)
+            continue
 
         #query the graphql api for basic variant info
         variant_data_basic = civic_graphql_utils.gather_variant_details(vid)
@@ -574,7 +590,9 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_
         civic_variant_name = variant_data_basic['variant_name']
 
         #skip variants with deprecated status
-        if variant_is_deprecated(vid, variant_data_basic): continue
+        if variant_is_deprecated(vid, variant_data_basic): 
+            mark_variant_processed(processed_variants_file, vid, processed_variants_out_f, already_processed_variants)    
+            continue
 
         #guess the variant type based on the CIViC variant name - skip unless it is a coding snv
         guessed_gene_variant_type = generic_utils.guess_variant_type(civic_variant_name)
@@ -582,7 +600,9 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_
         #get the gene name for the current variant
         gene_name = variant_data_basic['feature_name']
 
-        if variant_type_is_unsupported(gene_name, civic_variant_name, guessed_gene_variant_type, "Missense Variant"): continue
+        if variant_type_is_unsupported(gene_name, civic_variant_name, guessed_gene_variant_type, "Missense Variant"): 
+            mark_variant_processed(processed_variants_file, vid, processed_variants_out_f, already_processed_variants)
+            continue
 
         #get the three components of a simple "Missense Variant" variant: ref_aa_1, pos, var_aa_1
         ref_aa_1, pos, var_aa_1 = generic_utils.parse_snv_coding_name_components(civic_variant_name)
@@ -592,10 +612,13 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_
         variant_data = civic_graphql_utils.merge_revision_data(variant_data)
 
         #if there is an outstanding revision to the variant name itself, warn the user
-        if variant_name_has_revision(variant_data): continue
+        if variant_name_has_revision(variant_data): 
+            continue
 
         #skip a variant if it has 0 pending revisions from other users - unless the user wishes to bypass this
-        if variant_has_no_open_revisions(variant_data, allow_variants_without_revisions): continue
+        if variant_has_no_open_revisions(variant_data, allow_variants_without_revisions): 
+            mark_variant_processed(processed_variants_file, vid, processed_variants_out_f, already_processed_variants)
+            continue
 
         #create the p. notation for the variant name (e.g. 'S459F' -> 'p.Ser459Phe')
         civic_variant_name_p_3letter = generic_utils.snv_coding_to_p_3letter(civic_variant_name)
@@ -618,7 +641,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_
         accepted_variant_data = civic_graphql_utils.gather_accepted_variant_data(vid)
 
         #print out a summary of accepted variant info and return an object with accepted values to be compared to clingen values later
-        civic_accepted_values = display_accepted_variant_info(variant_id, accepted_variant_data)
+        civic_accepted_values = display_accepted_variant_info(vid, accepted_variant_data)
 
         #get all clingen allele registry transcripts supported for the gene of this variant
         #only query the clingen API if we don't already have transcripts for this gene
@@ -714,7 +737,10 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_
             clingen_clinvar_ids_allele_string = ', '.join(str(id) for id in sorted(clingen_clinvar_ids_allele))
             clingen_clinvar_ids_allele_all_string = ', '.join(str(id) for id in clingen_clinvar_ids_all) if clingen_clinvar_ids_all else None #clinvar ids for all valid alleles
 
-            print(f"    ClinVar IDs: {clingen_clinvar_ids_allele_all_string}. All compatible with CIViC variant name")
+            if clingen_clinvar_ids_allele_all_string:
+                print(f"    ClinVar IDs: {clingen_clinvar_ids_allele_all_string}. All compatible with CIViC variant name")
+            else:
+                print(f"    ClinVar IDs: {clingen_clinvar_ids_allele_all_string}.")
 
             #get a possible ensembl build37 representative transcript to propose below
             #use the current MANE select and attempt to map it to v75 or v87 ensembl transcripts
@@ -806,11 +832,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_
         print(f"\nTemplate comment for CIViC submission:\nVariant information was reviewed with civic-editor-tools (v{editor_tools_version})")
 
         #If the user asked to keep track of already processed variants, add this one to the list
-        if processed_variants_file:
-            with open(processed_variants_file, "a") as out_f:
-                out_f.write(f"{vid}\n")
-                out_f.flush()
-                already_processed_variants.add(vid)
+        mark_variant_processed(processed_variants_file, vid, processed_variants_out_f, already_processed_variants)
 
         #Pause before moving on to the next CIViC variant
         prompt_to_proceed(f"Processing complete for variant: {vid} ({gene_name} {civic_variant_name})")
