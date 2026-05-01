@@ -164,7 +164,7 @@ def get_variant_ids_to_process(variant_id, all_variants, variant_list_file):
                     continue
                 parts = line.strip().split("\t")
                 if parts:
-                    variant_ids_to_process.append(parts[0])
+                    variant_ids_to_process.append(int(parts[0]))
 
     return variant_ids_to_process
 
@@ -354,7 +354,7 @@ def variant_is_ambiguous_in_genome(clingen_allele_info):
     position_range = (max_pos - min_pos) if (min_pos is not None and max_pos is not None) else None
 
     if len(unique_positions) > 1:
-            unique_positions_str = ", ".join(unique_positions)
+        unique_positions_str = ", ".join(unique_positions)
         if position_range <= 3:
             print(f"\n{YELLOW}WARNING: Minor ambiguous genomic positions found: {unique_positions_str}")
             print(f"  Coordinate range across all CAIDs: {min_pos} - {max_pos} ({position_range} nucleotides){RESET}")
@@ -558,7 +558,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_
     for vid in variant_ids_to_process:
 
         #skip if this variant is stored as already processed
-        if vid in already_processed_variants:
+        if (vid) in already_processed_variants:
             continue
 
         print(f"\n{BLUE}" + "=" * 80)

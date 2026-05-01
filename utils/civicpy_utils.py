@@ -39,7 +39,7 @@ def extract_variant_id_list(variants: list) -> list[int]:
     variant_info.sort(key=lambda x: x[0])
 
     # Extract ordered variant_ids
-    return [variant_id for _, variant_id in variant_info]
+    return [int(variant_id) for _, variant_id in variant_info]
 
 
 def get_sources_for_variant(variant_id: int) -> dict[str, dict[str, str]]:
