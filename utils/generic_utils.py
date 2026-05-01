@@ -189,9 +189,10 @@ def reference_aa_positions_matches(ref_aa_1, pos, protein_seq, protein_id):
     if secondary_pos <= len(protein_seq):
         secondary_match = protein_seq[secondary_pos - 1] == ref_aa_1
         if secondary_match:
-            print(f"{YELLOW}\nWARNING! Possible methionine counting ambiguity detected for Amino Acid:{ref_aa_1} in {protein_id}:")
-            print(f"  Primary position {pos} match: {primary_match}\tSecondary position {secondary_pos} match: {secondary_match}{RESET}")
-
+            print(
+                  f"{YELLOW}  WARNING: Possible methionine counting ambiguity detected for Amino Acid: {ref_aa_1}"
+                  f" in {protein_id} at primart position: {pos} and secondary position: {secondary_pos}"
+                 )
     return primary_match
 
 

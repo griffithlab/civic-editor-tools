@@ -180,7 +180,7 @@ def variant_type_is_unsupported(gene_name, civic_variant_name, guessed_gene_vari
 def variant_name_has_revision(variant_data):
     """Test is variant has a pending revision on the variant name itself"""
     if variant_data['name_change']:
-        print(f"{YELLOW}The variant name itself has an outstanding revision!")
+        print(f"{RED}The variant name itself has an outstanding revision!")
         print(f"  Since this entire exercise derives from that name, this should be resolved first. Skipping this variant\n{RESET}")
         return True
 
@@ -333,9 +333,13 @@ def variant_is_ambiguous_in_genome(clingen_allele_info):
     position_range = (max_pos - min_pos) if (min_pos is not None and max_pos is not None) else None
 
     if len(unique_positions) > 1:
-        unique_positions_str = ", ".join(unique_positions)
-        print(f"\n{YELLOW}Ambiguous genomic positions found: {unique_positions_str}")
-        print(f"  Coordinate range across all CAIDs: {min_pos} - {max_pos} ({position_range} nucleotides){RESET}")
+        if position_range <= 3:
+            unique_positions_str = ", ".join(unique_positions)
+            print(f"\n{YELLOW}WARNING: Minor ambiguous genomic positions found: {unique_positions_str}")
+            print(f"  Coordinate range across all CAIDs: {min_pos} - {max_pos} ({position_range} nucleotides){RESET}")
+        else:
+            print(f"\n{RED}WARNING: Major ambiguous genomic positions found: {unique_positions_str}")
+            print(f"  Coordinate range across all CAIDs: {min_pos} - {max_pos} ({position_range} nucleotides){RESET}")
         return True
 
     if len(clingen_allele_info) > 1:
@@ -440,7 +444,7 @@ def display_accepted_variant_info(variant_id, accepted_variant_data):
         f" | Reference Bases: {accepted_variant_data['reference_bases']}"
         f" | Variant Bases: {accepted_variant_data['variant_bases']}\n"
         f"  Representative Transcript: {accepted_variant_data['representative_transcript']}"
-        f" | Ensembl Version: {accepted_variant_data['ensembl_version']}"
+        f" | Ensembl Version: {accepted_variant_data['ensembl_version']}\n"
     )
 
     #create a set of civic accepted values to allow comparisons to clingen, one field at a time similar to what is done for revisions
@@ -601,9 +605,9 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_
         variant_build37_ensembl_transcripts = get_build37_ensembl_transcripts_for_variant(clingen_transcript_sequence_ids_compatible2, build37_ensembl_transcripts)
 
         #summarize possible build37 ensembl representative transcripts for this variant
-        print(f"\nPossible build37 ensembl representative transcripts for this variant:")
-        for clingen_id, v75_match, v87_match in variant_build37_ensembl_transcripts:
-            print(f"  ClinGen Id: {clingen_id} (b38). Ensembl_v75: {v75_match} (b37). Ensembl_v87: {v87_match} (b37)")
+        #print(f"\nPossible build37 ensembl representative transcripts for this variant:")
+        #for clingen_id, v75_match, v87_match in variant_build37_ensembl_transcripts:
+        #    print(f"  ClinGen Id: {clingen_id} (b38). Ensembl_v75: {v75_match} (b37). Ensembl_v87: {v87_match} (b37)")
 
         #get a unique list of useful/compatible CAIDs for the list of protein HGVS expressions
         clingen_allele_ids = get_clingen_alleles_from_p_hgvs(clingen_protein_sequence_ids_compatible1, civic_variant_name_p_3letter)
