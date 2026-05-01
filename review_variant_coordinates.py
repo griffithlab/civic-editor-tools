@@ -354,8 +354,8 @@ def variant_is_ambiguous_in_genome(clingen_allele_info):
     position_range = (max_pos - min_pos) if (min_pos is not None and max_pos is not None) else None
 
     if len(unique_positions) > 1:
-        if position_range <= 3:
             unique_positions_str = ", ".join(unique_positions)
+        if position_range <= 3:
             print(f"\n{YELLOW}WARNING: Minor ambiguous genomic positions found: {unique_positions_str}")
             print(f"  Coordinate range across all CAIDs: {min_pos} - {max_pos} ({position_range} nucleotides){RESET}")
         else:
