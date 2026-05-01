@@ -356,7 +356,7 @@ def variant_is_ambiguous_in_genome(clingen_allele_info):
                 continue
             genomic_variant = f"chr{coord['chr']}:{coord['start']}-{coord['end']}{coord['ref']}>{coord['alt']}"
             build_37_positions.append(genomic_variant)
-            all_starts.append(int(coord['start']))
+            all_starts.append(int(coord['start'])+1)
             all_ends.append(int(coord['end']))
 
 
@@ -367,7 +367,10 @@ def variant_is_ambiguous_in_genome(clingen_allele_info):
 
     if len(unique_positions) > 1:
         unique_positions_str = ", ".join(unique_positions)
-        if position_range <= 3:
+        if position_range == 0:
+            print(f"\n{YELLOW}WARNING: Alternate alleles at a single genomic position found: {unique_positions_str}")
+            print(f"  Coordinate range across all CAIDs: {min_pos} - {max_pos} ({position_range} nucleotides){RESET}")
+        elif position_range <= 3:
             print(f"\n{YELLOW}WARNING: Minor ambiguous genomic positions found: {unique_positions_str}")
             print(f"  Coordinate range across all CAIDs: {min_pos} - {max_pos} ({position_range} nucleotides){RESET}")
         else:
