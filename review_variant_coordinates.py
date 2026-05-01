@@ -708,6 +708,9 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_
                     clingen_ref_bases = clingen_coord['ref']
                     clingen_alt_bases = clingen_coord['alt']
 
+            #compare the CIViC variant name to the MANE select variant name for this CAID and warn if it doesn't match
+            mane_select_names = clingen_ar_utils.extract_mane_select_names_and_compare(ca_json, civic_variant_name_p_3letter)
+
             #display a summary of what expected values in CIViC would look like if this CAID is correct:
             #this is particularly useful for cases where nothing has been accepted or revised yet
             print(f"\n  A. Expected. Based on this CAID, expected values for {guessed_gene_variant_type}: {gene_name} {civic_variant_name} would be:")
@@ -758,9 +761,6 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_
                   f"    Representative Transcript: {suggested_build37_ensembl_transcripts_string}"
                   f" | Ensembl Version: {suggested_build37_ensembl_versions_string}"
             )
-
-            #compare the CIViC variant name to the MANE select variant name and warning if it doesn't match
-            mane_select_names = clingen_ar_utils.extract_mane_select_names_and_compare(ca_json, civic_variant_name_p_3letter)
 
             #assemble the payload of clingen allele data that will be compared against each accepted or revision value according to civic field name
             clingen_data = {
