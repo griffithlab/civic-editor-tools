@@ -161,7 +161,7 @@ def parse_snv_coding_name_components(snv_coding_name):
     return ref_aa_1, int(pos), var_aa_1
 
 
-def reference_aa_positions_matches(ref_aa_1, pos, protein_seq, protein_id):
+def reference_aa_positions_matches(ref_aa_1, pos, protein_seq, protein_id, transcript_id):
     """
     Check whether the amino acid at position `pos` in `protein_seq`
     matches `ref_aa_1`.
@@ -191,7 +191,7 @@ def reference_aa_positions_matches(ref_aa_1, pos, protein_seq, protein_id):
         if secondary_match:
             print(
                   f"{YELLOW}  WARNING: Possible methionine counting ambiguity detected for Amino Acid: {ref_aa_1}"
-                  f" in {protein_id} at primary position: {pos} and secondary position: {secondary_pos}"
+                  f" in {protein_id} ({transcript_id}) at primary position: {pos} ({primary_match}) and secondary position: {secondary_pos} ({secondary_match})"
                  )
     return primary_match
 

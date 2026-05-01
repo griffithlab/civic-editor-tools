@@ -293,7 +293,7 @@ def get_compatible_clingen_transcripts(clingen_gene_transcripts_json, refseq_tra
         #unless the protein sequence has the expected reference amino acid at the expected position, skip it
         #also check for methionine counting ambiguity (is there a matching ref AA one position to the right of the named position?)
         if test_name_match:
-            if not generic_utils.reference_aa_positions_matches(ref_aa_1, pos, protein_seq, protein_id):
+            if not generic_utils.reference_aa_positions_matches(ref_aa_1, pos, protein_seq, protein_id, clingen_reference_sequence_id):
                 continue
 
         clingen_transcript_sequence_ids_final.append(clingen_reference_sequence_id)
