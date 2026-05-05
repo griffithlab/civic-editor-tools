@@ -219,4 +219,4 @@ data/refseq/*.faa.gz
 assertion_variant_list.txt
 backfilled_genes.txt
 processed_variants.txt
-
+mapk_erk_variant_list.txt

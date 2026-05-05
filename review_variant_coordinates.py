@@ -637,8 +637,11 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, variant_list_
         #diplay sources associated with the evidence for the molecular profiles involving this variant
         sources = civicpy_utils.get_sources_for_variant(vid)
         print(f"\nSources for all evidence associated with this variant (check for validity of variant name/identity)")
-        for url, source in sources.items():
-            print(f"  {url} ({source['citation']}. {source['source_type']}) (civic.sid:{source['id']})")
+        if sources:
+            for url, source in sources.items():
+                print(f"  {url} ({source['citation']}. {source['source_type']}) (civic.sid:{source['id']})")
+        else:
+            print(f"  No evidence sources found")
 
         #get currently *accepted* variant and variant coordinate info in CIViC for this variant
         accepted_variant_data = civic_graphql_utils.gather_accepted_variant_data(vid)
