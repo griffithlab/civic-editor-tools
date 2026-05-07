@@ -161,7 +161,7 @@ def extract_possible_variant_aliases(ca_json):
     return list(dict.fromkeys(possible_variant_aliases_filtered))
 
 
-def extract_recommended_variant_aliases(ca_json):
+def extract_recommended_variant_aliases(ca_json, civic_variant_name):
     """extract recommended variant aliases from a transcript CAID json object
        return a list of aliases to submit in CIViC for a new variant
     """
@@ -194,18 +194,18 @@ def extract_recommended_variant_aliases(ca_json):
         if rest.startswith('n.'):
             continue
     
-        # Extract variant name
+        # Extract the 3-letter AA variant name and add to list of aliases
         variant_name = rest.split('.', 1)[1]
         recommended_variant_aliases_filtered.append(variant_name)
 
-        # Convert 3-letter AA codes to 1-letter and append as additional alias
+        # Convert 3-letter AA codes to 1-letter and append as additional alias (unless it matches the civic variant name)
         # Matches patterns like Ser432Phe, Ala123Val, etc.
         variant_name_1_aa = re.sub(
             r'([A-Z][a-z]{2})(\d+)([A-Z][a-z]{2})',
             lambda m: f"{generic_utils.aa_3_to_1(m.group(1))}{m.group(2)}{generic_utils.aa_3_to_1(m.group(3))}",
             variant_name
         )
-        if variant_name_1_aa != variant_name:
+        if variant_name_1_aa != civic_variant_name:
             recommended_variant_aliases_filtered.append(variant_name_1_aa)
 
     return list(dict.fromkeys(recommended_variant_aliases_filtered))

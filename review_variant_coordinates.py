@@ -736,7 +736,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, target_gene: 
 
             #extract possible and recommended variant aliases across all transcripts for this CAID
             clingen_possible_variant_aliases = clingen_ar_utils.extract_possible_variant_aliases(ca_json)
-            clingen_recommended_variant_aliases = clingen_ar_utils.extract_recommended_variant_aliases(ca_json) 
+            clingen_recommended_variant_aliases = clingen_ar_utils.extract_recommended_variant_aliases(ca_json, civic_variant_name) 
             print(f"    Recommended variant aliases: {', '.join(sorted(clingen_recommended_variant_aliases))}")
 
             #show the genomic HGVS expression for this CAID
