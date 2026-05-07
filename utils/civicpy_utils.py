@@ -42,6 +42,23 @@ def extract_variant_id_list(variants: list) -> list[int]:
     return [int(variant_id) for _, variant_id in variant_info]
 
 
+def extract_variant_id_list_by_gene(variants: list, gene_name: str) -> list[int]:
+    """Produce a list of all variant IDs in a civicpy variants object, for a specific gene"""
+    variant_info = []
+
+    for v in variants:
+        info = extract_variant_info(v)
+        variant_id = info['variant_id']
+        feature_id = info['feature_id']
+        entrez_name = info['entrez_name']
+
+        if gene_name == entrez_name:
+            variant_info.append((feature_id, variant_id))
+
+    # Extract ordered variant_ids
+    return [int(variant_id) for _, variant_id in variant_info]
+
+
 def get_sources_for_variant(variant_id: int) -> dict[str, dict[str, str]]:
     """Starting with a variant id, get associated molecular profiles, and their associated evidence, and their associated sources """
     sources = {}
