@@ -3,6 +3,8 @@
 from pathlib import Path
 import requests
 import pdb
+import time
+from requests.exceptions import ConnectionError, Timeout, RequestException
 
 api_url = "https://civicdb.org/api/graphql"
 base_dir = Path(__file__).resolve().parent
@@ -57,6 +59,59 @@ def run_graphql_operation(api_url: str, operation_name: str, query_id: int, time
     )
 
     return resp
+
+
+def run_graphql_operation(
+    api_url: str,
+    operation_name: str,
+    query_id: int,
+    timeout: tuple = (20, 200),
+    retries: int = 4,
+    backoff_factor: float = 2.0,
+) -> requests.Response:
+    """Load graphql query and variable json objects from file, update with a
+    query id, and submit the query to the API. Retries on transient errors."""
+    query_path = base_dir / f"../graphql/{operation_name}_query.json"
+    variables_path = base_dir / f"../graphql/{operation_name}_variables.json"
+
+    if not query_path.exists():
+        raise FileNotFoundError(f"Missing query file: {query_path}")
+    if not variables_path.exists():
+        raise FileNotFoundError(f"Missing variables file: {variables_path}")
+
+    with query_path.open("r") as f:
+        query = f.read()
+    with variables_path.open("r") as f:
+        variables = f.read()
+
+    variables_updated = populate_variables_id(variables, query_id)
+
+    last_exc: Exception | None = None
+    for attempt in range(1, retries + 1):
+        try:
+            resp = requests.post(
+                api_url,
+                json={"query": query, "variables": variables_updated},
+                timeout=timeout,
+            )
+            resp.raise_for_status()  # surface 4xx/5xx as exceptions
+            return resp
+
+        except (ConnectionError, Timeout) as exc:
+            last_exc = exc
+            if attempt < retries:
+                wait = backoff_factor ** (attempt - 1)  # 1s, 2s, 4s …
+                print(f"[Attempt {attempt}/{retries}] Network error: {exc}. Retrying in {wait:.1f}s…")
+                time.sleep(wait)
+            
+        except RequestException as exc:
+            # Non-retryable HTTP errors (auth failures, bad requests, etc.)
+            raise RuntimeError(f"GraphQL request failed: {exc}") from exc
+
+    raise RuntimeError(
+        f"GraphQL operation '{operation_name}' failed after {retries} attempts. "
+        f"Last error: {last_exc}"
+    ) from last_exc
 
 
 def gather_user_details(user_id: int) -> dict:
