@@ -29,46 +29,8 @@ def populate_variables_id(variables_template: str, graphql_id: int) -> str:
     return populated
 
 
-def run_graphql_operation(api_url: str, operation_name: str, query_id: int, timeout=(10, 200)) -> str:
-    """load graphql query and variable json objects from file, update with a query id, and submit the query to the API"""
-    query_path = base_dir / f"../graphql/{operation_name}_query.json"
-    variables_path = base_dir / f"../graphql/{operation_name}_variables.json"
-
-    if not query_path.exists():
-        raise FileNotFoundError(f"Missing query file: {query_path}")
-
-    if not variables_path.exists():
-        raise FileNotFoundError(f"Missing variables file: {variables_path}")
-
-    with query_path.open("r") as f:
-        query = f.read()
-
-    with variables_path.open("r") as f:
-        variables = f.read()
-
-    #inject the actual query ID into the variables object
-    variables_updated = populate_variables_id(variables, query_id)
-
-    resp = requests.post(
-        api_url,
-        json={
-            "query": query,
-            "variables": variables_updated
-        },
-        timeout=timeout
-    )
-
-    return resp
-
-
-def run_graphql_operation(
-    api_url: str,
-    operation_name: str,
-    query_id: int,
-    timeout: tuple = (20, 200),
-    retries: int = 4,
-    backoff_factor: float = 2.0,
-) -> requests.Response:
+def run_graphql_operation(api_url: str, operation_name: str, query_id: int, timeout: tuple = (20, 200),
+                          retries: int = 4, backoff_factor: float = 2.0) -> requests.Response:
     """Load graphql query and variable json objects from file, update with a
     query id, and submit the query to the API. Retries on transient errors."""
     query_path = base_dir / f"../graphql/{operation_name}_query.json"
@@ -87,6 +49,10 @@ def run_graphql_operation(
     variables_updated = populate_variables_id(variables, query_id)
 
     last_exc: Exception | None = None
+
+    #To add a mutate concept add the following input the post below
+    #headers={"Authorization": f"Bearer {os.environ['CIVIC_API_KEY']}", "Content-Type": "application/json",},
+
     for attempt in range(1, retries + 1):
         try:
             resp = requests.post(

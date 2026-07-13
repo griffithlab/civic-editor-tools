@@ -1,0 +1,9 @@
+mutation AcceptRevision($input: AcceptRevisionsInput!) {
+  acceptRevisions(input: $input) {
+    revisions {
+      id
+      __typename
+    }
+    __typename
+  }
+}
