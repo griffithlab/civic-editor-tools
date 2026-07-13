@@ -699,11 +699,8 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, target_gene: 
 
         #iterate through each useful/compatible CAID and display information that helps the user review outstanding edits
         for i, (caid, ca_json) in enumerate(clingen_allele_info.items(), start=1):
-            print(f"{SKY_BLUE}\n({i}) CAID: {caid}", end="")
+            print(f"{SKY_BLUE}\n({i}/{len(clingen_allele_info)}) CAID: {caid}", end="")
             print(f"\thttps://reg.genome.network/redmine/projects/registry/genboree_registry/by_caid?caid={caid}{RESET}")
-            
-            #query the clingen API with a CAID and get a json of relevant info
-            ca_json = clingen_ar_utils.get_allele_by_id(caid)
 
             #for each clingen CAID get info that we would expect to be submited to CIViC: 
             #variant aliases, clinvar ids, hgvs expressions, genomic coordinates (chr, start, stop, ref var)
