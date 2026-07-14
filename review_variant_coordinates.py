@@ -702,12 +702,6 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, target_gene: 
             print(f"{SKY_BLUE}\n({i}/{len(clingen_allele_info)}) CAID: {caid}", end="")
             print(f"\thttps://reg.genome.network/redmine/projects/registry/genboree_registry/by_caid?caid={caid}{RESET}")
 
-            #for this clingen CAID, get a count of transcript for whom the protein effect would match the name
-            #this can help resolve ambiguous alleles where an odd transcript could give rise to the same variant name
-            #but where another CAID, instead of having one matching transcript, it has many. This is more likely on average to be the correct CAID.
-            #TODO: create method to count transcripts/protein_effects matching the current name
-            #TODO: takes ca_json and civic_variant_name_p_3letter as input and returns a count
-
             #for this clingen CAID get info that we would expect to be submited to CIViC: 
             #variant aliases, clinvar ids, hgvs expressions, genomic coordinates (chr, start, stop, ref var)
             #get and disply genomic coordinate information for this CAID (all builds)
@@ -729,6 +723,12 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, target_gene: 
                     clingen_end = clingen_coord['end']
                     clingen_ref_bases = clingen_coord['ref']
                     clingen_alt_bases = clingen_coord['alt']
+
+            #for this clingen CAID, get a count of transcript for whom the protein effect would match the name
+            #this can help resolve ambiguous alleles where an odd transcript could give rise to the same variant name
+            #but where another CAID, instead of having one matching transcript, it has many. This is more likely on average to be the correct CAID.
+            name_matching_transcript_count = clingen_ar_utils.count_ca_transcripts_compatible_with_name(ca_json, civic_variant_name_p_3letter)
+            print(f"    Based on this CAID genomic allele, there are {name_matching_transcript_count} unique protein ID(s) (isoforms) compatible with {civic_variant_name_p_3letter}")
 
             #compare the CIViC variant name to the MANE select variant name for this CAID and warn if it doesn't match
             mane_select_names = clingen_ar_utils.extract_mane_select_names_and_compare(ca_json, civic_variant_name_p_3letter)

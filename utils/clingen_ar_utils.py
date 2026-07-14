@@ -120,8 +120,6 @@ def extract_possible_variant_aliases(ca_json):
             hgvs = protein_effect.get("hgvs")
             possible_variant_hgvs_expressions.append(hgvs)
 
-
-
     #go through the hgvs expressions, filter invalid types, and get alias names from them
     for hgvs in possible_variant_hgvs_expressions:
         seq_id, rest = hgvs.split(':', 1)
@@ -286,7 +284,7 @@ def extract_mane_select_names_and_compare(ca_json, p_dot_var_name):
 
 
 def extract_clinvar_ids_allele(ca_json):
-    """"extract clinvar ids from a specific transcript CAID json object"""
+    """extract clinvar ids from a specific transcript CAID json object"""
     clinvar_allele_ids = []
     clinvar_variation_ids = []
 
@@ -301,6 +299,28 @@ def extract_clinvar_ids_allele(ca_json):
         clinvar_variation_ids.append(clinvar_variation.get("variationId"))
 
     return list(set(clinvar_variation_ids))
+
+
+def count_ca_transcripts_compatible_with_name(ca_json, p_dot_var_name):
+    """ 
+    given the ca_json object for a specific CAID, count all the transcripts within it
+    where the predicted protein effect matches the user supplied variant name
+    """
+    protein_list = []
+
+    # get transcript+protein HGVS expressions, check each to make sure it matches one of the valid/compatible transcript/protein ids
+    for transcript in ca_json.get("transcriptAlleles", []):
+        transcript_hgvs = transcript.get("hgvs")
+        protein_effect = transcript.get("proteinEffect")
+        if protein_effect:
+            protein_hgvs = protein_effect.get("hgvs")
+            if not protein_hgvs or p_dot_var_name not in protein_hgvs:
+                continue
+            protein_id = protein_hgvs.split(":")[0].split(".")[0]
+            protein_list.append(protein_id)
+
+    return len(set(protein_list))
+
 
 def extract_all_clinvar_ids(clingen_allele_info):
     """
