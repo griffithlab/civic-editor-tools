@@ -350,12 +350,13 @@ def extract_reference_sequences(ref_seqs_json):
             or
             external_records.get('Ensembl', {}).get('id')
         )
+        if tid is None:
+            sys.exit("Error: No transcript ID found in NCBI or Ensembl external records.")
+
         # reject predicted/refseq model transcripts
         if tid.startswith(("XM_", "XR_")):
             continue
 
-        if tid is None:
-            sys.exit("Error: No transcript ID found in NCBI or Ensembl external records.")
         tid_list.append(tid)
     return tid_list
 

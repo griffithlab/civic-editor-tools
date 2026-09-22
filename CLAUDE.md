@@ -4,6 +4,7 @@
 A Python CLI toolkit for CIViC database editors to automate variant coordinate review. The main script cross-references ClinGen Allele Registry, NCBI Entrez, Ensembl, and RefSeq to validate genomic coordinates.
 
 - **Main script:** `review_variant_coordinates.py`
+- **Batch backfill script:** `backfill_refseq_transcript_info.py` — pre-populates missing RefSeq transcript/protein mappings for every CIViC gene, ahead of a large `--all-variants` review run
 - **Utilities:** `utils/` (civic_graphql_utils, civicpy_utils, clingen_ar_utils, ensembl_utils, entrez_utils, refseq_utils, compare_utils, generic_utils)
 - **GraphQL queries:** `graphql/`
 - **Reference data:** `data/` (staged locally, not committed)

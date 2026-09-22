@@ -145,6 +145,27 @@ Go to [CIViC](civicdb.org) and find your user ID from the [Contributors View](ht
 
 If all this has worked smoothly you should be ready to start using the editor tool suite. 
 
+## Other ways to select variants to review
+
+`--variant-id` is one of four mutually exclusive ways to tell `review_variant_coordinates.py` which CIViC variant(s) to review:
+
+- `--variant-id <id>` — review a single variant.
+- `--target-gene <gene>` — review every CIViC variant for a given gene (e.g. `FGFR3`).
+- `--all-variants` — review every variant currently in CIViC.
+- `--variant-list-file <path>` — review the variant IDs listed (one per line, first column) in a file. Lines starting with `#` are ignored.
+
+Additional flags that apply regardless of how variants are selected:
+
+- `--allow-variants-without-revisions` — normally a variant is skipped if it has no pending revisions from another contributor; this flag processes it anyway.
+- `--processed-variants-file <path>` — path to a file tracking variants already reviewed. Already-listed variants are silently skipped, and each newly processed variant (including ones skipped as blacklisted, deprecated, unsupported, or having no open revisions) is appended as review proceeds. Useful for resuming a long `--all-variants` or `--target-gene` run.
+- `--open-browser` — open the CIViC revisions page for each variant in your default browser as it's reviewed.
+
+Example — batch-review all variants for a gene, tracking progress so the run can be safely interrupted and resumed:
+
+```bash
+./review_variant_coordinates.py --contributor-id 15 --target-gene FGFR3 --processed-variants-file processed_variants.txt
+```
+
 
 ## Running in Docker
 
@@ -163,6 +184,24 @@ cd /civic-editor-tools
 ./review_variant_coordinates.py --contributor-id 15 --variant-id 1832
 
 ```
+
+---
+
+## What does `backfill_refseq_transcript_info.py` do?
+
+`review_variant_coordinates.py` needs a RefSeq transcript-to-protein mapping for every transcript ClinGen Allele Registry supports for a gene; when a transcript is missing from the locally staged `data/entrez/gene2refseq_human.tsv.gz`, the main tool stops and prints instructions for fetching it one transcript at a time via `./data/entrez/get_missing_refseq_mappings.py`.
+
+`backfill_refseq_transcript_info.py` automates that process across every gene currently in CIViC: for each gene it asks ClinGen Allele Registry for its supported RefSeq transcripts, and for any transcript not already in the local mapping it calls `get_missing_refseq_mappings.py` to fetch it from NCBI and adds it to `data/entrez/gene2refseq_human_missing.tsv`. Run it ahead of time (e.g. before a large `--all-variants` review) so the main tool doesn't stop partway through a run on a missing transcript.
+
+```bash
+# run once, from scratch
+./backfill_refseq_transcript_info.py
+
+# resumable run — records completed genes to a checkpoint file so an interrupted run can pick up where it left off
+./backfill_refseq_transcript_info.py --checkpoint backfill_checkpoint.txt
+```
+
+This is a slow, NCBI-rate-limited operation (there's a fixed delay between `efetch`-backed lookups), so the checkpoint option is recommended for a full run.
 
 ---
 

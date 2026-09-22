@@ -410,17 +410,15 @@ class ValueComparator:
         self._print_revision_details()
         if str(civic_ensembl_version) in expected_ensembl_versions:
             self._print_match(
-                MatchLevel.MATCH, 
+                MatchLevel.MATCH,
                 f"matches civic value: {civic_ensembl_version}.\n"
             )
             return True
-        
-        if str(civic_ensembl_version) not in expected_ensembl_versions:
-            self._print_match(
-                MatchLevel.MISMATCH, 
-                f"mismatches civic value: {civic_ensembl_version}.\n"
-            )
- 
+
+        self._print_match(
+            MatchLevel.MISMATCH,
+            f"mismatches civic value: {civic_ensembl_version}.\n"
+        )
         return False
 
 

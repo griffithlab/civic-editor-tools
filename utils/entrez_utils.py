@@ -3,7 +3,6 @@
 from Bio import Entrez
 import ssl
 import certifi
-from Bio import Entrez
 import xml.etree.ElementTree as ET
 import gzip
 from pathlib import Path

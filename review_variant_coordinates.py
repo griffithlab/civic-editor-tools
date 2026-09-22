@@ -205,10 +205,10 @@ def variant_is_black_listed(vid, black_listed_variant_ids, black_list_path):
 
 def variant_is_deprecated(vid, variant_data_basic):
     """Test if variant has a deprecated status"""
-    if (variant_data_basic['deprecated'] == "True"):
+    if variant_data_basic['deprecated']:
         print(f"Skipping CIViC variant {vid} because it has a deprecated status")
         return True
-    
+
     return False
 
 
@@ -628,7 +628,8 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, target_gene: 
         variant_data = civic_graphql_utils.merge_revision_data(variant_data)
 
         #if there is an outstanding revision to the variant name itself, warn the user
-        if variant_name_has_revision(variant_data): 
+        if variant_name_has_revision(variant_data):
+            mark_variant_processed(processed_variants_file, vid, processed_variants_out_f, already_processed_variants)
             continue
 
         #skip a variant if it has 0 pending revisions from other users - unless the user wishes to bypass this

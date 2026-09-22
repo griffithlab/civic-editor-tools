@@ -128,7 +128,7 @@ def snv_coding_to_p_3letter(variant):
     """Convert a coding SNV like 'S459F' to 'p.Ser459Phe'"""
 
     if guess_variant_type(variant) != "Missense Variant":
-        raise ValueError(f"Expected 'Missense Variant', got {variant_type} for variant {variant}")
+        raise ValueError(f"Expected 'Missense Variant', got {guess_variant_type(variant)} for variant {variant}")
 
     match = re.match(r"^([A-Za-z])(\d+)([A-Za-z])", variant)
     if not match:
@@ -296,9 +296,9 @@ def main():
 
     protein = "MSTNPKPQRKTKRNTNRRPQDVKFPGGG"
     print(f"\nTesting amino acid position matches for sequence: {protein}")
-    print(f"  Does P at position 5 match? {reference_aa_positions_matches('P', 5, protein, 'test_id')}") #True
-    print(f"  Does A at position 5 match? {reference_aa_positions_matches('A', 5, protein, 'test_id')}") #False
-    print(f"  Does P at position 100 match? {reference_aa_positions_matches('P', 100, protein, 'test_id')}") #False
+    print(f"  Does P at position 5 match? {reference_aa_positions_matches('P', 5, protein, 'test_protein_id', 'test_transcript_id')}") #True
+    print(f"  Does A at position 5 match? {reference_aa_positions_matches('A', 5, protein, 'test_protein_id', 'test_transcript_id')}") #False
+    print(f"  Does P at position 100 match? {reference_aa_positions_matches('P', 100, protein, 'test_protein_id', 'test_transcript_id')}") #False
 
 
 if __name__ == "__main__":
