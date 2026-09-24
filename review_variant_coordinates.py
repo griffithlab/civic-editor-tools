@@ -26,6 +26,7 @@ from utils import entrez_utils
 from utils import ensembl_utils
 from utils import refseq_utils
 from utils import compare_utils
+from utils import civic_pubtator_utils
 
 base_dir = Path(__file__).resolve().parent
 
@@ -92,6 +93,12 @@ def parse_args():
         dest="processed_variants_file",
         type=str,
         help="Path to file with list of already processed variants, one per line (first column), rows with # will be ignored, file will be updated as new variants are processed"
+    )
+    parser.add_argument(
+        "--civic-pubtator-data",
+        dest="civic_pubtator_data",
+        type=str,
+        help="Path to civic-pubtator results. EID publications will be searched for mentions of the variant name"
     )
     parser.add_argument(
         "--open-browser",
@@ -527,7 +534,7 @@ def display_accepted_variant_info(vid, accepted_variant_data):
 
     return civic_accepted_values
 
-def main(variant_id: int, contributor_id: int, all_variants: bool, target_gene: bool, variant_list_file: str, processed_variants_file: str, allow_variants_without_revisions: bool, open_browser: bool):
+def main(variant_id: int, contributor_id: int, all_variants: bool, target_gene: bool, variant_list_file: str, processed_variants_file: str, civic_pubtator_data: str, allow_variants_without_revisions: bool, open_browser: bool):
 
     #define input data files
     version_file = base_dir / f"RELEASE"
@@ -571,6 +578,12 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, target_gene: 
 
     #get build37 ensembl transcript IDs with version numbers for (ensembl v75 and build37 imported ensembl v87)
     build37_ensembl_transcripts = ensembl_utils.load_build37_ensembl_transcripts()
+
+    #if a civic-pubtator-data path was supplied, index its report files once so each variant's
+    #evidence sources don't each re-resolve and re-glob the (growing) pub-reports directory
+    civic_pubtator_report_index = None
+    if civic_pubtator_data:
+        civic_pubtator_report_index = civic_pubtator_utils.build_report_file_index(civic_pubtator_data)
 
     #summarize user info based on contributor id
     user_details = civic_graphql_utils.gather_user_details(contributor_id)
@@ -654,6 +667,13 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, target_gene: 
         if sources:
             for url, source in sources.items():
                 print(f"  {url} ({source['citation']}. {source['source_type']}) (civic.sid:{source['id']})")
+                #If the user supplied a path to civic-pubtator-data, and this source has a citation id to look up,
+                #search those results for the civic variant name
+                if civic_pubtator_report_index and source['citation_id']:
+                    variant_name_list = [civic_variant_name, f"p.{civic_variant_name}", civic_variant_name_p_3letter]
+                    match_summary = civic_pubtator_utils.summarize_variant_name_matches(civic_pubtator_report_index, [source['citation_id']], variant_name_list)
+                    print(f"    {civic_pubtator_utils.format_variant_name_match_summary(match_summary, variant_name_list)}")
+
         else:
             print(f"  No evidence sources found")
 
@@ -871,6 +891,7 @@ if __name__ == "__main__":
         target_gene=args.target_gene,
         variant_list_file=args.variant_list_file,
         processed_variants_file=args.processed_variants_file,
+        civic_pubtator_data=args.civic_pubtator_data,
         allow_variants_without_revisions=args.allow_variants_without_revisions,
         open_browser=args.open_browser
     )
