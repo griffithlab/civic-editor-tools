@@ -4,10 +4,17 @@ from pathlib import Path
 import requests
 import pdb
 import time
-from requests.exceptions import ConnectionError, Timeout, RequestException
+from requests.exceptions import ConnectionError, Timeout, RequestException, HTTPError
 
 api_url = "https://civicdb.org/api/graphql"
 base_dir = Path(__file__).resolve().parent
+
+#HTTP statuses worth retrying: rate limiting and transient server errors
+RETRYABLE_HTTP_STATUS_CODES = {429, 500, 502, 503, 504}
+
+#default pacing applied before every GraphQL request, to stay under CIViC's rate limit
+#regardless of caller or query pattern (single variant, --all-variants, --target-gene, etc.)
+DEFAULT_GRAPHQL_REQUEST_DELAY = 0.25
 
 def populate_variables_id(variables_template: str, graphql_id: int) -> str:
     """update a template graphql object string to inject the query ID to be used"""
@@ -30,9 +37,12 @@ def populate_variables_id(variables_template: str, graphql_id: int) -> str:
 
 
 def run_graphql_operation(api_url: str, operation_name: str, query_id: int, timeout: tuple = (20, 200),
-                          retries: int = 4, backoff_factor: float = 2.0) -> requests.Response:
+                          retries: int = 4, backoff_factor: float = 2.0,
+                          request_delay: float = DEFAULT_GRAPHQL_REQUEST_DELAY) -> requests.Response:
     """Load graphql query and variable json objects from file, update with a
-    query id, and submit the query to the API. Retries on transient errors."""
+    query id, and submit the query to the API. Paces every request by request_delay
+    seconds (including retries) to reduce how often CIViC's rate limit is hit in the
+    first place, and retries on transient errors."""
     query_path = base_dir / f"../graphql/{operation_name}_query.json"
     variables_path = base_dir / f"../graphql/{operation_name}_variables.json"
 
@@ -54,6 +64,7 @@ def run_graphql_operation(api_url: str, operation_name: str, query_id: int, time
     #headers={"Authorization": f"Bearer {os.environ['CIVIC_API_KEY']}", "Content-Type": "application/json",},
 
     for attempt in range(1, retries + 1):
+        time.sleep(request_delay)
         try:
             resp = requests.post(
                 api_url,
@@ -69,9 +80,28 @@ def run_graphql_operation(api_url: str, operation_name: str, query_id: int, time
                 wait = backoff_factor ** (attempt - 1)  # 1s, 2s, 4s …
                 print(f"[Attempt {attempt}/{retries}] Network error: {exc}. Retrying in {wait:.1f}s…")
                 time.sleep(wait)
-            
+
+        except HTTPError as exc:
+            last_exc = exc
+            status_code = exc.response.status_code if exc.response is not None else None
+
+            # Non-retryable HTTP errors (auth failures, bad requests, not found, etc.)
+            if status_code not in RETRYABLE_HTTP_STATUS_CODES:
+                raise RuntimeError(f"GraphQL request failed: {exc}") from exc
+
+            if attempt < retries:
+                wait = backoff_factor ** (attempt - 1)  # 1s, 2s, 4s …
+                retry_after = exc.response.headers.get("Retry-After") if exc.response is not None else None
+                if retry_after:
+                    try:
+                        wait = max(wait, float(retry_after))
+                    except ValueError:
+                        pass
+                print(f"[Attempt {attempt}/{retries}] HTTP {status_code} from CIViC API: {exc}. Retrying in {wait:.1f}s…")
+                time.sleep(wait)
+
         except RequestException as exc:
-            # Non-retryable HTTP errors (auth failures, bad requests, etc.)
+            # Non-retryable errors (e.g. malformed request that requests itself rejects)
             raise RuntimeError(f"GraphQL request failed: {exc}") from exc
 
     raise RuntimeError(
