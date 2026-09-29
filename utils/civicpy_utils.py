@@ -59,6 +59,22 @@ def extract_variant_id_list_by_gene(variants: list, gene_name: str) -> list[int]
     return [int(variant_id) for _, variant_id in variant_info]
 
 
+def extract_evidence_info(e) -> dict:
+    """Extract useful evidence item info from a civicpy EvidenceItem object"""
+    return {
+        "evidence_id": e.id,
+        "evidence_name": e.name,
+        "status": e.status,
+        "molecular_profile_id": e.molecular_profile_id,
+        "evidence_type": e.evidence_type,
+    }
+
+
+def extract_evidence_id_list(evidence_items: list) -> list[int]:
+    """Produce a sorted list of all evidence IDs in a civicpy evidence items list"""
+    return sorted(int(e.id) for e in evidence_items)
+
+
 def get_sources_for_variant(variant_id: int) -> dict[str, dict[str, str]]:
     """Starting with a variant id, get associated molecular profiles, and their associated evidence, and their associated sources """
     sources = {}

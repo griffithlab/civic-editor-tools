@@ -1,0 +1,281 @@
+query EvidenceSummary($evidenceId: Int!) {
+  evidenceItem(id: $evidenceId) {
+    ...EvidenceSummaryFields
+    __typename
+  }
+}
+
+fragment EvidenceSummaryFields on EvidenceItem {
+  id
+  name
+  description
+  descriptionReplaceEidWithSource
+  descriptionWithTags {
+    ...parsedCommentFragment
+    __typename
+  }
+  descriptionWithNames
+  descriptionWithTagsReplaceEidWithSource {
+    ...parsedCommentFragment
+    __typename
+  }
+  descriptionWithNamesReplaceEidWithSource
+  status
+  evidenceLevel
+  evidenceType
+  evidenceDirection
+  significance
+  variantOrigin
+  therapies {
+    id
+    name
+    link
+    deprecated
+    __typename
+  }
+  therapyInteractionType
+  disease {
+    id
+    name
+    link
+    deprecated
+    __typename
+  }
+  phenotypes {
+    id
+    name
+    link
+    __typename
+  }
+  source {
+    id
+    citation
+    citationId
+    sourceType
+    displayType
+    sourceUrl
+    ascoAbstractId
+    link
+    clinicalTrials {
+      nctId
+      id
+      link
+      __typename
+    }
+    retractionNature
+    deprecated
+    __typename
+  }
+  evidenceRating
+  molecularProfile {
+    id
+    name
+    link
+    parsedName {
+      ...MolecularProfileParsedName
+      __typename
+    }
+    deprecated
+    flagged
+    __typename
+  }
+  flags(state: OPEN) {
+    totalCount
+    __typename
+  }
+  revisions(status: NEW) {
+    totalCount
+    __typename
+  }
+  comments {
+    totalCount
+    __typename
+  }
+  submissionActivity {
+    createdAt
+    parsedNote {
+      ...parsedCommentFragment
+      __typename
+    }
+    user {
+      displayName
+      profileImagePath(size: 32)
+      id
+      role
+      __typename
+    }
+    __typename
+  }
+  acceptanceEvent {
+    createdAt
+    originatingUser {
+      id
+      displayName
+      role
+      profileImagePath(size: 32)
+      __typename
+    }
+    __typename
+  }
+  submissionEvent {
+    createdAt
+    originatingUser {
+      id
+      displayName
+      role
+      profileImagePath(size: 32)
+      __typename
+    }
+    __typename
+  }
+  rejectionEvent {
+    createdAt
+    originatingUser {
+      id
+      displayName
+      role
+      profileImagePath(size: 32)
+      __typename
+    }
+    __typename
+  }
+  __typename
+}
+
+fragment parsedCommentFragment on CommentBodySegment {
+  __typename
+  ... on CommentTagSegment {
+    entityId
+    displayName
+    tagType
+    link
+    revisionSetId
+    feature {
+      id
+      name
+      link
+      deprecated
+      flagged
+      __typename
+    }
+    __typename
+  }
+  ... on CommentTagSegmentFlagged {
+    entityId
+    displayName
+    tagType
+    flagged
+    link
+    revisionSetId
+    feature {
+      id
+      name
+      link
+      deprecated
+      flagged
+      __typename
+    }
+    __typename
+  }
+  ... on CommentTagSegmentFlaggedAndWithStatus {
+    entityId
+    displayName
+    tagType
+    status
+    flagged
+    link
+    revisionSetId
+    feature {
+      id
+      name
+      link
+      deprecated
+      flagged
+      __typename
+    }
+    __typename
+  }
+  ... on CommentTagSegmentFlaggedAndDeprecated {
+    entityId
+    displayName
+    tagType
+    flagged
+    deprecated
+    link
+    revisionSetId
+    feature {
+      id
+      name
+      link
+      deprecated
+      flagged
+      __typename
+    }
+    __typename
+  }
+  ... on CommentTagSegmentDeprecated {
+    entityId
+    displayName
+    tagType
+    deprecated
+    link
+    revisionSetId
+    feature {
+      id
+      name
+      link
+      deprecated
+      flagged
+      __typename
+    }
+    __typename
+  }
+  ... on CommentTextSegment {
+    text
+    __typename
+  }
+  ... on User {
+    ...commenterFields
+    __typename
+  }
+}
+
+fragment commenterFields on User {
+  id
+  username
+  displayName
+  name
+  role
+  profileImagePath(size: 32)
+  organizations {
+    id
+    name
+    profileImagePath(size: 32)
+    __typename
+  }
+  __typename
+}
+
+fragment MolecularProfileParsedName on MolecularProfileSegment {
+  __typename
+  ... on MolecularProfileTextSegment {
+    text
+    __typename
+  }
+  ... on Feature {
+    id
+    name
+    link
+    deprecated
+    flagged
+    __typename
+  }
+  ... on Variant {
+    id
+    name
+    link
+    deprecated
+    flagged
+    __typename
+  }
+}

@@ -348,6 +348,98 @@ def merge_revision_data(variant_data: dict) -> dict:
     return variant_data
 
 
+def gather_evidence_summary_data(evidence_id: int) -> dict:
+    """execute graphql queries, parse json, return current live details for a CIViC evidence item"""
+    #graphql template name: "evidence_EvidenceSummary"
+    resp = run_graphql_operation(api_url, "evidence_EvidenceSummary", evidence_id)
+    json = resp.json()
+    evidence = json['data']['evidenceItem']
+
+    therapy_names = [t['name'] for t in evidence['therapies']]
+    phenotype_names = [p['name'] for p in evidence['phenotypes']]
+
+    evidence_data = {
+        "evidence_id": evidence['id'],
+        "evidence_name": evidence['name'],
+        "description": evidence['description'],
+        "status": evidence['status'],
+        "open_revision_count": evidence['revisions']['totalCount'],
+        "open_flag_count": evidence['flags']['totalCount'],
+        "evidence_type": evidence['evidenceType'],
+        "evidence_direction": evidence['evidenceDirection'],
+        "evidence_level": evidence['evidenceLevel'],
+        "significance": evidence['significance'],
+        "evidence_rating": evidence['evidenceRating'],
+        "variant_origin": evidence['variantOrigin'],
+        "therapy_interaction_type": evidence['therapyInteractionType'],
+        "disease_name": evidence['disease']['name'] if evidence['disease'] else None,
+        "molecular_profile_id": evidence['molecularProfile']['id'],
+        "molecular_profile_name": evidence['molecularProfile']['name'],
+        "therapy_names": therapy_names,
+        "phenotype_names": phenotype_names,
+        "source_citation": evidence['source']['citation'],
+        "source_url": evidence['source']['sourceUrl'],
+        "source_type": evidence['source']['sourceType'],
+    }
+
+    return evidence_data
+
+
+def gather_evidence_revisions(evidence_id: int, contributor_id: int) -> dict:
+    """execute graphql queries, parse json, build a simplified data structure with open revision info for an evidence item"""
+    #graphql template name: "evidence_Revisions-Evidence"
+    resp = run_graphql_operation(api_url, "evidence_Revisions-Evidence", evidence_id)
+    json = resp.json()
+
+    revisions = json["data"]["revisions"]["edges"]
+    evidence_revisions = []
+    contributor_revisions = 0
+    for i, revision in enumerate(revisions):
+        revision_id = revision['node']['id']
+        user_id = revision['node']['creationActivity']['user']['id']
+        user_display_name = revision['node']['creationActivity']['user']['displayName']
+        if user_id == contributor_id:
+            contributor_revisions += 1
+
+        field_name = revision['node']['fieldName']
+        revision_values_string = ""
+        revision_values_list = []
+
+        #diffValue is a GraphQL union: an ObjectFieldDiff (list/reference-type fields, e.g.
+        #molecular_profile_id, therapy_ids) has addedObjects, whose displayName values are
+        #the only human-readable form available (currentValue/suggestedValue are raw id lists
+        #for these fields). A ScalarFieldDiff (e.g. description, significance) has left/right,
+        #but those are pre-rendered HTML diff markup meant for the CIViC web UI, not plain text -
+        #so for scalar fields prefer the node's own currentValue/suggestedValue instead.
+        diff_value = revision['node']['linkoutData']['diffValue']
+        if 'addedObjects' in diff_value:
+            for revision_value in diff_value['addedObjects']:
+                revision_values_list.append(revision_value['displayName'])
+            revision_values_string = ",".join(sorted(revision_values_list))
+        else:
+            current_value = revision['node']['currentValue']
+            suggested_value = revision['node']['suggestedValue']
+            revision_values_string = f"'{current_value}' -> '{suggested_value}'"
+
+        evidence_revisions.append({
+            "index": i,
+            "revision_id": revision_id,
+            "user_id": user_id,
+            "user_display_name": user_display_name,
+            "field_name": field_name,
+            "revision_values_list": revision_values_list,
+            "revision_values_string": revision_values_string
+        })
+
+    evidence_data = {
+        "evidence_id": evidence_id,
+        "evidence_revisions": evidence_revisions,
+        "contributor_revisions": contributor_revisions,
+    }
+
+    return evidence_data
+
+
 def load_blacklisted_variant_ids(filepath: str) -> list:
 	"""Load blacklisted variant IDs from a file. One per line. Each line must start with the ID, anything else on the line will be ignored"""
 	variant_ids = set()

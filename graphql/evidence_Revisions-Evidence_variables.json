@@ -1,0 +1,8 @@
+{
+    "first": 50,
+    "subject": {
+        "id": graphql_query_id1,
+        "entityType": "EVIDENCE_ITEM"
+    },
+    "status": "NEW"
+}

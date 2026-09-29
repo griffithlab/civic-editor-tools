@@ -217,14 +217,15 @@ def check_connection(timeout: int = 5) -> bool:
     return False
 
 
-def check_apis(timeout: int = 5) -> bool:
+def check_apis(timeout: int = 5, api_urls: list = None) -> bool:
     """
-    Returns True if both required APIs are reachable, False otherwise.
+    Returns True if all required APIs are reachable, False otherwise.
     """
-    api_urls = [
-        "https://www.civicdb.org",
-        "https://reg.genome.network",
-    ]
+    if api_urls is None:
+        api_urls = [
+            "https://www.civicdb.org",
+            "https://reg.genome.network",
+        ]
     for url in api_urls:
         try:
             response = requests.head(url, timeout=timeout)
