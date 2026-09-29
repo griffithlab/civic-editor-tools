@@ -229,6 +229,7 @@ def gather_variant_revisions(variant_id: int, contributor_id: int) -> dict:
         
         field_name = revision['node']['fieldName']
         revision_values_string = ""
+        revision_values_list = []
 
         #special handling when the revision is the variant "name" itself
         if field_name == 'name':
@@ -237,13 +238,21 @@ def gather_variant_revisions(variant_id: int, contributor_id: int) -> dict:
             revision_values_string = f"'{current_value}' -> '{suggested_value}'"
             variant_data['name_change'] = True
         else:
-            #revisions that are lists of things
-            revision_values = revision['node']['linkoutData']['diffValue']['addedObjects']
-            revision_values_list = []
-            for revision_value in revision_values:
-                revision_display_name = revision_value['displayName']
-                revision_values_list.append(revision_display_name)
-            revision_values_string = ",".join(sorted(revision_values_list))
+            #diffValue is a GraphQL union: an ObjectFieldDiff (list-type fields, e.g.
+            #hgvs_description_ids) has addedObjects; a ScalarFieldDiff (e.g. an unsupported
+            #field like chromosome2) has left/right instead. Handle both shapes here so an
+            #unexpected field can't crash this parsing step; merge_revision_data() is still
+            #responsible for rejecting field names this tool has no comparison logic for.
+            diff_value = revision['node']['linkoutData']['diffValue']
+            if 'addedObjects' in diff_value:
+                #revisions that are lists of things
+                for revision_value in diff_value['addedObjects']:
+                    revision_display_name = revision_value['displayName']
+                    revision_values_list.append(revision_display_name)
+                revision_values_string = ",".join(sorted(revision_values_list))
+            else:
+                #a scalar before/after value pair
+                revision_values_string = f"'{diff_value.get('left')}' -> '{diff_value.get('right')}'"
 
         variant_data["variant_revisions"].append({
             "index": i,
