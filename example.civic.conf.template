@@ -1,0 +1,21 @@
+# Template for a CIViC connection config file, used by --civic-config.
+#
+# Copy this file to something matching '*.civic.conf' (e.g. username.prod.civic.conf) - that naming
+# convention is required, and is what keeps it out of git via .gitignore. Never rename it to
+# something that doesn't end in '.civic.conf', and never commit the copy.
+#
+# The file must be readable by its owner only (like an AWS .pem file):
+#   chmod 600 username.prod.civic.conf
+#
+# To obtain an API key, log in to CIViC, go to your user profile and use the Manage API Keys function
+#
+# api_url must be exactly one of:
+#   https://civicdb.org          (production - requires typed confirmation to use)
+#   https://staging.civicdb.org
+
+contributor_id = 15
+organization_id = 1
+api_key = your-civic-api-key-here
+api_url = https://staging.civicdb.org
+
+

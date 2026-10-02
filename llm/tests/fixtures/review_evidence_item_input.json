@@ -1,0 +1,34 @@
+{
+  "evidence_item": {
+    "id": 1832,
+    "statement": "This is a fictional evidence item statement used for smoke testing only.",
+    "evidence_level": "B",
+    "evidence_type": "Predictive",
+    "direction": "Supports",
+    "significance": "Sensitivity/Response",
+    "disease": "Fictional Cancer Syndrome",
+    "therapies": ["Fictazumab"],
+    "molecular_profile": "FAKE1 V600E",
+    "source": {"citation": "Doe et al., 2099", "pmid": 99999999},
+    "rating": 3
+  },
+  "revisions": [
+    {
+      "revision_id": 90001,
+      "field_name": "description",
+      "current_value": "Old fictional description.",
+      "proposed_value": "New fictional description with a claimed improvement.",
+      "comment": "Clarifying wording per fictional reviewer.",
+      "revisor_id": 42
+    },
+    {
+      "revision_id": 90002,
+      "field_name": "rating",
+      "current_value": "3",
+      "proposed_value": "4",
+      "comment": "",
+      "revisor_id": 42
+    }
+  ],
+  "source_full_text": "This is fictional full-article text used only for smoke-testing the llm CLI. It contains no real clinical claims."
+}

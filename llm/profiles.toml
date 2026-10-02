@@ -1,0 +1,38 @@
+# Named LLM provider profiles for the llm package.
+#
+# This file holds no secrets - API keys are read only from the environment variable named by
+# api_key_env for each profile. It's safe to commit and edit directly.
+#
+# Add a new profile by adding a new [name] table below with: provider ("anthropic" or
+# "openai_compatible"), model, base_url (openai_compatible only), api_key_env, supports (a list
+# drawn from "structured_output", "tools", "large_context"), and an optional [name.default_params]
+# table of extra keyword args passed to the underlying client (e.g. max_tokens).
+
+[claude]
+provider = "anthropic"
+model = "claude-opus-5"  # verify/update against current docs as models change
+api_key_env = "ANTHROPIC_API_KEY"
+supports = ["structured_output", "tools", "large_context"]
+[claude.default_params]
+max_tokens = 4096
+
+[openai]
+provider = "openai_compatible"
+model = "gpt-4o"  # placeholder - verify/update against current docs as models change
+base_url = "https://api.openai.com/v1"
+api_key_env = "OPENAI_API_KEY"
+supports = ["structured_output", "tools", "large_context"]
+[openai.default_params]
+max_tokens = 4096
+
+[local]
+provider = "openai_compatible"
+model = "llama3.1"
+base_url = "http://localhost:11434/v1"
+api_key_env = ""  # no env var read; a harmless placeholder key is sent to the local server
+# deliberately omits "structured_output": most local models don't reliably honor strict
+# json_schema mode, so this profile exercises both the requires/supports warning and the
+# OpenAICompatibleClient's JSON-mode fallback path
+supports = ["tools"]
+[local.default_params]
+max_tokens = 4096

@@ -3,4 +3,9 @@ civicpy
 requests
 certifi
 pymysql
+anthropic
+openai
+pydantic
+jinja2
+pyyaml
 

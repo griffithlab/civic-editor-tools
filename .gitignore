@@ -222,6 +222,12 @@ processed_variants.txt
 mapk_erk_variant_list.txt
 all_variants_working.txt
 
+# CIViC connection config files (contributor id, org id, API key, API url) - never commit these
+*.civic.conf
+
+# llm_review provenance logs (local, per-user, potentially large/sensitive review content)
+logs/
+
 
 
 

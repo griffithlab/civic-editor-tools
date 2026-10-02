@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Self-locate the repo root so this script works regardless of the caller's cwd, and regardless
+# of install/docker/ moving again in the future.
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
 IMAGE="griffithlab/civic-editor-tools"
-VERSION=$(cat "$(dirname "$0")/RELEASE" | tr -d '[:space:]')
+VERSION=$(cat "$REPO_ROOT/RELEASE" | tr -d '[:space:]')
 
 # Verify Docker Hub authentication before wasting time on the build
 CREDS_STORE=$(python3 -c "import json; d=json.load(open('$HOME/.docker/config.json')); print(d.get('credsStore',''))" 2>/dev/null || true)
@@ -31,6 +36,7 @@ docker buildx build \
     --tag "${IMAGE}:${VERSION}" \
     --tag "${IMAGE}:latest" \
     --push \
-    .
+    -f "$SCRIPT_DIR/Dockerfile" \
+    "$REPO_ROOT"
 
 echo "Done: ${IMAGE}:${VERSION} and ${IMAGE}:latest pushed to Docker Hub"

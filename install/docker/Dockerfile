@@ -18,8 +18,8 @@ RUN apt-get update && apt-get install -y \
 RUN curl -fsSL https://ftp.ncbi.nlm.nih.gov/entrez/entrezdirect/install-edirect.sh | bash
 ENV PATH="/root/edirect:${PATH}"
 
-# Install Python dependencies
-COPY requirements.txt /tmp/requirements.txt
+# Install Python dependencies (build context is the repo root - see docker_build_push.sh)
+COPY install/requirements.txt /tmp/requirements.txt
 RUN pip3 install --break-system-packages -r /tmp/requirements.txt
 
 CMD ["/bin/bash"]

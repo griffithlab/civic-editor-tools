@@ -10,16 +10,20 @@ A Python CLI toolkit for CIViC database editors to automate variant coordinate r
 - **Reference data:** `data/` (staged locally, not committed)
 
 ## Python dependencies
-Managed in `requirements.txt`:
+Managed in `install/requirements.txt`:
 - `biopython` — Entrez queries, FASTA parsing (`Bio.SeqIO`, `Bio.Entrez`)
 - `civicpy` — CIViC API client
 - `requests` — HTTP calls (GraphQL, ClinGen AR)
 - `certifi` — SSL certificate bundle
 - `pymysql` — Ensembl public MySQL (`data/ensembl/get_ensembl_v75_version_numbers.py`)
+- `anthropic`, `openai`, `pydantic`, `jinja2`, `pyyaml` — used by the `llm/` library
 
 Install:
 ```bash
-pip3 install -r requirements.txt
+pip3 install -r install/requirements.txt
+
+# optional, only needed to run the test suite (pytest llm/tests/)
+pip3 install -r install/requirements-dev.txt
 ```
 
 ## Staging reference data
@@ -58,11 +62,13 @@ Each utility module has a `__main__` block and can be run standalone to test and
 ```
 
 ## Docker
-Build and run a containerized environment (Ubuntu 24.04, Python 3.12):
+Build and run a containerized environment (Ubuntu 24.04, Python 3.12). The Dockerfile lives in `install/docker/` but the build context must still be the repo root (it needs `install/requirements.txt`):
 ```bash
-docker build -t civic-editor-tools .
+docker build -f install/docker/Dockerfile -t civic-editor-tools .
 docker run -it civic-editor-tools
 ```
+
+To build and push a multi-platform image to Docker Hub, run `install/docker/docker_build_push.sh` (it self-locates the repo root, so it can be run from anywhere).
 
 Note: reference data in `data/` is not staged inside the image by default — mount it or run `stage_local_data.sh` inside the container after starting.
 

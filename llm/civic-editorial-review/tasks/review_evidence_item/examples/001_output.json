@@ -1,0 +1,21 @@
+{
+  "summary": "Both pending revisions correct the same underlying issue: this Predisposing evidence item currently has 'N/A' for both significance and direction, and neither is a valid value for the Predisposing evidence type. The two proposed values (Predisposition / Supports) form a coherent, valid pair and are well supported by the evidence statement's explicit ACMG PP4 citation. Recommend accepting both together.",
+  "revision_assessments": [
+    {
+      "revision_id": 52276,
+      "field_name": "significance",
+      "recommendation": "accept",
+      "confidence": "high",
+      "rationale": "Predisposing evidence must have significance of Predisposition or Protectiveness, not N/A, so the current value is invalid for this evidence type rather than a deliberate choice. The statement explicitly cites ACMG code PP4, which is exactly the basis CIViC uses for a Predisposition call on a germline finding."
+    },
+    {
+      "revision_id": 52277,
+      "field_name": "evidence_direction",
+      "recommendation": "accept",
+      "confidence": "high",
+      "rationale": "An 'N/A' direction is only valid for Oncogenic evidence, not Predisposing, so the current value is invalid here too. 'Supports' is the correct direction once significance is Predisposition, since the statement supports (rather than refutes) a predisposing role for this variant - and accepting it alongside the significance revision keeps the two fields consistent with each other."
+    }
+  ],
+  "issues": [],
+  "suggested_revisions": []
+}

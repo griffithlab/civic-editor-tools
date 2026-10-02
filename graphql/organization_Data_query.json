@@ -1,0 +1,9 @@
+query OrganizationDetail($organizationId: Int!) {
+  organization(id: $organizationId) {
+    id
+    name
+    url
+    memberCount
+    __typename
+  }
+}

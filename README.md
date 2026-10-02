@@ -86,12 +86,15 @@ Before running for the first time the following python dependencies will need to
 - requests
 - certifi
 - pymysql
+- anthropic, openai, pydantic, jinja2, pyyaml (used by the `llm/` library — see [LLM-assisted editorial review](#llm-assisted-editorial-review-experimental))
 
 Install Python dependencies with:
 ```bash
 cd ~/git/civic-editor-tools
-pip3 install -r requirements.txt
+pip3 install -r install/requirements.txt
 
+# optional, only needed to run the test suite (pytest llm/tests/)
+pip3 install -r install/requirements-dev.txt
 ```
 
 Install efetch
@@ -205,6 +208,82 @@ This is a slow, NCBI-rate-limited operation (there's a fixed delay between `efet
 
 ---
 
+## LLM-assisted editorial review (experimental)
+
+`llm/` is a small, provider-agnostic library (not a CLI tool in its own right) for sending a CIViC evidence item and *all* of its currently open pending revisions to an LLM together, and getting back a structured, advisory assessment — one recommendation per revision, plus any issues that span more than one of them. Revisions on the same evidence item routinely interact (e.g. two revisions together forming one coherent fix), so they're reviewed as a collection, not one at a time — matching how a human editor actually works, and how `civic_graphql_utils.accept_revisions()` already accepts a list of revisions as one action. A human editor always makes the final accept/reject decision for each revision (they may accept any subset) — this only ever returns advisory opinions for a script to display; it never submits anything to CIViC itself.
+
+```python
+from llm import run_task
+
+result = run_task(
+    "review_evidence_item",
+    inputs={
+        "evidence_item": {...},   # see llm/civic-editorial-review/tasks/review_evidence_item/instructions.md
+        "revisions": [{...}, ...],  # every currently open revision on this evidence item
+        "source_full_text": "...",  # optional - ideally the full article text, not just the abstract
+    },
+    profile="claude",
+)
+
+print(result.parsed.summary)   # holistic take on the whole pending revision set
+for assessment in result.parsed.revision_assessments:
+    print(assessment.revision_id, assessment.recommendation)  # accept | reject | accept_with_changes | needs_human_review
+```
+
+### Configuration
+
+Named provider profiles live in `llm/profiles.toml` (committed — it holds no secrets). Three are provided out of the box: `claude` (Anthropic), `openai` (OpenAI), and `local` (any OpenAI-compatible server, e.g. Ollama). API keys are never read from this file, only from the environment variable each profile names:
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...   # for the "claude" profile
+export OPENAI_API_KEY=sk-...          # for the "openai" profile
+                                       # "local" needs no key by default
+```
+
+Other overridable defaults, all via environment variable or the matching `run_task(...)` keyword argument:
+
+| Env var | Overrides | Default |
+|---|---|---|
+| `LLM_PROFILES_PATH` | which profiles file to read | `llm/profiles.toml` |
+| `LLM_LOG_PATH` | where provenance is logged | `llm/logs/provenance.jsonl` |
+
+Every `run_task()` call — success or failure — appends one JSON line to the provenance log, with the full assembled prompt stored once in a content-addressed sidecar file under `llm/logs/prompts/`. `llm/logs/` is gitignored.
+
+### Adding a new task
+
+Each task lives under `llm/civic-editorial-review/tasks/<name>/` and needs three things, following `review_evidence_item` as a worked example:
+
+- `instructions.md` — YAML frontmatter (`name`, `description`, `version`, `knowledge`, `requires`, `recommended_profiles`) followed by a Jinja2 prompt body. The body is rendered with task metadata only (never the per-item input), so it stays identical across calls and forms part of the cacheable prompt prefix.
+- `schema.py` — a Pydantic model describing the structured output, exposed as a module-level `SCHEMA = YourModel` (the class itself can be named anything).
+- `examples/` — optional `NNN_input.json`/`NNN_output.json` pairs used as few-shot examples; see the `README.md` inside `llm/civic-editorial-review/tasks/review_evidence_item/examples/` for the convention.
+
+Background knowledge shared across tasks goes in `llm/civic-editorial-review/knowledge/` and is referenced by filename from a task's `knowledge` frontmatter list.
+
+### Running against a local Ollama model
+
+```bash
+ollama pull llama3.1
+ollama serve   # separate terminal
+
+python -m llm run review_evidence_item --input llm/tests/fixtures/review_evidence_item_input.json --profile local
+```
+
+The committed `local` profile deliberately omits `structured_output` from its `supports` list, since most local models don't reliably honor strict JSON-schema mode — `run_task()` prints a warning (not an error) in that case and falls back to JSON mode plus schema validation with one retry.
+
+### Smoke testing without any provider
+
+```bash
+python -m llm run review_evidence_item --input llm/tests/fixtures/review_evidence_item_input.json --fake
+```
+
+`--fake` uses a canned in-process response (zero network, zero configuration) to exercise task loading, prompt assembly, and provenance logging end to end. The automated test suite (`pytest llm/tests/`) covers the same layers more thoroughly, also without any network access.
+
+### Trying it against real evidence items
+
+`review_evidence_items.py --llm-assist` (optionally with `--llm-profile <name>`, default `claude`) shows this advisory review inline, right after an evidence item's open revisions are displayed and before you're asked which to accept. It's entirely best-effort: if the `llm/` dependencies aren't installed, no provider is configured, or the call fails for any reason, it prints a warning and the normal human review workflow continues unaffected — nothing about accepting revisions depends on it.
+
+---
+
 ## Developer notes
 
 ### Code organisation
@@ -224,6 +303,25 @@ graphql/
   <operation>_query.json        # GraphQL query bodies (one file per operation)
   <operation>_variables.json    # Corresponding variable templates (one file per operation)
 data/                           # locally staged reference files (not committed; see stage_local_data.sh)
+llm/                             # provider-agnostic LLM client + task-loading library (see above) -
+  providers/                    # everything related to this feature lives under this one directory
+    base.py                     # LLMClient/LLMResult contract, validate_with_retry()
+    anthropic_client.py         # Anthropic messages.parse()-backed client
+    openai_compat_client.py     # OpenAI/Ollama/LM Studio/vLLM-backed client
+    profiles.py                 # profiles.toml loading, get_client()
+  registry.py                   # task discovery/loading from civic-editorial-review/
+  prompt.py                     # prompt assembly (stable knowledge/instructions/examples + per-item input)
+  provenance.py                 # JSONL run logging (llm/logs/, gitignored)
+  runner.py                     # run_task() public entry point
+  profiles.toml                 # named provider profiles (no secrets - keys come from env vars)
+  civic-editorial-review/       # task content (knowledge, per-task instructions.md/schema.py/examples/)
+  tests/                        # pytest suite for llm/ (no network access required)
+install/
+  requirements.txt              # runtime Python dependencies
+  requirements-dev.txt          # dev-only dependencies (pytest)
+  docker/
+    Dockerfile                  # build context is the repo root, not install/docker/
+    docker_build_push.sh        # builds and pushes a multi-platform image to Docker Hub
 ```
 
 The main script handles workflow logic and user interaction. The `utils/` modules are responsible for all external communication and data wrangling. Neither layer knows about the other's internals — the main script calls utility functions and passes their return values along.
