@@ -131,9 +131,22 @@ Execute the following one at a time and examine the output for any errors
 
 ```
 
-## Determine your civic user ID
+## Create a CIViC config file
 
-Go to [CIViC](civicdb.org) and find your user ID from the [Contributors View](https://civicdb.org/users/home). Once you have found your user profile, your user ID will be the number in the URL.  For example: https://civicdb.org/users/15/activity (15 is the ID for user MalachiGriffith)
+Both `review_variant_coordinates.py` and `review_evidence_items.py` take a `--civic-config` file that defines who you are and which CIViC deployment to talk to: `contributor_id`, `organization_id`, `api_key`, and `api_url` (`https://civicdb.org` for production, or `https://staging.civicdb.org`).
+
+- **contributor_id** — go to [CIViC](https://civicdb.org) and find your user ID from the [Contributors View](https://civicdb.org/users/home). Once you have found your user profile, your user ID will be the number in the URL. For example: https://civicdb.org/users/15/activity (15 is the ID for user MalachiGriffith)
+- **organization_id** — the ID of the CIViC organization you act on behalf of, found the same way from its organization page URL.
+- **api_key** — log in to CIViC, go to your user profile and use the Manage API Keys function.
+
+Copy `example.civic.conf.template` to a file whose name ends in `.civic.conf` (required, and what keeps it out of git), fill it in, and restrict it to owner-only permissions:
+
+```bash
+cp example.civic.conf.template ~/username.prod.civic.conf
+chmod 600 ~/username.prod.civic.conf
+```
+
+If `api_url` points at production, the tools ask you to type `production` before making any API call.
 
 ## Run a test of an editor tool
 
@@ -142,7 +155,7 @@ Go to [CIViC](civicdb.org) and find your user ID from the [Contributors View](ht
 ./review_variant_coordinates.py --help
 
 # example test command for a single variant
-./review_variant_coordinates.py --contributor-id 15 --variant-id 1832
+./review_variant_coordinates.py --civic-config ~/username.prod.civic.conf --variant-id 1832
 
 ```
 
@@ -166,7 +179,7 @@ Additional flags that apply regardless of how variants are selected:
 Example — batch-review all variants for a gene, tracking progress so the run can be safely interrupted and resumed:
 
 ```bash
-./review_variant_coordinates.py --contributor-id 15 --target-gene FGFR3 --processed-variants-file processed_variants.txt
+./review_variant_coordinates.py --civic-config ~/username.prod.civic.conf --target-gene FGFR3 --processed-variants-file processed_variants.txt
 ```
 
 
@@ -176,7 +189,7 @@ Example command using the latest version of the image
 ```bash
 docker run -it -v /Users/mgriffit/git/civic-editor-tools:/civic-editor-tools griffithlab/civic-editor-tools:latest 
 cd /civic-editor-tools
-./review_variant_coordinates.py --contributor-id 15 --variant-id 1832
+./review_variant_coordinates.py --civic-config ~/username.prod.civic.conf --variant-id 1832
 
 ```
 
@@ -184,7 +197,7 @@ Example command using a specific version of the image
 ```bash
 docker run -it -v /Users/mgriffit/git/civic-editor-tools:/civic-editor-tools griffithlab/civic-editor-tools:1.0
 cd /civic-editor-tools
-./review_variant_coordinates.py --contributor-id 15 --variant-id 1832
+./review_variant_coordinates.py --civic-config ~/username.prod.civic.conf --variant-id 1832
 
 ```
 

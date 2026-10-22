@@ -50,11 +50,11 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--contributor-id",
-        dest="contributor_id",
-        type=int,
+        "--civic-config",
+        dest="civic_config",
+        type=str,
         required=True,
-        help="CIViC contributor ID performing the review (integer, e.g. 15)"
+        help="Path to a *.civic.conf file defining contributor_id, organization_id, api_key, and api_url (see example.civic.conf.template)"
     )
 
     variant_choice_group = parser.add_mutually_exclusive_group(required=True)
@@ -109,21 +109,21 @@ def parse_args():
 
     return parser.parse_args()
 
-def verify_connectivity():
+def verify_connectivity(civic_url: str):
     """Tests whether internet access is working and then if we can actually access the APIs needed before attempting anything """
     if not generic_utils.check_connection():
         print("No internet access. Aborting.")
         sys.exit(1)
 
-    if not generic_utils.check_apis():
+    if not generic_utils.check_apis(api_urls=[civic_url, "https://reg.genome.network"]):
         print("Required APIs are unavailable. Aborting.")
         sys.exit(1)
 
     print("Internet and API connectivity verified.")
 
 
-def open_variant_revision(vid: int) -> None:
-    url = f"https://civicdb.org/variants/{vid}/revisions"
+def open_variant_revision(vid: int, civic_url: str) -> None:
+    url = f"{civic_url}/variants/{vid}/revisions"
     webbrowser.open(url)
 
 
@@ -534,7 +534,7 @@ def display_accepted_variant_info(vid, accepted_variant_data):
 
     return civic_accepted_values
 
-def main(variant_id: int, contributor_id: int, all_variants: bool, target_gene: bool, variant_list_file: str, processed_variants_file: str, civic_pubtator_data: str, allow_variants_without_revisions: bool, open_browser: bool):
+def main(civic_config: str, variant_id: int, all_variants: bool, target_gene: bool, variant_list_file: str, processed_variants_file: str, civic_pubtator_data: str, allow_variants_without_revisions: bool, open_browser: bool):
 
     #define input data files
     version_file = base_dir / f"RELEASE"
@@ -554,8 +554,18 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, target_gene: 
     with open(version_file) as f:
         editor_tools_version = f.read().strip()
 
+    #load and validate the user's CIViC connection config (contributor/org id, api key, api url).
+    #if it points at production, this forces a typed confirmation before any API call is made.
+    config = civic_graphql_utils.load_civic_config(civic_config)
+    civic_graphql_utils.confirm_production_usage(config['api_url'])
+    civic_graphql_utils.apply_civic_config(config)
+    civic_graphql_utils.summarize_civic_config(config)
+
+    contributor_id = config['contributor_id']
+    civic_url = config['api_url']
+
     #make sure internet and API access is working before attempting anything
-    verify_connectivity()
+    verify_connectivity(civic_url)
 
     #load black listed variants file
     black_listed_variant_ids = civic_graphql_utils.load_blacklisted_variant_ids(black_list_path)
@@ -589,7 +599,12 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, target_gene: 
     user_details = civic_graphql_utils.gather_user_details(contributor_id)
     print(f"\nContributor (id: {contributor_id}) is {user_details['user_name']} aka {user_details['user_display_name']} ({user_details['user_role']})")
 
-    prompt_to_proceed("Verify your user info above. Revisions by this user will be ignored/skipped. \nYou can't moderate your own submissions.")
+    #summarize organization info based on organization id
+    organization_id = config['organization_id']
+    organization_details = civic_graphql_utils.gather_organization_details(organization_id)
+    print(f"Organization (id: {organization_id}) is {organization_details['organization_name']} ({organization_details['organization_member_count']} members)")
+
+    prompt_to_proceed("Verify your user and organization info above. Revisions by this user will be ignored/skipped. \nYou can't moderate your own submissions.")
 
     #create a data structure that will store all clingen supported transcripts ids per gene
     clingen_transcript_ids = {}
@@ -716,7 +731,7 @@ def main(variant_id: int, contributor_id: int, all_variants: bool, target_gene: 
         
         #Open the variant revision view for the user
         if open_browser:
-            open_variant_revision(vid)
+            open_variant_revision(vid, civic_url)
 
         #iterate through each useful/compatible CAID and display information that helps the user review outstanding edits
         for i, (caid, ca_json) in enumerate(clingen_allele_info.items(), start=1):
@@ -885,7 +900,7 @@ if __name__ == "__main__":
     args = parse_args()
 
     main(
-        contributor_id=args.contributor_id,
+        civic_config=args.civic_config,
         variant_id=args.variant_id,
         all_variants=args.all_variants,
         target_gene=args.target_gene,

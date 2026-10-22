@@ -46,7 +46,7 @@ This runs:
 ./review_variant_coordinates.py --help
 
 # Single variant
-./review_variant_coordinates.py --contributor-id 15 --variant-id 1832
+./review_variant_coordinates.py --civic-config ~/username.prod.civic.conf --variant-id 1832
 ```
 
 ## Testing utility modules
