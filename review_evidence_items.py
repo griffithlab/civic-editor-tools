@@ -12,6 +12,7 @@ GraphQL API) and supports review workflows tied to a specific CIViC contributor.
 import os
 import argparse
 import sys
+import time
 import webbrowser
 from civicpy import civic
 from pathlib import Path
@@ -368,11 +369,16 @@ def run_llm_review(inputs: dict, llm_profile: str, llm_client):
     """
     from llm import run_task
 
+    #some models take a minute or more to respond, so say what's happening rather than appear hung
+    print(f"\nRequesting LLM-assisted review from {llm_client.model} (this can take a minute or more)...", flush=True)
+    start = time.monotonic()
     try:
-        return run_task("review_evidence_item", inputs=inputs, profile=llm_profile, client=llm_client)
+        result = run_task("review_evidence_item", inputs=inputs, profile=llm_profile, client=llm_client)
     except Exception as exc:
-        print(f"{YELLOW}WARNING: LLM-assisted review failed ({exc}); continuing without it.{RESET}")
+        print(f"{YELLOW}WARNING: LLM-assisted review failed after {time.monotonic() - start:.0f}s ({exc}); continuing without it.{RESET}")
         return None
+    print(f"LLM-assisted review received in {time.monotonic() - start:.0f}s.")
+    return result
 
 
 def display_llm_review(result) -> None:
