@@ -4,6 +4,9 @@ requests
 certifi
 pymysql
 anthropic
+# anthropic's HTTP client (httpx2) needs brotli>=1.2.0 to decode compressed responses; an older
+# brotlicffi (common in conda envs) otherwise fails every successful request with "Connection error."
+brotli>=1.2.0
 openai
 pydantic
 jinja2
