@@ -6,6 +6,7 @@ import anthropic
 from .base import LLMClient, LLMRefusalError, LLMResult, validate_with_retry
 
 _FORCED_TOOL_NAME = "emit_result"
+_CALL_TOOL_INSTRUCTION = f"Give your final answer by calling the {_FORCED_TOOL_NAME} tool exactly once, with no other text."
 
 
 def _build_system_param(system: str, cache_system: bool):
@@ -37,6 +38,24 @@ def _extract_tool_input_json(response, tool_name: str) -> str:
     raise RuntimeError(f"Forced tool-use response did not contain a '{tool_name}' tool call")
 
 
+def _is_forced_tool_choice_unsupported_error(exc: anthropic.BadRequestError) -> bool:
+    """The 400 newer models give for tool_choice type 'tool'/'any' ("tool_choice: type "tool" and
+    "any" are not supported for this model.") - and only that, not any other bad request."""
+    if getattr(exc, "status_code", None) != 400:
+        return False
+    message = str(exc).lower()
+    return "tool_choice" in message and "not supported" in message
+
+
+def _append_system_text(system_param, text: str):
+    """system_param (a string, or a list of content blocks as _build_system_param() makes it)
+    with `text` added at the end - after any cache_control breakpoint, so the cached prefix is
+    unchanged."""
+    if isinstance(system_param, list):
+        return system_param + [{"type": "text", "text": text}]
+    return f"{system_param}\n\n{text}"
+
+
 def _is_unsupported_structured_output_error(exc: anthropic.BadRequestError) -> bool:
     """Narrow check for exactly the case this fallback exists for: an older SDK/API surface (or
     a non-standard proxy) that doesn't recognize output_format/output_config. Never treat an
@@ -54,14 +73,16 @@ class AnthropicClient(LLMClient):
     Structured output uses the current (GA) mechanism, output_config={"format": <JSON schema>} on
     messages.create(), and validates the reply with validate_with_retry() - deliberately not
     client.messages.parse(), which validates inside the SDK and raises before a schema mismatch
-    can be retried. If that raises a 400 specifically about output_format/output_config being unrecognized (an older
-    pinned SDK/API version, or a non-standard proxy), this falls back to forced tool use - current
-    Claude models do NOT reject forced tool_choice; structured outputs and strict tool use are
-    documented as complementary, separate features, so this fallback is a defensive measure, not
-    a workaround for current-model behavior.
+    can be retried. If that raises a 400 specifically about output_format/output_config being
+    unrecognized (an older pinned SDK/API version, or a non-standard proxy), this falls back to
+    asking for the result as a tool call (see _complete_via_tool() - forced where the model
+    allows it, which the newest models don't). This is a defensive measure: current Claude models
+    support structured outputs directly.
     """
 
     provider_name = "anthropic"
+    #set (per instance) once the model rejects a forced tool_choice - see _complete_via_tool()
+    _tool_choice_auto = False
 
     def __init__(self, model: str, api_key: Optional[str] = None, **default_params):
         self.model = model
@@ -98,10 +119,13 @@ class AnthropicClient(LLMClient):
             if not _is_unsupported_structured_output_error(exc):
                 raise
             used_fallback = True
-            response = self._complete_via_forced_tool(system_param, messages, output_schema, max_tokens, extra)
+            response = self._complete_via_tool(system_param, messages, output_schema, max_tokens, extra)
 
-        self._require_stop_reason(response, {"tool_use"} if used_fallback else {"end_turn"})
-        raw_text = _extract_tool_input_json(response, _FORCED_TOOL_NAME) if used_fallback else _extract_text(response)
+        if used_fallback:
+            raw_text = self._tool_reply_text(response)
+        else:
+            self._require_stop_reason(response, {"end_turn"})
+            raw_text = _extract_text(response)
 
         state = {"raw_text": raw_text, "responses": [response]}
 
@@ -117,11 +141,8 @@ class AnthropicClient(LLMClient):
                 },
             ]
             if used_fallback:
-                new_response = self._complete_via_forced_tool(
-                    system_param, corrected_messages, output_schema, max_tokens, extra
-                )
-                self._require_stop_reason(new_response, {"tool_use"})
-                new_raw = _extract_tool_input_json(new_response, _FORCED_TOOL_NAME)
+                new_response = self._complete_via_tool(system_param, corrected_messages, output_schema, max_tokens, extra)
+                new_raw = self._tool_reply_text(new_response)
             else:
                 new_response = self._client.messages.create(
                     model=self.model, max_tokens=max_tokens, system=system_param,
@@ -141,16 +162,43 @@ class AnthropicClient(LLMClient):
             latency_ms=(time.monotonic() - start) * 1000, retries=retries,
         )
 
-    def _complete_via_forced_tool(self, system_param, messages, output_schema, max_tokens, extra):
+    def _complete_via_tool(self, system_param, messages, output_schema, max_tokens, extra):
+        """The structured-output fallback: ask for the result as the input of an emit_result tool
+        call. Forces that call with tool_choice where the model allows it; newer models (e.g.
+        Claude Opus 5.5, Sonnet 5.5, Fable 5.1) reject a forced tool_choice with a 400, so on that
+        error this switches - for the rest of this client's life - to tool_choice auto plus a
+        system-prompt instruction to call the tool."""
         tool = {
             "name": _FORCED_TOOL_NAME,
             "description": f"Emit the final {output_schema.__name__} result.",
             "input_schema": output_schema.model_json_schema(),
         }
+        if not self._tool_choice_auto:
+            try:
+                return self._client.messages.create(
+                    model=self.model, max_tokens=max_tokens, system=system_param, messages=messages,
+                    tools=[tool], tool_choice={"type": "tool", "name": _FORCED_TOOL_NAME}, **extra,
+                )
+            except anthropic.BadRequestError as exc:
+                if not _is_forced_tool_choice_unsupported_error(exc):
+                    raise
+                self._tool_choice_auto = True
         return self._client.messages.create(
-            model=self.model, max_tokens=max_tokens, system=system_param, messages=messages,
-            tools=[tool], tool_choice={"type": "tool", "name": _FORCED_TOOL_NAME}, **extra,
+            model=self.model, max_tokens=max_tokens, system=_append_system_text(system_param, _CALL_TOOL_INSTRUCTION),
+            messages=messages, tools=[tool], tool_choice={"type": "auto"}, **extra,
         )
+
+    def _tool_reply_text(self, response) -> str:
+        """The JSON result from a _complete_via_tool() response: the emit_result call's input. With
+        tool_choice auto the model may instead answer in plain text (stop_reason end_turn), which
+        is passed on as-is for validate_with_retry() to check like any other reply."""
+        expected = {"tool_use", "end_turn"} if self._tool_choice_auto else {"tool_use"}
+        self._require_stop_reason(response, expected)
+        if response.stop_reason == "end_turn" and not any(
+            block.type == "tool_use" and block.name == _FORCED_TOOL_NAME for block in response.content
+        ):
+            return _extract_text(response)
+        return _extract_tool_input_json(response, _FORCED_TOOL_NAME)
 
     @staticmethod
     def _require_stop_reason(response, expected: set) -> None:
