@@ -15,6 +15,7 @@ import json
 import sys
 from pathlib import Path
 
+from . import pricing as pricing_module
 from . import registry
 from .providers import profiles as profiles_module
 from .providers.base import LLMOutputValidationError, LLMRefusalError, LLMResult
@@ -314,7 +315,8 @@ def main(
         f"\n--- provider={result.provider} model={result.model} stop_reason={result.stop_reason} "
         f"latency_ms={result.latency_ms:.1f} retries={result.retries} "
         f"input_tokens={result.input_tokens} output_tokens={result.output_tokens} "
-        f"cache_read_input_tokens={result.cache_read_input_tokens} ---"
+        f"cache_read_input_tokens={result.cache_read_input_tokens} "
+        f"estimated_cost={pricing_module.format_cost(result.estimated_cost_usd)} ---"
     )
 
 

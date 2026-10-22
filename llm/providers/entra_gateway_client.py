@@ -212,10 +212,10 @@ class EntraGatewayGeminiClient(LLMClient):
         raw_text = self._extract_text(body)
 
         if output_schema is None:
-            return self._to_result(body, parsed=None, raw_text=raw_text,
+            return self._to_result([body], parsed=None, raw_text=raw_text,
                                    latency_ms=(time.monotonic() - start) * 1000, retries=0)
 
-        state = {"raw_text": raw_text, "body": body}
+        state = {"raw_text": raw_text, "bodies": [body]}
 
         def retry_fn(error_message: str) -> str:
             corrected_messages = list(messages) + [
@@ -230,12 +230,12 @@ class EntraGatewayGeminiClient(LLMClient):
             ]
             new_body = self._post(self._request_body(system_text, corrected_messages, max_tokens, json_mode=True))
             state["raw_text"] = self._extract_text(new_body)
-            state["body"] = new_body
+            state["bodies"].append(new_body)
             return state["raw_text"]
 
         parsed, retries = validate_with_retry(output_schema, raw_text, retry_fn)
 
-        return self._to_result(state["body"], parsed=parsed, raw_text=state["raw_text"],
+        return self._to_result(state["bodies"], parsed=parsed, raw_text=state["raw_text"],
                                latency_ms=(time.monotonic() - start) * 1000, retries=retries)
 
     def _request_body(self, system_text: str, messages: list, max_tokens: int, json_mode: bool) -> dict:
@@ -297,20 +297,24 @@ class EntraGatewayGeminiClient(LLMClient):
             raise LLMRefusalError(stop_reason=finish_reason, raw_text=text)
         return text
 
-    def _to_result(self, body: dict, *, parsed, raw_text, latency_ms, retries) -> LLMResult:
-        usage = body.get("usageMetadata") or {}
+    def _to_result(self, bodies: list, *, parsed, raw_text, latency_ms, retries) -> LLMResult:
+        """Build the LLMResult from every response body this call got (more than one after a
+        validation retry), summing their usage. promptTokenCount already includes any cached
+        tokens."""
+        usages = [body.get("usageMetadata") or {} for body in bodies]
+        cached = [u["cachedContentTokenCount"] for u in usages if u.get("cachedContentTokenCount") is not None]
         return LLMResult(
             parsed=parsed,
             raw_text=raw_text,
             provider=self.provider_name,
             model=self.model,
-            input_tokens=usage.get("promptTokenCount", 0),
+            input_tokens=sum(u.get("promptTokenCount", 0) for u in usages),
             #thinking tokens are billed as output, so they're counted here too
-            output_tokens=usage.get("candidatesTokenCount", 0) + usage.get("thoughtsTokenCount", 0),
-            cache_read_input_tokens=usage.get("cachedContentTokenCount"),
+            output_tokens=sum(u.get("candidatesTokenCount", 0) + u.get("thoughtsTokenCount", 0) for u in usages),
+            cache_read_input_tokens=sum(cached) if cached else None,
             cache_creation_input_tokens=None,
             latency_ms=latency_ms,
-            stop_reason=body["candidates"][0].get("finishReason", "STOP"),
+            stop_reason=bodies[-1]["candidates"][0].get("finishReason", "STOP"),
             retries=retries,
         )
 

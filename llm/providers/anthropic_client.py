@@ -77,7 +77,7 @@ class AnthropicClient(LLMClient):
             )
             self._require_stop_reason(response, {"end_turn"})
             return self._to_result(
-                response, parsed=None, raw_text=_extract_text(response),
+                [response], parsed=None, raw_text=_extract_text(response),
                 latency_ms=(time.monotonic() - start) * 1000, retries=0,
             )
 
@@ -96,7 +96,7 @@ class AnthropicClient(LLMClient):
         self._require_stop_reason(response, {"tool_use"} if used_fallback else {"end_turn"})
         raw_text = _extract_tool_input_json(response, _FORCED_TOOL_NAME) if used_fallback else _extract_text(response)
 
-        state = {"raw_text": raw_text, "response": response}
+        state = {"raw_text": raw_text, "responses": [response]}
 
         def retry_fn(error_message: str) -> str:
             corrected_messages = messages + [
@@ -124,13 +124,13 @@ class AnthropicClient(LLMClient):
                 new_raw = _extract_text(new_response)
 
             state["raw_text"] = new_raw
-            state["response"] = new_response
+            state["responses"].append(new_response)
             return new_raw
 
         parsed, retries = validate_with_retry(output_schema, raw_text, retry_fn)
 
         return self._to_result(
-            state["response"], parsed=parsed, raw_text=state["raw_text"],
+            state["responses"], parsed=parsed, raw_text=state["raw_text"],
             latency_ms=(time.monotonic() - start) * 1000, retries=retries,
         )
 
@@ -154,21 +154,34 @@ class AnthropicClient(LLMClient):
         if response.stop_reason not in expected:
             raise LLMRefusalError(stop_reason=response.stop_reason, raw_text=_extract_text(response))
 
-    def _to_result(self, response, *, parsed, raw_text, latency_ms, retries) -> LLMResult:
-        usage = response.usage
+    def _to_result(self, responses, *, parsed, raw_text, latency_ms, retries) -> LLMResult:
+        """Build the LLMResult from every response this call got (more than one after a
+        validation retry), summing their usage. Anthropic reports cache reads/writes separately
+        from input_tokens, so they're added back in to make input_tokens the total prompt size."""
+        cache_read = sum(r.usage.cache_read_input_tokens or 0 for r in responses)
+        cache_write = sum(r.usage.cache_creation_input_tokens or 0 for r in responses)
         return LLMResult(
             parsed=parsed,
             raw_text=raw_text,
             provider=self.provider_name,
             model=self.model,
-            input_tokens=usage.input_tokens,
-            output_tokens=usage.output_tokens,
-            cache_read_input_tokens=usage.cache_read_input_tokens,
-            cache_creation_input_tokens=usage.cache_creation_input_tokens,
+            input_tokens=sum(_usage_tokens(r.usage)[0] for r in responses) + cache_read + cache_write,
+            output_tokens=sum(_usage_tokens(r.usage)[1] for r in responses),
+            cache_read_input_tokens=cache_read,
+            cache_creation_input_tokens=cache_write,
             latency_ms=latency_ms,
-            stop_reason=response.stop_reason,
+            stop_reason=responses[-1].stop_reason,
             retries=retries,
         )
+
+
+def _usage_tokens(usage) -> tuple:
+    """(input_tokens, output_tokens) from a Message's usage. Some Anthropic-format proxies (e.g.
+    the WashU gateway) leave those None and report OpenAI-style prompt_tokens/completion_tokens
+    instead, which the SDK keeps as extra fields."""
+    input_tokens = usage.input_tokens if usage.input_tokens is not None else getattr(usage, "prompt_tokens", None)
+    output_tokens = usage.output_tokens if usage.output_tokens is not None else getattr(usage, "completion_tokens", None)
+    return input_tokens or 0, output_tokens or 0
 
 
 def check_model_available(sdk_client, model: str, profile_name: str):

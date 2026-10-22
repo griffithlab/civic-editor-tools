@@ -377,8 +377,48 @@ def run_llm_review(inputs: dict, llm_profile: str, llm_client):
     except Exception as exc:
         print(f"{YELLOW}WARNING: LLM-assisted review failed after {time.monotonic() - start:.0f}s ({exc}); continuing without it.{RESET}")
         return None
-    print(f"LLM-assisted review received in {time.monotonic() - start:.0f}s.")
+    print(f"LLM-assisted review received in {time.monotonic() - start:.0f}s ({describe_llm_usage(result)}).")
     return result
+
+
+def describe_llm_usage(result) -> str:
+    """'5,628 in / 3,445 out tokens, est. cost $0.0320' for an LLMResult. Output tokens include
+    any hidden reasoning tokens, which are billed as output."""
+    from llm.pricing import format_cost
+
+    usage = f"{result.input_tokens:,} in / {result.output_tokens:,} out tokens"
+    if result.cache_read_input_tokens:
+        usage += f" ({result.cache_read_input_tokens:,} of the input cached)"
+    if result.estimated_cost_usd is None:
+        return f"{usage}, est. cost unknown - no pricing available for {result.model}"
+    return f"{usage}, est. cost {format_cost(result.estimated_cost_usd)}"
+
+
+class LLMCostTotals:
+    """Running token/cost totals over the LLM-assisted reviews in one run of this script."""
+
+    def __init__(self):
+        self.reviews = 0
+        self.input_tokens = 0
+        self.output_tokens = 0
+        self.cost = 0.0
+        self.unpriced_reviews = 0
+
+    def add(self, result) -> None:
+        self.reviews += 1
+        self.input_tokens += result.input_tokens
+        self.output_tokens += result.output_tokens
+        if result.estimated_cost_usd is None:
+            self.unpriced_reviews += 1
+        else:
+            self.cost += result.estimated_cost_usd
+
+    def summary(self) -> str:
+        text = (f"{self.reviews} review(s), {self.input_tokens:,} in / {self.output_tokens:,} out tokens, "
+                f"est. cost ${self.cost:.4f}")
+        if self.unpriced_reviews:
+            text += f" (excludes {self.unpriced_reviews} review(s) with no pricing available)"
+        return text
 
 
 def display_llm_review(result) -> None:
@@ -458,6 +498,9 @@ def main(civic_config: str, evidence_id: int, all_evidence: bool, evidence_list_
     #get civic evidence item IDs to evaluate, either from the user, or by querying CIViCpy
     evidence_ids_to_process = get_evidence_ids_to_process(evidence_id, all_evidence, evidence_list_file)
 
+    #estimated LLM-assisted review spend across this run (only used with --llm-assist)
+    llm_cost_totals = LLMCostTotals()
+
     #iterate over each evidence item and examine revisions associated with it
     for eid in evidence_ids_to_process:
 
@@ -494,6 +537,9 @@ def main(civic_config: str, evidence_id: int, all_evidence: bool, evidence_list_
             llm_result = run_llm_review(llm_inputs, llm_profile, llm_client)
             if llm_result:
                 display_llm_review(llm_result)
+                llm_cost_totals.add(llm_result)
+                if llm_cost_totals.reviews > 1:
+                    print(f"LLM-assisted review running total this session: {llm_cost_totals.summary()}")
 
         #Open the evidence item revision view for the user
         if open_browser:
@@ -514,6 +560,9 @@ def main(civic_config: str, evidence_id: int, all_evidence: bool, evidence_list_
 
         #Pause before moving on to the next CIViC evidence item
         prompt_to_proceed(f"Processing complete for evidence item: {eid} ({evidence_data['evidence_name']})")
+
+    if llm_cost_totals.reviews:
+        print(f"\nLLM-assisted review total for this session: {llm_cost_totals.summary()}")
 
 
 if __name__ == "__main__":

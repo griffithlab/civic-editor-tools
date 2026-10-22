@@ -18,6 +18,13 @@ def _is_unsupported_response_format_error(exc: openai.BadRequestError) -> bool:
     return "response_format" in message or "json_schema" in message
 
 
+def _cached_prompt_tokens(usage) -> Optional[int]:
+    """The cached part of usage.prompt_tokens (usage.prompt_tokens_details.cached_tokens), or
+    None if the server doesn't report it."""
+    details = getattr(usage, "prompt_tokens_details", None)
+    return getattr(details, "cached_tokens", None) if details else None
+
+
 def _is_max_completion_tokens_required_error(exc: openai.BadRequestError) -> bool:
     """Narrow check for a server (newer OpenAI models, directly or behind a gateway) rejecting
     the legacy max_tokens parameter in favor of max_completion_tokens."""
@@ -64,7 +71,7 @@ class OpenAICompatibleClient(LLMClient):
             self._require_finish_reason(response.choices[0])
             raw_text = response.choices[0].message.content or ""
             return self._to_result(
-                response, parsed=None, raw_text=raw_text,
+                [response], parsed=None, raw_text=raw_text,
                 latency_ms=(time.monotonic() - start) * 1000, retries=0,
             )
 
@@ -83,7 +90,7 @@ class OpenAICompatibleClient(LLMClient):
         self._require_finish_reason(response.choices[0])
         raw_text = response.choices[0].message.content or ""
 
-        state = {"raw_text": raw_text, "response": response}
+        state = {"raw_text": raw_text, "responses": [response]}
 
         def retry_fn(error_message: str) -> str:
             corrected_messages = full_messages + [
@@ -106,13 +113,13 @@ class OpenAICompatibleClient(LLMClient):
             self._require_finish_reason(new_response.choices[0])
             new_raw = new_response.choices[0].message.content or ""
             state["raw_text"] = new_raw
-            state["response"] = new_response
+            state["responses"].append(new_response)
             return new_raw
 
         parsed, retries = validate_with_retry(output_schema, raw_text, retry_fn)
 
         return self._to_result(
-            state["response"], parsed=parsed, raw_text=state["raw_text"],
+            state["responses"], parsed=parsed, raw_text=state["raw_text"],
             latency_ms=(time.monotonic() - start) * 1000, retries=retries,
         )
 
@@ -156,18 +163,23 @@ class OpenAICompatibleClient(LLMClient):
         if choice.finish_reason != "stop":
             raise LLMRefusalError(stop_reason=choice.finish_reason, raw_text=choice.message.content or "")
 
-    def _to_result(self, response, *, parsed, raw_text, latency_ms, retries) -> LLMResult:
-        usage = response.usage
+    def _to_result(self, responses, *, parsed, raw_text, latency_ms, retries) -> LLMResult:
+        """Build the LLMResult from every response this call got (more than one after a
+        validation retry), summing their usage. prompt_tokens already includes any cached
+        tokens; completion_tokens includes any reasoning tokens."""
+        usages = [r.usage for r in responses if r.usage]
+        cached = [_cached_prompt_tokens(u) for u in usages]
         return LLMResult(
             parsed=parsed,
             raw_text=raw_text,
             provider=self.provider_name,
             model=self.model,
-            input_tokens=usage.prompt_tokens if usage else 0,
-            output_tokens=usage.completion_tokens if usage else 0,
-            cache_read_input_tokens=None,
+            input_tokens=sum(u.prompt_tokens or 0 for u in usages),
+            output_tokens=sum(u.completion_tokens or 0 for u in usages),
+            #None (not 0) when the server never reports cached tokens at all
+            cache_read_input_tokens=sum(c for c in cached if c is not None) if any(c is not None for c in cached) else None,
             cache_creation_input_tokens=None,
             latency_ms=latency_ms,
-            stop_reason=response.choices[0].finish_reason,
+            stop_reason=responses[-1].choices[0].finish_reason,
             retries=retries,
         )

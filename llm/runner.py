@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Optional
 
+from . import pricing as pricing_module
 from . import prompt as prompt_module
 from . import provenance as provenance_module
 from . import registry
@@ -65,6 +66,7 @@ def run_task(
         logger.log_run(task, profile, client, None, prompt_text, error=error)
         raise
 
+    result.estimated_cost_usd = pricing_module.estimate_cost(result, getattr(client, "pricing", None))
     logger.log_run(task, profile, client, result, prompt_text)
 
     return result

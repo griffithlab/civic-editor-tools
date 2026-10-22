@@ -4,6 +4,7 @@ import tomllib
 from pathlib import Path
 from typing import Optional
 
+from ..pricing import ModelPricing
 from .base import LLMClient
 
 YELLOW = "\033[33m"
@@ -26,6 +27,8 @@ class Profile:
     token_url: Optional[str] = None  # entra_gateway only
     scope: Optional[str] = None  # entra_gateway only
     discovery_url: Optional[str] = None  # entra_gateway only
+    pricing: dict = dataclasses.field(default_factory=dict)  # {model_id: {input, output, cache_write?, cache_read?}}, USD per million tokens
+    pricing_source: str = ""  # where the pricing table's prices came from, and when
 
 
 def load_profiles(path=None) -> dict:
@@ -61,6 +64,8 @@ def load_profiles(path=None) -> dict:
             token_url=values.get("token_url"),
             scope=values.get("scope"),
             discovery_url=values.get("discovery_url"),
+            pricing={k: v for k, v in values.get("pricing", {}).items() if isinstance(v, dict)},
+            pricing_source=values.get("pricing", {}).get("source", ""),
         )
 
     return profiles
@@ -101,10 +106,12 @@ def build_gateway_token_provider(profile: Profile, credentials: dict):
     return token_provider, creds["llm_gateway_api_key"]
 
 
-def _gateway_model_api_format(profile: Profile, model: str, token_provider, gateway_api_key: str) -> str:
+def _gateway_model_info(profile: Profile, model: str, token_provider, gateway_api_key: str) -> tuple:
     """
-    Look `model` up in the gateway's discovery list and return its api_format ('openai' or
-    'anthropic'), which decides which request format - and so which client - to use. Fails fast,
+    Look `model` up in the gateway's discovery list and return (api_format, info): api_format
+    ('openai', 'anthropic' or 'gemini') decides which request format - and so which client - to
+    use, and info is the model's discovery entry ({} if discovery was unavailable), which
+    includes its token costs. Fails fast,
     with a useful message, if the model is misspelled or not available to this account (the
     gateway's own error for both is an ambiguous 403). If discovery is unavailable, warns and
     guesses the format from the model id rather than blocking on it.
@@ -113,19 +120,27 @@ def _gateway_model_api_format(profile: Profile, model: str, token_provider, gate
 
     guessed_format = "anthropic" if model.startswith("claude") else "gemini" if model.startswith("gemini") else "openai"
     if not profile.discovery_url:
-        return guessed_format
+        return guessed_format, {}
 
     try:
         discovery = fetch_discovery(profile.discovery_url, token_provider, gateway_api_key)
     except Exception as exc:
         print(f"{YELLOW}WARNING: could not check model '{model}' against the gateway's model list ({exc}); "
               f"continuing, assuming the '{guessed_format}' API format.{RESET}")
-        return guessed_format
+        return guessed_format, {}
 
     error, info = check_model_against_discovery(model, discovery)
     if error:
         raise ValueError(error)
-    return info.get("api_format", "openai")
+    return info.get("api_format", "openai"), info
+
+
+def _profile_pricing(profile: Profile, model: str) -> Optional[ModelPricing]:
+    """`model`'s prices from the profile's [<profile>.pricing] table, or None if not listed."""
+    entry = profile.pricing.get(model)
+    if not entry:
+        return None
+    return ModelPricing.from_profile_entry(entry, source=profile.pricing_source or f"profiles.toml [{profile.name}.pricing]")
 
 
 def resolve_api_key(profile: Profile, credentials: Optional[dict] = None) -> Optional[str]:
@@ -166,31 +181,37 @@ def get_client(profile_name: str, profiles_path=None, credentials: Optional[dict
             raise ValueError(error)
         if warning:
             print(f"{YELLOW}WARNING: {warning}{RESET}")
+        client.pricing = _profile_pricing(profile, model)
         return client
 
     if profile.provider == "openai_compatible":
         from .openai_compat_client import OpenAICompatibleClient
-        return OpenAICompatibleClient(
+        client = OpenAICompatibleClient(
             model=model,
             base_url=profile.base_url,
             api_key=api_key,
             **profile.default_params,
         )
+        client.pricing = _profile_pricing(profile, model)
+        return client
 
     if profile.provider == "entra_gateway":
         from .entra_gateway_client import EntraGatewayAnthropicClient, EntraGatewayClient, EntraGatewayGeminiClient
         token_provider, gateway_api_key = build_gateway_token_provider(profile, credentials)
-        api_format = _gateway_model_api_format(profile, model, token_provider, gateway_api_key)
+        api_format, model_info = _gateway_model_info(profile, model, token_provider, gateway_api_key)
         client_class = {
             "anthropic": EntraGatewayAnthropicClient,
             "gemini": EntraGatewayGeminiClient,
         }.get(api_format, EntraGatewayClient)
-        return client_class(
+        client = client_class(
             model=model,
             base_url=profile.base_url,
             token_provider=token_provider,
             api_key=gateway_api_key,
             **profile.default_params,
         )
+        #prefer the gateway's own (billed) prices; a [<profile>.pricing] entry is the fallback
+        client.pricing = ModelPricing.from_gateway_cost(model_info.get("cost")) or _profile_pricing(profile, model)
+        return client
 
     raise ValueError(f"Unknown provider '{profile.provider}' for profile '{profile_name}'")

@@ -53,6 +53,7 @@ class ProvenanceLogger:
                 "cache_read_input_tokens": result.cache_read_input_tokens if result else None,
                 "cache_creation_input_tokens": result.cache_creation_input_tokens if result else None,
             },
+            "estimated_cost_usd": result.estimated_cost_usd if result else None,
             "latency_ms": result.latency_ms if result else None,
             "stop_reason": result.stop_reason if result else None,
             "retries": result.retries if result else None,

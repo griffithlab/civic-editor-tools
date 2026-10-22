@@ -9,7 +9,15 @@ from pydantic import BaseModel
 
 @dataclasses.dataclass
 class LLMResult:
-    """The result of one LLMClient.complete() call."""
+    """The result of one LLMClient.complete() call.
+
+    Token counts are summed over every request the call made (a schema-validation retry is
+    billed too). input_tokens is the total prompt size, the same across providers;
+    cache_read_input_tokens/cache_creation_input_tokens are the parts of it read from / written
+    to a prompt cache (None when the provider doesn't report them). output_tokens includes any
+    reasoning/thinking tokens. estimated_cost_usd is filled in by run_task() when the client's
+    pricing is known.
+    """
 
     parsed: Optional[BaseModel]
     raw_text: str
@@ -22,6 +30,7 @@ class LLMResult:
     latency_ms: float
     stop_reason: str
     retries: int = 0
+    estimated_cost_usd: Optional[float] = None
 
 
 class LLMOutputValidationError(Exception):
@@ -48,6 +57,8 @@ class LLMClient(ABC):
     """Common interface every provider-specific client implements."""
 
     provider_name: str
+    #llm.pricing.ModelPricing for self.model, set by profiles.get_client() when known
+    pricing = None
 
     @abstractmethod
     def complete(
