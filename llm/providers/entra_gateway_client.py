@@ -120,9 +120,9 @@ class EntraGatewayAnthropicClient(AnthropicClient):
     """LLMClient for the gateway's Anthropic-format models (api_format 'anthropic' in discovery),
     which the gateway only serves via the Anthropic Messages API, not chat completions.
 
-    The anthropic SDK already sends its api_key as an 'X-Api-Key' header - exactly the header the
-    gateway expects its API key in - and its auth_token as 'Authorization: Bearer', so the gateway
-    API key and the Entra token map directly onto those. The gateway serves Messages at
+    The Entra token is passed as the SDK's auth_token (sent as 'Authorization: Bearer') and the
+    gateway API key as an explicit 'X-Api-Key' default header - not as api_key, since anthropic
+    SDK 2.x refuses a client given both api_key and auth_token. The gateway serves Messages at
     <base_url>/messages (alongside <base_url>/chat/completions for OpenAI-format models), but the
     SDK always posts to <base_url>/v1/messages, so a request hook rewrites that path just before
     each request is sent. Everything else (structured output, forced-tool fallback, stop_reason checks) is
@@ -143,8 +143,8 @@ class EntraGatewayAnthropicClient(AnthropicClient):
         http_client.event_hooks = {**hooks, "request": list(hooks.get("request", [])) + [_rewrite_sdk_messages_path]}
         self._client = anthropic.Anthropic(
             base_url=base_url,
-            api_key=api_key,
             auth_token=token_provider.get_token(),
+            default_headers={"X-Api-Key": api_key},
             http_client=http_client,
         )
 
