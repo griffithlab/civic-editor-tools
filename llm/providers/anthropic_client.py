@@ -17,6 +17,12 @@ def _build_system_param(system: str, cache_system: bool):
     return [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
 
 
+def _json_schema_output_config(output_schema) -> dict:
+    """output_config constraining the reply to output_schema's JSON schema (in the form the API
+    expects, via the SDK's own transform_schema)."""
+    return {"format": {"type": "json_schema", "schema": anthropic.transform_schema(output_schema)}}
+
+
 def _extract_text(response) -> str:
     """Concatenate every text block in a Message/ParsedMessage's content."""
     return "".join(block.text for block in response.content if block.type == "text")
@@ -45,9 +51,10 @@ def _is_unsupported_structured_output_error(exc: anthropic.BadRequestError) -> b
 class AnthropicClient(LLMClient):
     """LLMClient backed by the official `anthropic` SDK.
 
-    Structured output uses the current (GA) mechanism, client.messages.parse(output_format=...),
-    which returns response.parsed_output already validated against the given Pydantic model. If
-    that raises a 400 specifically about output_format/output_config being unrecognized (an older
+    Structured output uses the current (GA) mechanism, output_config={"format": <JSON schema>} on
+    messages.create(), and validates the reply with validate_with_retry() - deliberately not
+    client.messages.parse(), which validates inside the SDK and raises before a schema mismatch
+    can be retried. If that raises a 400 specifically about output_format/output_config being unrecognized (an older
     pinned SDK/API version, or a non-standard proxy), this falls back to forced tool use - current
     Claude models do NOT reject forced tool_choice; structured outputs and strict tool use are
     documented as complementary, separate features, so this fallback is a defensive measure, not
@@ -83,9 +90,9 @@ class AnthropicClient(LLMClient):
 
         used_fallback = False
         try:
-            response = self._client.messages.parse(
+            response = self._client.messages.create(
                 model=self.model, max_tokens=max_tokens, system=system_param, messages=messages,
-                output_format=output_schema, **extra,
+                output_config=_json_schema_output_config(output_schema), **extra,
             )
         except anthropic.BadRequestError as exc:
             if not _is_unsupported_structured_output_error(exc):
@@ -116,9 +123,9 @@ class AnthropicClient(LLMClient):
                 self._require_stop_reason(new_response, {"tool_use"})
                 new_raw = _extract_tool_input_json(new_response, _FORCED_TOOL_NAME)
             else:
-                new_response = self._client.messages.parse(
+                new_response = self._client.messages.create(
                     model=self.model, max_tokens=max_tokens, system=system_param,
-                    messages=corrected_messages, output_format=output_schema, **extra,
+                    messages=corrected_messages, output_config=_json_schema_output_config(output_schema), **extra,
                 )
                 self._require_stop_reason(new_response, {"end_turn"})
                 new_raw = _extract_text(new_response)

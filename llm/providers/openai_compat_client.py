@@ -4,6 +4,7 @@ from typing import Optional
 
 import openai
 from openai import OpenAI
+from openai.lib import type_to_response_format_param
 
 from .base import LLMClient, LLMRefusalError, LLMResult, validate_with_retry
 
@@ -39,10 +40,11 @@ class OpenAICompatibleClient(LLMClient):
     base_url - covers OpenAI itself and any OpenAI-compatible local server (Ollama, LM Studio,
     vLLM).
 
-    Structured output tries chat.completions.parse(response_format=<PydanticModel>) first. If the
-    server rejects that (most local servers today), falls back to JSON mode
-    (response_format={"type": "json_object"}) with the target JSON schema spelled out in the
-    system prompt, then validates the result with validate_with_retry().
+    Structured output tries a strict JSON-schema response_format first. If the server rejects
+    that (most local servers today), falls back to JSON mode (response_format={"type":
+    "json_object"}) with the target JSON schema spelled out in the system prompt. Either way the
+    reply is validated with validate_with_retry() - deliberately not chat.completions.parse(),
+    which validates inside the SDK and raises before a schema mismatch can be retried.
 
     The output token limit is sent as max_tokens, which local servers expect. If the server
     rejects that in favor of max_completion_tokens (newer OpenAI models), the request is retried
@@ -77,9 +79,9 @@ class OpenAICompatibleClient(LLMClient):
 
         used_fallback = False
         try:
-            response = self._send("parse",
+            response = self._send("create",
                 model=self.model, messages=full_messages, max_tokens=max_tokens,
-                response_format=output_schema,
+                response_format=type_to_response_format_param(output_schema),
             )
         except openai.BadRequestError as exc:
             if not _is_unsupported_response_format_error(exc):
@@ -106,9 +108,9 @@ class OpenAICompatibleClient(LLMClient):
             if used_fallback:
                 new_response = self._complete_via_json_mode(corrected_messages, output_schema, max_tokens)
             else:
-                new_response = self._send("parse",
+                new_response = self._send("create",
                     model=self.model, messages=corrected_messages, max_tokens=max_tokens,
-                    response_format=output_schema,
+                    response_format=type_to_response_format_param(output_schema),
                 )
             self._require_finish_reason(new_response.choices[0])
             new_raw = new_response.choices[0].message.content or ""

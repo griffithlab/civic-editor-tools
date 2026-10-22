@@ -130,7 +130,6 @@ def _token_provider() -> EntraTokenProvider:
 
 
 def test_openai_format_usage_is_summed_over_every_response_and_counts_cached_tokens():
-    # (the SDK's .parse() validates responses itself, so a retry is exercised via _to_result directly)
     def response(prompt, completion, cached):
         return SimpleNamespace(
             usage=SimpleNamespace(prompt_tokens=prompt, completion_tokens=completion,
