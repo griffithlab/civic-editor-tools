@@ -92,7 +92,7 @@ def parse_args():
         "--llm-assist",
         dest="llm_assist",
         action="store_true",
-        help="Show an LLM-generated advisory review of an evidence item's open revisions before asking which to accept. Purely advisory - never submits anything itself. Requires the llm/ package's dependencies (pip3 install -r install/requirements.txt) and a configured provider (see llm/profiles.toml)"
+        help="Show an LLM-generated advisory review of an evidence item's open revisions before asking which to accept. Purely advisory - never submits anything itself. Requires the llm/ package's dependencies (pip3 install -r install/requirements.txt) and credentials for the chosen provider, in your --civic-config file or (for the claude profile) the ANTHROPIC_API_KEY environment variable (see llm/profiles.toml and example.civic.conf.template)"
     )
     parser.add_argument(
         "--llm-profile",
@@ -100,6 +100,12 @@ def parse_args():
         type=str,
         default="claude",
         help="Provider profile (from llm/profiles.toml) to use with --llm-assist (default: claude)"
+    )
+    parser.add_argument(
+        "--llm-model",
+        dest="llm_model",
+        type=str,
+        help="Model to use with --llm-assist, overriding the --llm-profile's default model (e.g. gpt-5.4-mini). List the models available to you with: python -m llm discover --profile <claude|wustl> --civic-config <file>"
     )
 
     return parser.parse_args()
@@ -332,25 +338,38 @@ def build_llm_review_inputs(eid: int, evidence_data: dict, revisions: list) -> d
     }
 
 
-def run_llm_review(inputs: dict, llm_profile: str):
+def build_llm_client(llm_profile: str, llm_model: str, llm_credentials: dict):
     """
-    Best-effort: returns an llm.providers.base.LLMResult, or None if the LLM-assisted review
-    fails for any reason (llm package not installed, no configured provider/API key, network
-    error, the model's output failing schema validation, a refusal). This step is purely
-    advisory - it must never block the human review workflow that follows it, and it never
-    itself calls accept_revisions() or any other mutation.
+    Construct the LLM client once, at startup, so a missing dependency, missing credentials or a
+    rejected gateway client secret is reported before any review work begins (rather than as a
+    warning on every evidence item), and so one client - and, for gateway profiles, its cached
+    bearer token - is reused for the whole run. Exits with a helpful message on failure.
     """
     try:
-        from llm import run_task
+        from llm import get_client
     except ImportError:
-        print(
-            f"{YELLOW}WARNING: --llm-assist requires the llm/ package's dependencies "
-            f"(pip3 install -r install/requirements.txt). Continuing without it.{RESET}"
+        sys.exit(
+            f"Fatal: --llm-assist requires the llm/ package's dependencies "
+            f"(pip3 install -r install/requirements.txt)."
         )
-        return None
 
     try:
-        return run_task("review_evidence_item", inputs=inputs, profile=llm_profile)
+        return get_client(llm_profile, credentials=llm_credentials, model=llm_model)
+    except Exception as exc:
+        sys.exit(f"Fatal: could not set up --llm-assist with profile '{llm_profile}': {exc}")
+
+
+def run_llm_review(inputs: dict, llm_profile: str, llm_client):
+    """
+    Best-effort: returns an llm.providers.base.LLMResult, or None if the LLM-assisted review
+    fails for any reason (network error, the model's output failing schema validation, a
+    refusal). This step is purely advisory - it must never block the human review workflow that
+    follows it, and it never itself calls accept_revisions() or any other mutation.
+    """
+    from llm import run_task
+
+    try:
+        return run_task("review_evidence_item", inputs=inputs, profile=llm_profile, client=llm_client)
     except Exception as exc:
         print(f"{YELLOW}WARNING: LLM-assisted review failed ({exc}); continuing without it.{RESET}")
         return None
@@ -384,7 +403,7 @@ def display_llm_review(result) -> None:
     print(f"{BLUE}--- end LLM-assisted review (nothing above was submitted to CIViC) ---{RESET}")
 
 
-def main(civic_config: str, evidence_id: int, all_evidence: bool, evidence_list_file: str, processed_evidence_file: str, allow_evidence_without_revisions: bool, open_browser: bool, execute: bool, llm_assist: bool, llm_profile: str):
+def main(civic_config: str, evidence_id: int, all_evidence: bool, evidence_list_file: str, processed_evidence_file: str, allow_evidence_without_revisions: bool, open_browser: bool, execute: bool, llm_assist: bool, llm_profile: str, llm_model: str):
 
     #define input data files
     version_file = base_dir / f"RELEASE"
@@ -423,8 +442,10 @@ def main(civic_config: str, evidence_id: int, all_evidence: bool, evidence_list_
     organization_details = civic_graphql_utils.gather_organization_details(organization_id)
     print(f"Organization (id: {organization_id}) is {organization_details['organization_name']} ({organization_details['organization_member_count']} members)")
 
+    llm_client = None
     if llm_assist:
-        print(f"LLM-assisted review is ON (profile: {llm_profile}) - advisory only, never submits anything itself.")
+        llm_client = build_llm_client(llm_profile, llm_model, config['llm_credentials'])
+        print(f"LLM-assisted review is ON (profile: {llm_profile}, model: {llm_client.model}) - advisory only, never submits anything itself.")
 
     prompt_to_proceed("Verify your user and organization info above. Revisions by this user will be ignored/skipped. \nYou can't moderate your own submissions.")
 
@@ -464,7 +485,7 @@ def main(civic_config: str, evidence_id: int, all_evidence: bool, evidence_list_
         #never itself calls accept_revisions() or any other mutation.
         if llm_assist:
             llm_inputs = build_llm_review_inputs(eid, evidence_data, revision_data['evidence_revisions'])
-            llm_result = run_llm_review(llm_inputs, llm_profile)
+            llm_result = run_llm_review(llm_inputs, llm_profile, llm_client)
             if llm_result:
                 display_llm_review(llm_result)
 
@@ -502,5 +523,6 @@ if __name__ == "__main__":
         open_browser=args.open_browser,
         execute=args.execute,
         llm_assist=args.llm_assist,
-        llm_profile=args.llm_profile
+        llm_profile=args.llm_profile,
+        llm_model=args.llm_model
     )

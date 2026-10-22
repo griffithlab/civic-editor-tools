@@ -18,4 +18,23 @@ organization_id = 1
 api_key = your-civic-api-key-here
 api_url = https://staging.civicdb.org
 
+# ---------------------------------------------------------------------------------------------
+# OPTIONAL: LLM provider credentials, only needed for review_evidence_items.py --llm-assist.
+# You only need the set for the provider you use (chosen with --llm-profile), not both.
+# Uncomment and fill in the lines for your provider; leave the rest commented out.
+# ---------------------------------------------------------------------------------------------
+
+# For --llm-profile claude (the default). If omitted, the ANTHROPIC_API_KEY environment variable
+# is used instead; if both are set, this value wins.
+#anthropic_api_key = your-anthropic-api-key-here
+
+# For --llm-profile wustl (WashU AI API gateway). All three are required together. The client id
+# and client secret are used to obtain a short-lived Microsoft Entra bearer token (refreshed
+# automatically); the API key ties each request to your account's model access and quota. All
+# three come from the gateway dashboard, where they can be regenerated (the client secret
+# expires after a year).
+#llm_gateway_client_id = your-gateway-client-id-here
+#llm_gateway_client_secret = your-gateway-client-secret-here
+#llm_gateway_api_key = your-gateway-api-key-here
+
 

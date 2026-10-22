@@ -20,6 +20,8 @@ def run_task(
     profiles_path=None,
     log_path=None,
     client: Optional[LLMClient] = None,
+    credentials: Optional[dict] = None,
+    model: Optional[str] = None,
     **complete_opts,
 ):
     """
@@ -31,10 +33,13 @@ def run_task(
     failure, and returns the LLMResult - or lets LLMOutputValidationError/LLMRefusalError
     propagate after logging the failed attempt.
 
-    `client` is a test seam: pass an already-constructed LLMClient (e.g. testing.FakeClient) to
-    bypass get_client()/profile-based construction entirely. `profile` is still used to label the
-    provenance record and, where the named profile happens to exist, to run the
-    requires-vs-supports warning check.
+    `client` lets a caller pass an already-constructed LLMClient - a testing.FakeClient, or one
+    real client reused across many calls (e.g. so an entra_gateway client's bearer token is
+    cached rather than re-fetched per call) - bypassing get_client()/profile-based construction
+    entirely. `profile` is still used to label the provenance record and, where the named profile
+    happens to exist, to run the requires-vs-supports warning check.
+
+    `credentials` and `model` are passed through to get_client() when `client` is not given.
     """
     content_root = Path(content_root) if content_root else registry.DEFAULT_CONTENT_ROOT
     task = registry.load_task(task_name, content_root)
@@ -46,7 +51,7 @@ def run_task(
         pass  # unknown/test-only profile name - nothing to warn about
 
     if client is None:
-        client = profiles_module.get_client(profile, profiles_path)
+        client = profiles_module.get_client(profile, profiles_path, credentials=credentials, model=model)
 
     system_text, user_text = prompt_module.assemble_prompt(task, inputs)
     prompt_text = f"{system_text}\n\n{user_text}"

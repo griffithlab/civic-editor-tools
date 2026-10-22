@@ -148,6 +148,8 @@ chmod 600 ~/username.prod.civic.conf
 
 If `api_url` points at production, the tools ask you to type `production` before making any API call.
 
+The same file can optionally hold credentials for `review_evidence_items.py --llm-assist` (an Anthropic API key and/or WashU AI API gateway credentials). See the commented section at the bottom of the template and [LLM-assisted editorial review](#llm-assisted-editorial-review-experimental) below.
+
 ## Run a test of an editor tool
 
 ```bash
@@ -245,12 +247,38 @@ for assessment in result.parsed.revision_assessments:
 
 ### Configuration
 
-Named provider profiles live in `llm/profiles.toml` (committed — it holds no secrets). Three are provided out of the box: `claude` (Anthropic), `openai` (OpenAI), and `local` (any OpenAI-compatible server, e.g. Ollama). API keys are never read from this file, only from the environment variable each profile names:
+Named provider profiles live in `llm/profiles.toml` (committed — it holds no secrets). Four are provided out of the box: `claude` (Anthropic), `wustl` (the WashU AI API gateway), `openai` (OpenAI), and `local` (any OpenAI-compatible server, e.g. Ollama). Credentials are never read from this file — they come from the optional LLM settings in your `*.civic.conf` file (see `example.civic.conf.template`) or, for some profiles, an environment variable. You only need credentials for the profile you use:
+
+| Profile | Credentials |
+|---|---|
+| `claude` | `anthropic_api_key` in your `*.civic.conf`, or else the `ANTHROPIC_API_KEY` environment variable (the conf file wins if both are set) |
+| `wustl` | `llm_gateway_client_id`, `llm_gateway_client_secret` and `llm_gateway_api_key` in your `*.civic.conf` (all three required) |
+| `openai` | `OPENAI_API_KEY` environment variable |
+| `local` | none by default |
+
+Each profile has a default model; override it per run with `review_evidence_items.py --llm-model <name>` (or `python -m llm run ... --model <name>`) to experiment with different models without editing `profiles.toml`. The model must be one the profile's provider offers. To list the valid model ids:
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...   # for the "claude" profile
-export OPENAI_API_KEY=sk-...          # for the "openai" profile
-                                       # "local" needs no key by default
+python -m llm discover --profile claude --civic-config ~/username.prod.civic.conf   # Anthropic models (--civic-config optional if ANTHROPIC_API_KEY is set)
+python -m llm discover --profile wustl --civic-config ~/username.prod.civic.conf    # gateway models, with costs (see below)
+```
+
+#### The WashU AI API gateway (`wustl` profile)
+
+The gateway puts many models behind one OpenAI-compatible endpoint with centralized billing. Every request needs two credentials: a Microsoft Entra bearer token (obtained from your client id and client secret, valid about an hour) that proves who is calling, and your gateway API key, which ties the call to your account's model access and quota. The tools fetch the token for you and get a fresh one shortly before it expires, so long `--all-evidence` runs keep working. The token is requested at startup, and the chosen model is checked against the gateway's model list, so a wrong or expired client secret, a misspelled model name (with suggestions), or a model you haven't been granted access to is reported before any review work begins.
+
+Models must be requested in the gateway dashboard before you can use them. To see which ones your account can currently use (with their capabilities and costs):
+
+```bash
+python -m llm discover --profile wustl --civic-config ~/username.prod.civic.conf
+```
+
+This prints a table of the chat models your account can use, with context size and cost per million tokens. Add `--all` to include models you haven't been granted yet and embedding models, or `--json` for the gateway's full response. Models of all three formats — `openai` (GPT, Grok, DeepSeek, ...), `anthropic` (Claude) and `gemini` (Gemini) — work with the `wustl` profile, which picks the matching request format automatically for each model.
+
+Then pick one per run:
+
+```bash
+./review_evidence_items.py --civic-config ~/username.prod.civic.conf --evidence-id 1234 --llm-assist --llm-profile wustl --llm-model gpt-5.4-mini
 ```
 
 Other overridable defaults, all via environment variable or the matching `run_task(...)` keyword argument:
@@ -293,7 +321,7 @@ python -m llm run review_evidence_item --input llm/tests/fixtures/review_evidenc
 
 ### Trying it against real evidence items
 
-`review_evidence_items.py --llm-assist` (optionally with `--llm-profile <name>`, default `claude`) shows this advisory review inline, right after an evidence item's open revisions are displayed and before you're asked which to accept. It's entirely best-effort: if the `llm/` dependencies aren't installed, no provider is configured, or the call fails for any reason, it prints a warning and the normal human review workflow continues unaffected — nothing about accepting revisions depends on it.
+`review_evidence_items.py --llm-assist` (optionally with `--llm-profile <name>`, default `claude`, and `--llm-model <name>`) shows this advisory review inline, right after an evidence item's open revisions are displayed and before you're asked which to accept. Setup problems — missing `llm/` dependencies, missing or rejected credentials, a model name the chosen profile's provider doesn't offer (e.g. a GPT model with the `claude` profile) — stop the tool at startup with an explanation, before any review work begins. After that it's entirely best-effort: if a call for an individual evidence item fails for any reason, it prints a warning and the normal human review workflow continues unaffected — nothing about accepting revisions depends on it.
 
 ---
 
@@ -321,12 +349,13 @@ llm/                             # provider-agnostic LLM client + task-loading l
     base.py                     # LLMClient/LLMResult contract, validate_with_retry()
     anthropic_client.py         # Anthropic messages.parse()-backed client
     openai_compat_client.py     # OpenAI/Ollama/LM Studio/vLLM-backed client
+    entra_gateway_client.py     # Entra bearer token + X-Api-Key gateway client (e.g. WashU AI API), discovery
     profiles.py                 # profiles.toml loading, get_client()
   registry.py                   # task discovery/loading from civic-editorial-review/
   prompt.py                     # prompt assembly (stable knowledge/instructions/examples + per-item input)
   provenance.py                 # JSONL run logging (llm/logs/, gitignored)
   runner.py                     # run_task() public entry point
-  profiles.toml                 # named provider profiles (no secrets - keys come from env vars)
+  profiles.toml                 # named provider profiles (no secrets - keys come from *.civic.conf or env vars)
   civic-editorial-review/       # task content (knowledge, per-task instructions.md/schema.py/examples/)
   tests/                        # pytest suite for llm/ (no network access required)
 install/

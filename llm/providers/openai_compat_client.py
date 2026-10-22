@@ -18,6 +18,15 @@ def _is_unsupported_response_format_error(exc: openai.BadRequestError) -> bool:
     return "response_format" in message or "json_schema" in message
 
 
+def _is_max_completion_tokens_required_error(exc: openai.BadRequestError) -> bool:
+    """Narrow check for a server (newer OpenAI models, directly or behind a gateway) rejecting
+    the legacy max_tokens parameter in favor of max_completion_tokens."""
+    if getattr(exc, "status_code", None) != 400:
+        return False
+    message = str(exc)
+    return "max_tokens" in message and "max_completion_tokens" in message
+
+
 class OpenAICompatibleClient(LLMClient):
     """LLMClient backed by the `openai` SDK's chat.completions API, pointed at a configurable
     base_url - covers OpenAI itself and any OpenAI-compatible local server (Ollama, LM Studio,
@@ -27,9 +36,14 @@ class OpenAICompatibleClient(LLMClient):
     server rejects that (most local servers today), falls back to JSON mode
     (response_format={"type": "json_object"}) with the target JSON schema spelled out in the
     system prompt, then validates the result with validate_with_retry().
+
+    The output token limit is sent as max_tokens, which local servers expect. If the server
+    rejects that in favor of max_completion_tokens (newer OpenAI models), the request is retried
+    with max_completion_tokens, and that choice is remembered for the rest of this client's life.
     """
 
     provider_name = "openai_compatible"
+    _use_max_completion_tokens = False
 
     def __init__(self, model: str, base_url: str, api_key: Optional[str] = None, **default_params):
         self.model = model
@@ -44,7 +58,7 @@ class OpenAICompatibleClient(LLMClient):
         start = time.monotonic()
 
         if output_schema is None:
-            response = self._client.chat.completions.create(
+            response = self._send("create",
                 model=self.model, messages=full_messages, max_tokens=max_tokens,
             )
             self._require_finish_reason(response.choices[0])
@@ -56,7 +70,7 @@ class OpenAICompatibleClient(LLMClient):
 
         used_fallback = False
         try:
-            response = self._client.chat.completions.parse(
+            response = self._send("parse",
                 model=self.model, messages=full_messages, max_tokens=max_tokens,
                 response_format=output_schema,
             )
@@ -85,7 +99,7 @@ class OpenAICompatibleClient(LLMClient):
             if used_fallback:
                 new_response = self._complete_via_json_mode(corrected_messages, output_schema, max_tokens)
             else:
-                new_response = self._client.chat.completions.parse(
+                new_response = self._send("parse",
                     model=self.model, messages=corrected_messages, max_tokens=max_tokens,
                     response_format=output_schema,
                 )
@@ -102,6 +116,22 @@ class OpenAICompatibleClient(LLMClient):
             latency_ms=(time.monotonic() - start) * 1000, retries=retries,
         )
 
+    def _send(self, method: str, **kwargs):
+        """Call chat.completions.<method>(**kwargs), sending the max_tokens kwarg under whichever
+        parameter name this server accepts (see class docstring)."""
+        sdk_method = getattr(self._client.chat.completions, method)
+        if self._use_max_completion_tokens:
+            kwargs["max_completion_tokens"] = kwargs.pop("max_tokens")
+            return sdk_method(**kwargs)
+        try:
+            return sdk_method(**kwargs)
+        except openai.BadRequestError as exc:
+            if not _is_max_completion_tokens_required_error(exc):
+                raise
+            self._use_max_completion_tokens = True
+            kwargs["max_completion_tokens"] = kwargs.pop("max_tokens")
+            return sdk_method(**kwargs)
+
     def _complete_via_json_mode(self, full_messages, output_schema, max_tokens):
         schema_json = json.dumps(output_schema.model_json_schema())
         augmented_messages = list(full_messages)
@@ -113,7 +143,7 @@ class OpenAICompatibleClient(LLMClient):
                 "and no other text:\n" + schema_json
             ),
         }
-        return self._client.chat.completions.create(
+        return self._send("create",
             model=self.model, messages=augmented_messages, max_tokens=max_tokens,
             response_format={"type": "json_object"},
         )

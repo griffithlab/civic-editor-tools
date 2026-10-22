@@ -33,6 +33,12 @@ VALID_CIVIC_URLS = {PRODUCTION_CIVIC_URL, STAGING_CIVIC_URL}
 CIVIC_CONFIG_SUFFIX = ".civic.conf"
 CIVIC_CONFIG_REQUIRED_KEYS = {"contributor_id", "organization_id", "api_key", "api_url"}
 
+#optional LLM provider credentials, used only by review_evidence_items.py --llm-assist. A user
+#needs credentials for whichever provider their --llm-profile uses, not all of them.
+CIVIC_CONFIG_ANTHROPIC_KEYS = ("anthropic_api_key",)
+CIVIC_CONFIG_LLM_GATEWAY_KEYS = ("llm_gateway_client_id", "llm_gateway_client_secret", "llm_gateway_api_key")
+CIVIC_CONFIG_OPTIONAL_KEYS = set(CIVIC_CONFIG_ANTHROPIC_KEYS + CIVIC_CONFIG_LLM_GATEWAY_KEYS)
+
 #the exact word a user must type to confirm they intend to query the live production database
 PRODUCTION_CONFIRMATION_PHRASE = "production"
 
@@ -255,10 +261,12 @@ def load_civic_config(config_path: str) -> dict:
       - be named '*.civic.conf' (matched by this repo's .gitignore, so it can never be committed)
       - be readable/writable by its owner only, no group or other access (like an AWS .pem file)
       - contain simple 'key = value' lines (blank lines and lines starting with # are ignored)
-        defining exactly: contributor_id, organization_id, api_key, api_url
+        defining: contributor_id, organization_id, api_key, api_url
+      - optionally define LLM provider credentials for --llm-assist: anthropic_api_key, and/or
+        all three of llm_gateway_client_id, llm_gateway_client_secret, llm_gateway_api_key
 
     api_url must be exactly 'https://civicdb.org' or 'https://staging.civicdb.org'. Does not
-    print or log the api_key value. Exits with a helpful message on any validation failure
+    print or log the api_key value or any LLM credential. Exits with a helpful message on any validation failure
     rather than raising, since this is always called directly from a CLI entry point.
     """
     path = Path(config_path)
@@ -297,6 +305,18 @@ def load_civic_config(config_path: str) -> dict:
     if missing:
         sys.exit(f"Fatal: {path} is missing required setting(s): {', '.join(sorted(missing))}")
 
+    #warn rather than fail on unrecognized settings, so a typo'd optional key doesn't go unnoticed
+    unknown = values.keys() - CIVIC_CONFIG_REQUIRED_KEYS - CIVIC_CONFIG_OPTIONAL_KEYS
+    if unknown:
+        print(f"{YELLOW}WARNING: {path} contains unrecognized setting(s), ignored: {', '.join(sorted(unknown))}{RESET}")
+
+    #optional LLM credentials: empty values are treated as not set; gateway settings are all-or-none
+    llm_credentials = {key: values[key] for key in CIVIC_CONFIG_OPTIONAL_KEYS if values.get(key)}
+    gateway_present = [key for key in CIVIC_CONFIG_LLM_GATEWAY_KEYS if key in llm_credentials]
+    if gateway_present and len(gateway_present) != len(CIVIC_CONFIG_LLM_GATEWAY_KEYS):
+        gateway_missing = [key for key in CIVIC_CONFIG_LLM_GATEWAY_KEYS if key not in llm_credentials]
+        sys.exit(f"Fatal: {path} sets some LLM gateway settings but is missing: {', '.join(gateway_missing)}")
+
     try:
         contributor_id = int(values["contributor_id"])
     except ValueError:
@@ -321,6 +341,7 @@ def load_civic_config(config_path: str) -> dict:
         "organization_id": organization_id,
         "api_key": civic_api_key,
         "api_url": civic_url,
+        "llm_credentials": llm_credentials,
     }
 
 
@@ -362,6 +383,11 @@ def summarize_civic_config(config: dict) -> None:
         f"  Organization ID: {config['organization_id']}\n"
         f"  API Key: ******** (provided, not displayed)"
     )
+    llm_credentials = config.get('llm_credentials', {})
+    if any(key in llm_credentials for key in CIVIC_CONFIG_ANTHROPIC_KEYS):
+        print(f"  Anthropic API key: ******** (provided, not displayed)")
+    if all(key in llm_credentials for key in CIVIC_CONFIG_LLM_GATEWAY_KEYS):
+        print(f"  LLM gateway client id/secret and API key: ******** (provided, not displayed)")
 
 
 def gather_user_details(user_id: int) -> dict:

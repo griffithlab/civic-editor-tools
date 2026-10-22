@@ -169,3 +169,39 @@ class AnthropicClient(LLMClient):
             stop_reason=response.stop_reason,
             retries=retries,
         )
+
+
+def check_model_available(sdk_client, model: str, profile_name: str):
+    """
+    Look up `model` with the Anthropic models API (free, no tokens used) so a misspelled or
+    non-Anthropic model id, or a rejected API key, is reported clearly up front rather than as a
+    404/401 on every review request. Returns (error, warning): error explains why the model
+    can't be used, warning reports that the check itself couldn't be completed; both may be None.
+    """
+    import difflib
+
+    try:
+        sdk_client.models.retrieve(model)
+        return None, None
+    except anthropic.NotFoundError:
+        pass
+    except anthropic.AuthenticationError:
+        return f"Anthropic rejected the API key for profile '{profile_name}'", None
+    except Exception as exc:
+        return None, f"could not check model '{model}' with Anthropic ({exc}); continuing"
+
+    try:
+        available = [m.id for m in list_models(sdk_client)]
+    except Exception:
+        available = []
+    suggestions = difflib.get_close_matches(model, available, n=3, cutoff=0.6)
+    hint = f" Did you mean: {', '.join(suggestions)}?" if suggestions else ""
+    if available:
+        hint += f"\n  Models available to your API key: {', '.join(available)}"
+    return (f"model '{model}' is not available from Anthropic (profile '{profile_name}' talks "
+            f"directly to the Anthropic API, so --llm-model must be an Anthropic model id).{hint}"), None
+
+
+def list_models(sdk_client) -> list:
+    """Every model available to this Anthropic API key, newest first (the API's own order)."""
+    return list(sdk_client.models.list(limit=1000))
